@@ -18,6 +18,10 @@ file (and ideally a visible in-app credits line) intact.
 > redistribution), replace it before public hosting — the procedural fallback figures
 > always work without any model.
 
+## Audio
+- **Narration** (`audio/*.mp3`, 24 Watchers + 12 Archangels): generated locally via Windows SAPI TTS ("Microsoft David Desktop") — no third-party rights.
+- **`music-archangels.mp3`**: "Angelic Choir" — **Pixabay** (track #179081), Pixabay Content License (royalty-free; attribution not required, credited here). The Watchers hall uses a generative WebAudio score (no asset).
+
 ## Text / lore
 Public domain: *1 Enoch* (R.H. Charles, 1917), *Book of Giants*, Genesis 6, Leviticus 16.
 Later-tradition figures (Metatron, Sandalphon, Raziel, etc.) are labeled as Kabbalah /
