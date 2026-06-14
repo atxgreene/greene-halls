@@ -748,8 +748,8 @@ function boot(LIB){
   function loadModelFor(node,fig,spec,a){
     getModelTemplate(spec.url).then(template=>{
       const m=template.clone(true); // clone shares geometry (cheap); fresh material per statue
-      const mat=new THREE.MeshStandardMaterial({color:spec.color||0xb8b2a4,roughness:0.74,metalness:0.04,emissive:new THREE.Color(0x2e2a22),emissiveIntensity:0.16,envMapIntensity:1.35});
-      m.traverse(o=>{ if(o.isMesh){ o.material=mat; o.castShadow=o.receiveShadow=true; o.frustumCulled=false; } });
+      const mat=new THREE.MeshStandardMaterial({color:spec.color||0xb8b2a4,roughness:0.74,metalness:0.04,emissive:new THREE.Color(0x342f25),emissiveIntensity:0.26,envMapIntensity:1.35});
+      m.traverse(o=>{ if(o.isMesh){ o.material=mat; o.castShadow=false; o.receiveShadow=true; } }); // no cast-shadow (skip high-poly statue in shadow pass); frustumCulled stays ON -> off-screen statues skip drawing
       // transform ONLY the wrapper; centre via worldToLocal so any pivot/up-axis is handled
       const wrap=new THREE.Group(); if(spec.rotationX) wrap.rotation.x=spec.rotationX; if(spec.rotationY) wrap.rotation.y=spec.rotationY; wrap.add(m); node.add(wrap);
       node.updateWorldMatrix(true,true);
@@ -763,7 +763,8 @@ function boot(LIB){
       wrap.position.add(tgt.sub(cur)); wrap.position.y+=(spec.yOffset||0);
       fig.bodyParts.forEach(pt=>{ fig.grp.remove(pt); pt.geometry&&pt.geometry.dispose&&pt.geometry.dispose(); });
       if(!spec.keepWings){ (fig.wings||[]).forEach(w=>fig.grp.remove(w)); if(fig.halo)fig.grp.remove(fig.halo); if(fig.glyphObj)fig.grp.remove(fig.glyphObj); }
-      const fill=new THREE.PointLight(0xfff1dc, a.giant?13:14, a.giant?26:13, 2); fill.position.set(0,(a.giant?7:3.4),-2.8); node.add(fill);
+      // dedicated fill light ONLY for the giant; the rest read via emissive + the roaming focus spotlight (keeps total light count low)
+      if(a.giant){ const fill=new THREE.PointLight(0xfff1dc,13,26,2); fill.position.set(0,7,-2.8); node.add(fill); }
       if(started) showToast(`✦ <b>${a.name}</b> — 3D model loaded`);
     }).catch(err=>{ console.warn('[model] kept procedural figure for',a.key,'—',err?.message||err); });
   }
@@ -784,6 +785,16 @@ function boot(LIB){
     if(!isNeph){
       const niche=new THREE.Mesh(new THREE.BoxGeometry(5,11,0.4),new THREE.MeshStandardMaterial({color:0x08070b,roughness:0.95})); niche.position.set(0,5.5,2.6); node.add(niche);
       const frame=new THREE.Mesh(new THREE.TorusGeometry(2.3,0.06,8,40,Math.PI),new THREE.MeshStandardMaterial({color:0x000,emissive:a.palette.emissive,emissiveIntensity:0.9})); frame.position.set(0,7.2,2.4); node.add(frame);
+    } else {
+      // The Deluge — Gustave Doré (public domain): the drowned world, the giants with it. Backdrop behind the colossus.
+      new THREE.TextureLoader().load('images/deluge.jpg', tex=>{
+        tex.colorSpace=THREE.SRGBColorSpace;
+        const ar=(tex.image&&tex.image.width?tex.image.width/tex.image.height:0.775), h=15.4, w=h*ar, zL=BACK-NEPH_Z+0.6;
+        const fr=new THREE.Mesh(new THREE.PlaneGeometry(w+0.9,h+0.9), new THREE.MeshBasicMaterial({color:0x04040a,fog:false}));
+        fr.position.set(0,h/2+0.3,zL-0.1); node.add(fr);
+        const bd=new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({map:tex,color:0xc9c9c9,fog:false}));
+        bd.position.set(0,h/2+0.3,zL); node.add(bd);
+      });
     }
     const fig=buildFigure(a); fig.grp.position.y=isNeph?1.2:1.1; node.add(fig.grp);
     const aura=buildAura(fig.emissiveColor,isNeph); aura.position.y=isNeph?1.2:1.1; node.add(aura);
@@ -1100,11 +1111,11 @@ function boot(LIB){
   // ===================== LOOP =====================
   const clock=new THREE.Clock();
   const fwd=new THREE.Vector3(),right=new THREE.Vector3(),move=new THREE.Vector3(),tmp=new THREE.Vector3();
-  const _warm=new THREE.Color(0xfff0d0),_tint=new THREE.Color();
+  const _warm=new THREE.Color(0xfff0d0),_tint=new THREE.Color(); let frame=0;
   const Z0=BACK+3, Z1=FRONT-2;
 
   function animate(){
-    const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+    const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime; frame++;
     const presenting=renderer.xr.isPresenting;
 
     if(inCinematic){
@@ -1147,18 +1158,20 @@ function boot(LIB){
       else if(dist>9 && activeExhibit){ activeExhibit=null; topbar.textContent='The Hall of the Watchers'; hideToast(); }
     }
 
-    // brazier light pool → nearest braziers
-    braziers.sort((a,b)=>a.pos.distanceToSquared(player.position)-b.pos.distanceToSquared(player.position));
+    // brazier light pool → nearest braziers (re-sort only every ~12 frames)
+    if(frame%12===0) braziers.sort((a,b)=>a.pos.distanceToSquared(player.position)-b.pos.distanceToSquared(player.position));
     for(let i=0;i<POOL;i++){ const b=braziers[i]; if(b){ const f=0.7+0.4*Math.sin(t*9+b.seed)+0.15*Math.sin(t*23+b.seed*2);
       pool[i].position.copy(b.pos); pool[i].intensity=22*(0.7+0.5*Math.abs(f)); } else pool[i].intensity=0; }
-    for(const b of braziers){ const f=0.85+0.25*Math.sin(t*9+b.seed); b.flame.scale.setScalar(f); }
+    for(const b of braziers){ b.flame.scale.setScalar(0.85+0.25*Math.sin(t*9+b.seed)); }
 
-    // exhibits anim
+    // exhibits anim — only animate ember auras for NEARBY statues (far ones are imperceptible)
     for(const ex of exhibits){
-      if(ex.glyphObj){ ex.glyphObj.rotation.y+=dt*0.4; }
-      if(ex.halo){ ex.halo.rotation.z+=dt*0.25; }
-      const pos=ex.aura.geometry.attributes.position, sp=ex.aura.userData.spd, H=ex.aura.userData.H;
-      for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+sp[i]*dt; if(y>H)y-=H; pos.setY(i,y); } pos.needsUpdate=true; ex.aura.rotation.y+=dt*0.08;
+      if(ex.glyphObj) ex.glyphObj.rotation.y+=dt*0.4;
+      if(ex.halo) ex.halo.rotation.z+=dt*0.25;
+      if(ex.pos.distanceToSquared(player.position)<1000){
+        const pos=ex.aura.geometry.attributes.position, sp=ex.aura.userData.spd, H=ex.aura.userData.H;
+        for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+sp[i]*dt; if(y>H)y-=H; pos.setY(i,y); } pos.needsUpdate=true; ex.aura.rotation.y+=dt*0.08;
+      }
     }
 
     // god-ray shimmer + dust drift

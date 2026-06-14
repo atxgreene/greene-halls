@@ -444,7 +444,7 @@ function boot(LIB){
   const fbxLoader=new FBXLoader();
 
   // ===================== LIGHTING (pooled for many exhibits) =====================
-  scene.add(new THREE.HemisphereLight(0xaebfe6,0x20242f,0.62));
+  scene.add(new THREE.HemisphereLight(0xc6d4f2,0x3c4456,0.92));
   const moon=new THREE.DirectionalLight(0xfff2da,0.6); moon.position.set(-30,60,20); scene.add(moon);
 
   const focusLight=new THREE.SpotLight(0xfff0d0,0,70,Math.PI/7,0.5,1.4);
@@ -458,7 +458,7 @@ function boot(LIB){
 
   // ===================== MATERIALS =====================
   const marble=new THREE.MeshStandardMaterial({color:0x252b3c,roughness:0.16,metalness:0.5,envMapIntensity:0.95});
-  const wallMat=new THREE.MeshStandardMaterial({color:0x141a2a,roughness:0.9,metalness:0.05});
+  const wallMat=new THREE.MeshStandardMaterial({color:0xd6d8df,roughness:0.95,metalness:0.02,emissive:0x2c3140,emissiveIntensity:0.28});
   const stoneTrim=new THREE.MeshStandardMaterial({color:0x2c3246,roughness:0.65,metalness:0.25});
   const carpetMat=new THREE.MeshStandardMaterial({color:0x1b2f63,roughness:0.92,metalness:0.05});
 
@@ -478,6 +478,16 @@ function boot(LIB){
     w.position.set(x,8,(FRONT+BACK)/2); w.receiveShadow=true; HALL.add(w); }
   wall(-HALF); wall(HALF);
   const backWall=new THREE.Mesh(new THREE.BoxGeometry(HALF*2,16,0.6),wallMat); backWall.position.set(0,8,BACK); HALL.add(backWall);
+  // The Empyrean — Gustave Doré (public domain): heaven's celestial rose, the radiant end of the hall.
+  new THREE.TextureLoader().load('images/paradiso.jpg', tex=>{
+    tex.colorSpace=THREE.SRGBColorSpace;
+    const ar=(tex.image&&tex.image.width?tex.image.width/tex.image.height:0.78), h=13, w=h*ar;
+    const fr=new THREE.Mesh(new THREE.PlaneGeometry(w+1.0,h+1.0), new THREE.MeshBasicMaterial({color:0xc7b06a,fog:false}));
+    fr.position.set(0,h/2+0.9,BACK+0.45); HALL.add(fr);
+    const bd=new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({map:tex,color:0xffffff,fog:false}));
+    bd.position.set(0,h/2+0.9,BACK+0.5); HALL.add(bd);
+    const gl=new THREE.PointLight(0xffe9c0,28,42,2); gl.position.set(0,h/2+0.9,BACK+6); HALL.add(gl);
+  });
   const frontWall=new THREE.Mesh(new THREE.BoxGeometry(HALF*2,16,0.6),wallMat); frontWall.position.set(0,8,FRONT+3); HALL.add(frontWall);
   // ceiling with a central slit to the void
   const ceilL=new THREE.Mesh(new THREE.PlaneGeometry(HALF-4,FRONT-BACK+8),wallMat);

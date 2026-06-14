@@ -29,3 +29,6 @@ Later-tradition figures (Metatron, Sandalphon, Raziel, etc.) are labeled as Kabb
 
 ## Engine
 Three.js r160 (MIT) via jsDelivr CDN.
+
+## Backdrop art (public domain)
+- Gustave Doré — The Deluge (Hall of the Watchers) and Paradiso / The Empyrean (Hall of the Archangels), 1860s engravings, via Wikimedia Commons. Public domain.
