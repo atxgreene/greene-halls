@@ -18,13 +18,22 @@ must be *served*. Pages does exactly that.
 The source lives in `C:\Users\austi\iCloudDrive\Kabbalah\`. Push its **contents** to this
 repo root (so `index.html` is at the root and `models/` + `audio/` sit beside the HTMLs):
 
+**Copy ONLY the files the halls need — never the whole `Kabbalah\` folder** (it holds
+unrelated/private files that must not go public):
+
 ```powershell
 git clone https://github.com/atxgreene/greene-halls.git
 cd greene-halls
-# copy the Kabbalah folder CONTENTS in (index.html, the two hall HTMLs, models\, audio\, start-museum.bat)
-robocopy "C:\Users\austi\iCloudDrive\Kabbalah" . /E /XD .git
+$src = "C:\Users\austi\iCloudDrive\Kabbalah"
+robocopy "$src\models" ".\models" /E
+robocopy "$src\audio"  ".\audio"  /E
+Copy-Item "$src\index.html" .
+Copy-Item "$src\hall-of-the-watchers.html" .
+Copy-Item "$src\hall-of-archangels.html" .
+Copy-Item "$src\music-archangels.mp3" .
+git status            # review exactly what is staged before committing — public repo
 git add -A
-git commit -m "Publish Watchers + Archangels halls (models, audio, hub)"
+git commit -m "Publish Watchers + Archangels halls (models, audio, music, hub)"
 git push
 ```
 
