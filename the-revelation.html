@@ -252,6 +252,8 @@ function boot(LIB){
   renderer.toneMappingExposure=1.1;
   renderer.shadowMap.enabled=false; // scenes lean on emissive + bloom, not shadow maps (keeps 11 scenes cheap)
   renderer.xr.enabled=true;
+  // stand on the real floor in VR (head height comes from the headset, not a guessed eye offset)
+  try{ renderer.xr.setReferenceSpaceType('local-floor'); }catch(e){}
   document.body.appendChild(renderer.domElement);
   const canvas=renderer.domElement;
 
@@ -337,6 +339,42 @@ function boot(LIB){
     return grp;
   }
 
+  // a smooth, full-scale steed built from capsules/spheres (no more box-horses). Feet rest near y=0,
+  // back ~y=11. Shared material on userData.mat so a scene can tint/animate it.
+  function makeHorse(color,emissive,ei){
+    const mat=new THREE.MeshStandardMaterial({color,roughness:0.82,metalness:0.16,emissive,emissiveIntensity:ei==null?0.15:ei});
+    const h=new THREE.Group(); h.userData.mat=mat;
+    const body=new THREE.Mesh(new THREE.CapsuleGeometry(3.5,9,12,20),mat); body.rotation.x=Math.PI/2; body.position.set(0,8,0); h.add(body);
+    const chest=new THREE.Mesh(new THREE.SphereGeometry(3.8,20,16),mat); chest.position.set(0,8.1,6.0); chest.scale.set(1,1.05,0.9); h.add(chest);
+    const hind=new THREE.Mesh(new THREE.SphereGeometry(4.0,20,16),mat); hind.position.set(0,8.3,-6.2); hind.scale.set(1,1.12,1); h.add(hind);
+    const neck=new THREE.Mesh(new THREE.CapsuleGeometry(1.7,5.4,10,16),mat); neck.position.set(0,11.6,9.2); neck.rotation.x=-0.62; h.add(neck);
+    const head=new THREE.Mesh(new THREE.CapsuleGeometry(1.1,3.0,8,14),mat); head.position.set(0,14.0,12.4); head.rotation.x=-1.0; h.add(head);
+    const muzzle=new THREE.Mesh(new THREE.CapsuleGeometry(0.7,1.5,6,10),mat); muzzle.position.set(0,12.9,13.9); muzzle.rotation.x=-1.35; h.add(muzzle);
+    [[-0.7,15.2,11.7],[0.7,15.2,11.7]].forEach(p=>{const ear=new THREE.Mesh(new THREE.ConeGeometry(0.34,1.0,8),mat);ear.position.set(p[0],p[1],p[2]);ear.rotation.x=-0.25;h.add(ear);});
+    [[2.2,7.0],[-2.2,7.0],[2.2,-6.4],[-2.2,-6.4]].forEach(p=>{const leg=new THREE.Mesh(new THREE.CapsuleGeometry(0.82,7,8,12),mat);leg.position.set(p[0],4,p[1]);h.add(leg);});
+    const tail=new THREE.Mesh(new THREE.CapsuleGeometry(0.65,5.2,6,10),mat);tail.position.set(0,8.4,-10.0);tail.rotation.x=0.7;h.add(tail);
+    return h;
+  }
+  // a lighter steed for ranked armies seen at distance (fewer meshes)
+  function makeHorseLite(color,emissive){
+    const mat=new THREE.MeshStandardMaterial({color,roughness:0.7,metalness:0.1,emissive,emissiveIntensity:0.35});
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.CapsuleGeometry(1.05,3.0,6,12),mat); body.rotation.x=Math.PI/2; body.position.y=3.1; g.add(body);
+    const neck=new THREE.Mesh(new THREE.CapsuleGeometry(0.5,1.7,6,10),mat); neck.position.set(0,4.4,2.3); neck.rotation.x=-0.7; g.add(neck);
+    const head=new THREE.Mesh(new THREE.CapsuleGeometry(0.38,1.0,6,8),mat); head.position.set(0,5.4,3.3); head.rotation.x=-1.1; g.add(head);
+    [[0.7,1.6],[-0.7,1.6],[0.7,-1.6],[-0.7,-1.6]].forEach(p=>{const l=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.16,3,6),mat);l.position.set(p[0],1.5,p[1]);g.add(l);});
+    return g;
+  }
+  // a cloaked/hooded rider of shadow, lit from within — sits on a steed's back (~y11)
+  function makeRider(robe,emissive,ei){
+    const mat=new THREE.MeshStandardMaterial({color:robe,roughness:0.9,metalness:0.05,emissive,emissiveIntensity:ei==null?0.18:ei});
+    const g=new THREE.Group();
+    const cloak=new THREE.Mesh(new THREE.ConeGeometry(2.1,7,18,1,true),mat); cloak.position.set(0,14.8,-0.4); g.add(cloak);
+    const torso=new THREE.Mesh(new THREE.CapsuleGeometry(1.0,2.4,8,12),mat); torso.position.set(0,15.4,-0.4); g.add(torso);
+    const hood=new THREE.Mesh(new THREE.SphereGeometry(0.95,16,14),mat); hood.position.set(0,17.7,-0.5); g.add(hood);
+    return g;
+  }
+
   // dispose every geometry/material under a node when a scene is torn down
   function disposeNode(node){
     node.traverse(o=>{
@@ -417,7 +455,7 @@ function boot(LIB){
       sword.rotation.z=-Math.PI/2; sword.position.set(2.4,2.5,0.4); theo.add(sword);
 
       return {
-        group:g, spawn:{pos:[0,0,7],yaw:Math.PI}, // start facing the sea; the voice is "behind", toward the theophany
+        group:g, spawn:{pos:[0,0,7],yaw:0},
         env:{bg:0x05070e,fog:{c:0x05070e,d:0.018},exposure:1.04,bloom:{s:1.0,r:0.7,t:0.8}},
         audio:{drone:[-17,-10,-5],noise:0.5,filter:520,wind:true,sea:true,texture:'patmos'},
         update(t,dt){
@@ -512,7 +550,7 @@ function boot(LIB){
       const motes=particleField(900,()=>[api.rand(-60,60),api.rand(0,50),api.rand(-80,30)],0xffe9b0,0.5,{soft:true,opacity:0.5}); g.add(motes.points);
 
       return {
-        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,6],yaw:0},
         env:{bg:0x060a14,fog:{c:0x060a14,d:0.006},exposure:1.16,bloom:{s:1.25,r:0.7,t:0.72}},
         audio:{drone:[-12,-8,-5,0],noise:0.12,filter:1800,choir:true,texture:'throne'},
         update(t,dt){
@@ -573,7 +611,7 @@ function boot(LIB){
 
       let worship=0;
       return {
-        group:g, spawn:{pos:[0,0,4],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,4],yaw:0},
         env:{bg:0x070810,fog:{c:0x070810,d:0.01},exposure:1.0,bloom:{s:1.2,r:0.75,t:0.7}},
         audio:{drone:[-15,-10,-3],noise:0.18,filter:900,texture:'seals'},
         update(t,dt){
@@ -631,17 +669,11 @@ function boot(LIB){
         // the cosmic fracture (a glowing rift they emerge through)
         const rift=new THREE.Mesh(new THREE.PlaneGeometry(10,40),new THREE.MeshBasicMaterial({color:tints[i],transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
         rift.position.y=18; rg.add(rift);
-        // horse + rider as a single dark mass, lit from within
+        // horse + rider as a single dark mass, lit from within (smooth, towering, symbolic)
         const mass=new THREE.Group(); rg.add(mass);
-        const horse=new THREE.Mesh(new THREE.BoxGeometry(9,9,18),new THREE.MeshStandardMaterial({color:0x06060a,roughness:1,emissive:tints[i],emissiveIntensity:0.12}));
-        horse.position.y=8; mass.add(horse);
-        const neck=new THREE.Mesh(new THREE.BoxGeometry(4,9,4),new THREE.MeshStandardMaterial({color:0x06060a,roughness:1,emissive:tints[i],emissiveIntensity:0.12}));
-        neck.position.set(0,12,8); neck.rotation.x=-0.5; mass.add(neck);
-        const rider=new THREE.Mesh(new THREE.BoxGeometry(3.4,7,3),new THREE.MeshStandardMaterial({color:0x04040a,roughness:1,emissive:tints[i],emissiveIntensity:0.18}));
-        rider.position.set(0,15,-1); mass.add(rider);
+        const horse=makeHorse(0x070710,tints[i],0.13); mass.add(horse);
+        const rider=makeRider(0x05050c,tints[i],0.22); mass.add(rider);
         const aura=glow(tints[i],26,0.0); aura.position.set(0,12,0); rg.add(aura);
-        // legs for scale (four columns)
-        [[-3,4],[3,4],[-3,-5],[3,-5]].forEach(p=>{const leg=new THREE.Mesh(new THREE.BoxGeometry(1.6,8,1.6),horse.material);leg.position.set(p[0],4,p[1]+8);mass.add(leg);});
         // signature emblem per rider
         if(i===0){ const crown=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.3,8,20),new THREE.MeshStandardMaterial({color:0xe7c878,emissive:0xffd27a,emissiveIntensity:0.7,metalness:1,roughness:0.2})); crown.position.set(0,19,-1); crown.rotation.x=Math.PI/2; mass.add(crown);}
         if(i===1){ const sword=new THREE.Mesh(new THREE.BoxGeometry(0.5,9,0.5),new THREE.MeshStandardMaterial({color:0x6a0a0e,emissive:0xb8121a,emissiveIntensity:0.7})); sword.position.set(3,17,-1); sword.rotation.z=-0.6; mass.add(sword);}
@@ -653,7 +685,7 @@ function boot(LIB){
       const ash=particleField(900,()=>[api.rand(-80,80),api.rand(0,30),api.rand(-140,-40)],0x9aa39a,0.7,{soft:true,opacity:0.0}); g.add(ash.points);
 
       return {
-        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,6],yaw:0},
         env:{bg:0x0c0707,fog:{c:0x130a0a,d:0.009},exposure:0.98,bloom:{s:1.1,r:0.7,t:0.74}},
         audio:{drone:[-19,-14,-7],noise:0.4,filter:420,hooves:true,texture:'horsemen'},
         update(t,dt){
@@ -713,7 +745,7 @@ function boot(LIB){
       const burnFlash=new THREE.PointLight(0xff6a2e,0,200,2); g.add(burnFlash);
 
       return {
-        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,6],yaw:0},
         env:{bg:0x070608,fog:{c:0x0a0808,d:0.008},exposure:1.02,bloom:{s:1.3,r:0.7,t:0.7}},
         audio:{drone:[-21,-14,-9],noise:0.5,filter:300,impacts:true,texture:'trumpets'},
         update(t,dt){
@@ -787,7 +819,7 @@ function boot(LIB){
       const spirals=particleField(900,(i,n)=>{const a=i/n*api.TAU*8,r=(1-i/n)*30;return[Math.cos(a)*r,api.rand(-10,30),Math.sin(a)*r-50];},0xcdb4ff,0.6,{soft:true,opacity:0.0}); g.add(spirals.points);
 
       return {
-        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,8],yaw:0},
         env:{bg:0x05060e,fog:{c:0x05060e,d:0.004},exposure:1.08,bloom:{s:1.3,r:0.7,t:0.7}},
         audio:{drone:[-16,-9,-2],noise:0.3,filter:700,battle:true,texture:'dragon'},
         update(t,dt){
@@ -832,8 +864,9 @@ function boot(LIB){
       const bolt=new THREE.PointLight(0xb98bff,0,300,2); bolt.position.set(0,60,-100); g.add(bolt);
       // BEAST FROM THE SEA
       const beast=new THREE.Group(); beast.position.set(0,0,-46); g.add(beast);
-      const body=new THREE.Mesh(new THREE.BoxGeometry(16,10,26),new THREE.MeshStandardMaterial({color:0x0c0a10,roughness:0.85,metalness:0.2,emissive:0x3a1020,emissiveIntensity:0.25}));
-      body.position.y=8; beast.add(body);
+      const bMat=new THREE.MeshStandardMaterial({color:0x0c0a10,roughness:0.8,metalness:0.25,emissive:0x3a1020,emissiveIntensity:0.28});
+      const body=new THREE.Mesh(new THREE.IcosahedronGeometry(8,2),bMat); body.scale.set(1.05,0.62,1.7); body.position.y=8; beast.add(body);
+      const hump=new THREE.Mesh(new THREE.SphereGeometry(6,24,18),bMat); hump.scale.set(1,0.7,1.2); hump.position.set(0,9.5,-4); beast.add(hump);
       const sHeads=[]; for(let i=0;i<7;i++){ const a=(i/6-0.5)*1.8; const head=new THREE.Group();
         const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.8,1.4,9,8),body.material); neck.position.set(Math.sin(a)*7,12,12); neck.rotation.z=-Math.sin(a)*0.4; head.add(neck);
         const sk=new THREE.Mesh(new THREE.ConeGeometry(1.4,3,7),body.material); sk.position.set(Math.sin(a)*9,16,14); sk.rotation.x=Math.PI/2.2; head.add(sk);
@@ -860,7 +893,7 @@ function boot(LIB){
       const markGlyph=label3D('worship · commerce · allegiance',{fs:30,color:'#c97a7a',glow:'#b8121a',size:0.7,add:true,opacity:0.0}); markGlyph.position.set(0,5,-2); g.add(markGlyph);
 
       return {
-        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,8],yaw:0},
         env:{bg:0x07060a,fog:{c:0x0a070c,d:0.01},exposure:0.98,bloom:{s:1.15,r:0.7,t:0.74}},
         audio:{drone:[-20,-13,-8],noise:0.45,filter:380,dread:true,texture:'beasts'},
         update(t,dt){
@@ -927,7 +960,7 @@ function boot(LIB){
       const mill=new THREE.Mesh(new THREE.CylinderGeometry(3,3,1,24),new THREE.MeshStandardMaterial({color:0x3a3530,roughness:0.9})); mill.position.set(0,40,60); mill.visible=false; g.add(mill);
 
       return {
-        group:g, spawn:{pos:[0,0,10],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,10],yaw:0},
         env:{bg:0x0a0808,fog:{c:0x0e0a08,d:0.006},exposure:1.08,bloom:{s:1.1,r:0.7,t:0.76}},
         audio:{drone:[-14,-9,-5,-2],noise:0.25,filter:1200,lament:true,texture:'babylon'},
         update(t,dt){
@@ -971,8 +1004,7 @@ function boot(LIB){
       const riftGlow=glow(0xfff6e0,120,0.0); riftGlow.position.set(0,38,-120); g.add(riftGlow);
       // THE RIDER on the white horse
       const rider=new THREE.Group(); rider.position.set(0,0,-70); g.add(rider);
-      const horse=new THREE.Mesh(new THREE.BoxGeometry(5,6,12),new THREE.MeshStandardMaterial({color:0xf3ecd8,roughness:0.5,metalness:0.1,emissive:0xfff0d0,emissiveIntensity:0.4})); horse.position.y=6; rider.add(horse);
-      const neck=new THREE.Mesh(new THREE.BoxGeometry(2.4,6,2.4),horse.material); neck.position.set(0,9,6); neck.rotation.x=-0.5; rider.add(neck);
+      const horse=makeHorse(0xf3ecd8,0xfff0d0,0.45); horse.scale.setScalar(0.62); horse.position.y=0.2; rider.add(horse);
       const figure=figureOfLight(5,0xfff0c0,0x2a0a0a); figure.position.set(0,7,-1); rider.add(figure);
       // robe dipped in blood — a crimson hem glow
       const robeBlood=glow(0xb8121a,4,0.6); robeBlood.position.set(0,5,-1); rider.add(robeBlood);
@@ -988,8 +1020,9 @@ function boot(LIB){
       const army=new THREE.Group(); g.add(army);
       const armyUnits=[]; for(let row=0;row<6;row++){ for(let i=0;i<9;i++){ if(row===0&&i===4)continue;
         const u=new THREE.Group(); u.position.set((i-4)*6,0,-86-row*9);
-        const h=new THREE.Mesh(new THREE.BoxGeometry(2.6,3,6),new THREE.MeshStandardMaterial({color:0xe9dcc0,roughness:0.6,emissive:0xcdbf93,emissiveIntensity:0.3})); h.position.y=3.5; u.add(h);
-        const r=new THREE.Mesh(new THREE.BoxGeometry(1.4,3,1.4),new THREE.MeshStandardMaterial({color:0xf3ecd8,emissive:0xfff0d0,emissiveIntensity:0.4})); r.position.y=6; u.add(r);
+        const h=makeHorseLite(0xe9dcc0,0xcdbf93); u.add(h);
+        const r=new THREE.Mesh(new THREE.CapsuleGeometry(0.5,1.6,8,12),new THREE.MeshStandardMaterial({color:0xf3ecd8,emissive:0xfff0d0,emissiveIntensity:0.45})); r.position.set(0,5.4,-0.3); u.add(r);
+        const gl=glow(0xfff0d0,2.0,0.5); gl.position.set(0,5.6,-0.3); u.add(gl);
         army.add(u); armyUnits.push(u); } }
       army.visible=false;
       // King of Kings inscription
@@ -997,7 +1030,7 @@ function boot(LIB){
       const riderLight=new THREE.PointLight(0xffffff,0,120,2); riderLight.position.set(0,12,-60); g.add(riderLight);
 
       return {
-        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,8],yaw:0},
         env:{bg:0x06070e,fog:{c:0x06070e,d:0.005},exposure:1.0,bloom:{s:1.35,r:0.7,t:0.68}},
         audio:{drone:[-12,-5,0,7],noise:0.08,filter:2200,brass:true,silenceFirst:true,texture:'rider'},
         update(t,dt){
@@ -1054,7 +1087,7 @@ function boot(LIB){
       const seaDead=particleField(800,()=>[rand(-60,60),-20,rand(20,90)],0x9fb4cf,0.6,{soft:true,opacity:0.0}); g.add(seaDead.points);
 
       return {
-        group:g, spawn:{pos:[0,0,10],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,10],yaw:0},
         env:{bg:0x03040a,fog:{c:0x03040a,d:0.004},exposure:0.92,bloom:{s:1.4,r:0.8,t:0.62}},
         audio:{drone:[-24,-12],noise:0.04,filter:2600,silence:true,texture:'judgment'},
         update(t,dt){
@@ -1122,7 +1155,7 @@ function boot(LIB){
       const glory=particleField(1400,()=>[rand(-120,120),rand(0,80),rand(-140,60)],0xeaf2ff,0.5,{soft:true,opacity:0.4}); g.add(glory.points);
 
       return {
-        group:g, spawn:{pos:[0,0,30],yaw:Math.PI},
+        group:g, spawn:{pos:[0,0,30],yaw:0},
         env:{bg:0x081018,fog:{c:0x0a1620,d:0.004},exposure:1.1,bloom:{s:1.25,r:0.8,t:0.66}},
         audio:{drone:[-12,-5,0,4,7],noise:0.05,filter:2400,water:true,peace:true,texture:'newjerusalem'},
         update(t,dt){
@@ -1162,8 +1195,8 @@ function boot(LIB){
     renderer.toneMappingExposure=env.exposure!=null?env.exposure:1.1;
     if(env.bloom){ bloom.strength=env.bloom.s; bloom.radius=env.bloom.r; bloom.threshold=env.bloom.t; }
     // seat the player
-    const sp=rec.spawn||{pos:[0,0,8],yaw:Math.PI};
-    player.position.set(sp.pos[0],sp.pos[1],sp.pos[2]); yaw=sp.yaw!=null?sp.yaw:Math.PI; pitch=0;
+    const sp=rec.spawn||{pos:[0,0,8],yaw:0};
+    player.position.set(sp.pos[0],sp.pos[1],sp.pos[2]); yaw=sp.yaw!=null?sp.yaw:0; pitch=0;
     sceneClock=0; userMoved=false;
     setAudioProfile(rec.audio||{});
     return rec;
@@ -1354,7 +1387,8 @@ function boot(LIB){
       // VR thumbstick locomotion
       if(presenting){ const s=renderer.xr.getSession(); if(s)for(const src of s.inputSources){ if(src.gamepad&&src.gamepad.axes.length>=4){
         const ax=src.gamepad.axes,lx=ax[2]||0,ly=ax[3]||0; if(Math.abs(lx)>0.15||Math.abs(ly)>0.15){ userMoved=true;
-          fwd.set(0,0,-1).applyAxisAngle(YAXIS,yaw); right.set(1,0,0).applyAxisAngle(YAXIS,yaw);
+          // move relative to where the headset is looking (flattened to the floor) so locomotion never feels off-axis
+          camera.getWorldDirection(fwd); fwd.y=0; if(fwd.lengthSq()<1e-4)fwd.set(0,0,-1); fwd.normalize(); right.crossVectors(fwd,YAXIS).normalize();
           move.set(0,0,0).addScaledVector(fwd,-ly).addScaledVector(right,lx).multiplyScalar(7*dt); player.position.add(move); } } } }
     }
     // soft bounds so the viewer never drifts into the void
