@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>The Hall of the Archangels — Watchers of the Throne</title>
+<style>
+  :root{ --gold:#d9b463; --ink:#0a0a0c; --parch:#e9dcc0; --crim:#b8121a; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;background:#000;color:#e9dcc0;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased;}
+  canvas{display:block;position:fixed;inset:0}
+
+  /* ---------- Intro ---------- */
+  #intro{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:radial-gradient(ellipse at 50% 35%,#161019 0%,#070608 60%,#000 100%);
+    transition:opacity 1.2s ease;padding:6vh 24px}
+  #intro h1{font-size:clamp(34px,7vw,76px);letter-spacing:.14em;font-weight:400;color:var(--parch);
+    text-shadow:0 0 36px rgba(217,180,99,.45),0 2px 2px #000;line-height:1.05}
+  #intro h1 small{display:block;font-size:.32em;letter-spacing:.5em;color:var(--gold);margin-top:1.2em;text-transform:uppercase;opacity:.85}
+  #intro p.sub{max-width:660px;margin:26px auto 0;font-size:clamp(14px,2vw,18px);line-height:1.7;color:#b9ac90;font-style:italic}
+  #intro .verse{max-width:600px;margin:30px auto 0;font-size:13px;color:#7e745f;line-height:1.8;letter-spacing:.02em}
+  #enter{margin-top:42px;padding:16px 46px;font:inherit;font-size:18px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(180deg,#e7c878,#b9923f);border:none;border-radius:2px;cursor:pointer;
+    box-shadow:0 0 40px rgba(217,180,99,.35);transition:transform .2s,box-shadow .2s}
+  #enter:hover{transform:translateY(-2px);box-shadow:0 0 60px rgba(217,180,99,.6)}
+  #enter:disabled{opacity:.4;cursor:wait;filter:grayscale(.6)}
+  #skiplink{display:block;margin-top:18px;font-size:12px;letter-spacing:.16em;color:#8a7f66;text-transform:uppercase;
+    cursor:pointer;background:none;border:none;font-family:inherit}
+  #skiplink:hover{color:var(--gold)}
+  #loadnote{margin-top:20px;font-size:12px;color:#6b6354;letter-spacing:.1em;height:16px}
+  .controls-hint{margin-top:26px;font-size:12px;color:#80765f;letter-spacing:.08em;max-width:680px}
+  .controls-hint b{color:var(--gold);font-weight:400}
+
+  /* ---------- Cinematic ---------- */
+  #cine{position:fixed;inset:0;z-index:48;display:none;pointer-events:none}
+  #cine-fade{position:absolute;inset:0;background:#000;opacity:1;transition:opacity 1.6s ease;pointer-events:none}
+  #cine-title{position:absolute;top:7%;left:0;right:0;text-align:center;font-size:13px;letter-spacing:.42em;
+    text-transform:uppercase;color:#9a8e72;opacity:0;transition:opacity 1.2s}
+  #cine-textwrap{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);width:min(820px,86vw);text-align:center}
+  #cine-text{font-size:clamp(20px,3.4vw,34px);line-height:1.4;color:var(--parch);font-style:italic;
+    text-shadow:0 0 30px rgba(0,0,0,.9),0 0 50px rgba(0,0,0,.7);opacity:0;transition:opacity 1s}
+  #cine-cite{margin-top:16px;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity 1s}
+  #cine-skip{position:absolute;bottom:5%;right:5%;pointer-events:auto;background:rgba(8,7,9,.6);border:1px solid rgba(217,180,99,.4);
+    color:var(--gold);font-family:inherit;font-size:13px;letter-spacing:.2em;padding:10px 22px;border-radius:3px;cursor:pointer}
+  #cine-skip:hover{background:rgba(217,180,99,.16)}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity .8s}
+  #crosshair{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;
+    background:rgba(233,220,192,.7);box-shadow:0 0 6px rgba(0,0,0,.8)}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 52%,rgba(0,0,0,.55) 100%)}
+  #toast{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);background:rgba(8,7,9,.72);
+    border:1px solid rgba(217,180,99,.35);backdrop-filter:blur(6px);padding:11px 22px;border-radius:3px;font-size:15px;
+    letter-spacing:.04em;color:var(--parch);opacity:0;transition:opacity .35s;text-align:center;max-width:80vw}
+  #toast b{color:var(--gold);font-weight:400}
+  #toast .key{display:inline-block;border:1px solid var(--gold);border-radius:3px;padding:1px 7px;margin:0 2px;font-size:12px;color:var(--gold)}
+  #topbar{position:absolute;top:18px;left:50%;transform:translateX(-50%);text-align:center;font-size:12px;
+    letter-spacing:.32em;text-transform:uppercase;color:#9a8e72;text-shadow:0 1px 4px #000}
+
+  /* ---------- Lore panel ---------- */
+  #panel{position:fixed;top:0;right:0;height:100%;width:min(470px,92vw);z-index:30;
+    background:linear-gradient(180deg,rgba(14,11,14,.97),rgba(8,7,9,.98));border-left:1px solid rgba(217,180,99,.3);
+    box-shadow:-30px 0 80px rgba(0,0,0,.6);transform:translateX(105%);transition:transform .5s cubic-bezier(.2,.8,.2,1);
+    overflow-y:auto;pointer-events:auto;padding:30px 34px 60px}
+  #panel.open{transform:translateX(0)}
+  #panel::-webkit-scrollbar{width:8px}#panel::-webkit-scrollbar-thumb{background:rgba(217,180,99,.3);border-radius:4px}
+  #panel .close{position:absolute;top:16px;right:18px;font-size:26px;color:#8a8068;cursor:pointer;line-height:1;background:none;border:none;font-family:inherit}
+  #panel .close:hover{color:var(--gold)}
+  #panel .rank{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.85}
+  #panel h2{font-size:38px;font-weight:400;letter-spacing:.05em;color:var(--parch);margin:6px 0 2px;text-shadow:0 0 26px var(--glow)}
+  #panel .aka{font-size:13px;font-style:italic;color:#9a8e72;margin-bottom:14px}
+  #panel .narrate{display:inline-flex;align-items:center;gap:8px;margin:4px 0 6px;background:rgba(217,180,99,.08);
+    border:1px solid rgba(217,180,99,.4);color:var(--gold);font-family:inherit;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;padding:9px 16px;border-radius:3px;cursor:pointer;transition:.18s}
+  #panel .narrate:hover{background:rgba(217,180,99,.18)}
+  #panel .narrate.on{background:rgba(184,18,26,.22);border-color:var(--crim);color:#f1c9c0}
+  #panel .divider{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:16px 0;opacity:.6}
+  #panel .field{margin:16px 0}
+  #panel .field .label{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);opacity:.8;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+  #panel .field .label::after{content:"";flex:1;height:1px;background:rgba(217,180,99,.18)}
+  #panel .field .val{font-size:15px;line-height:1.65;color:#cabfa3}
+  #panel .story{font-size:15.5px;line-height:1.78;color:#d6cbb0}
+  #panel .story p{margin:0 0 12px}#panel .story em{color:var(--parch);font-style:italic}
+  #panel .src{font-size:11.5px;color:#7c725d;line-height:1.6;font-style:italic;margin-top:6px}
+  #panel .glyphmark{font-size:11px;letter-spacing:.3em;color:var(--gold);opacity:.5;text-align:center;margin-top:26px}
+
+  /* ---------- Directory ---------- */
+  #dir{position:fixed;top:0;left:0;height:100%;width:min(340px,88vw);z-index:30;
+    background:linear-gradient(180deg,rgba(12,10,13,.97),rgba(7,6,8,.98));border-right:1px solid rgba(217,180,99,.25);
+    transform:translateX(-105%);transition:transform .45s cubic-bezier(.2,.8,.2,1);overflow-y:auto;padding:26px 0 40px;pointer-events:auto}
+  #dir.open{transform:translateX(0)}
+  #dir h3{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);padding:0 26px 10px}
+  #dir .act{margin:0 26px 12px;padding:10px 0 16px;border-bottom:1px solid rgba(217,180,99,.15)}
+  #dir .act button{width:100%;background:rgba(217,180,99,.08);border:1px solid rgba(217,180,99,.3);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.14em;padding:9px;border-radius:3px;cursor:pointer;margin-top:6px}
+  #dir .act button:hover{background:rgba(217,180,99,.18)}
+  #dir .item{padding:12px 26px;cursor:pointer;border-left:3px solid transparent;transition:.18s;display:flex;align-items:baseline;gap:10px}
+  #dir .item:hover{background:rgba(217,180,99,.07);border-left-color:var(--gold)}
+  #dir .item .n{font-size:11px;color:#6f6552;width:18px;flex:none}
+  #dir .item .nm{font-size:16px;color:#cabfa3}
+  #dir .item .dm{display:block;font-size:11px;color:#7c725d;font-style:italic;margin-top:2px}
+  #dir .item:hover .nm{color:var(--parch)}
+
+  /* ---------- buttons ---------- */
+  #ui-btns{position:fixed;z-index:25;top:14px;right:14px;display:flex;gap:8px;pointer-events:auto}
+  .ibtn{pointer-events:auto;background:rgba(10,9,11,.7);border:1px solid rgba(217,180,99,.3);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.12em;padding:9px 13px;border-radius:3px;cursor:pointer;backdrop-filter:blur(6px)}
+  .ibtn:hover{background:rgba(217,180,99,.15)}
+  .ibtn.on{background:rgba(184,18,26,.25);border-color:var(--crim);color:#f1c9c0}
+
+  /* ---------- touch ---------- */
+  #joy{position:fixed;left:26px;bottom:26px;width:130px;height:130px;z-index:24;border-radius:50%;
+    border:1px solid rgba(217,180,99,.25);background:rgba(10,9,11,.35);display:none;touch-action:none;pointer-events:auto}
+  #joy .stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(217,180,99,.4)}
+  #tap-e{position:fixed;right:26px;bottom:40px;z-index:24;display:none;width:78px;height:78px;border-radius:50%;
+    border:1px solid var(--gold);background:rgba(10,9,11,.5);color:var(--gold);font-family:inherit;font-size:13px;letter-spacing:.1em;pointer-events:auto}
+  body.touch #joy,body.touch #tap-e{display:block}
+
+  #err{position:fixed;inset:0;z-index:99;display:none;align-items:center;justify-content:center;background:#070608;padding:40px;text-align:center}
+  #err div{max-width:560px}#err h2{color:var(--crim);font-weight:400;margin-bottom:16px;letter-spacing:.1em}
+  #err p{color:#b9ac90;line-height:1.7;font-size:15px}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <h1>The Hall of the Archangels<small>Watchers of the Throne</small></h1>
+  <p class="sub">Seven holy ones stand before the Glory of God, and with them the princes of the host of heaven.
+    Here they stand in light — each with his charge, his emblem, and the scripture that remembers him.</p>
+  <p class="verse">"And these are the names of the holy angels who watch: Uriel… Raphael… Raguel… Michael… Saraqael… Gabriel… Remiel."<br>— 1 Enoch 20</p>
+  <button id="enter" disabled>Enter the Hall</button>
+  <button id="skiplink">› skip the vision, enter the hall</button>
+  <div id="loadnote">gathering the host…</div>
+  <div class="controls-hint">
+    <b>W A S D / arrows</b> walk · <b>mouse</b> look · <b>Shift</b> hasten ·
+    <b>E</b> read account · <b>N</b> narrate · <b>M</b> directory · <b>Esc</b> release cursor
+  </div>
+</div>
+
+<!-- CINEMATIC -->
+<div id="cine">
+  <div id="cine-title">The Intercession of the Archangels</div>
+  <div id="cine-textwrap"><div id="cine-text"></div><div id="cine-cite"></div></div>
+  <button id="cine-skip">Skip ▸</button>
+  <div id="cine-fade"></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="vignette"></div>
+  <div id="crosshair"></div>
+  <div id="topbar">The Hall of the Archangels</div>
+  <div id="toast"></div>
+</div>
+
+<!-- UI buttons -->
+<div id="ui-btns">
+  <button class="ibtn" id="btn-music">♪ Music: On</button>
+  <button class="ibtn" id="btn-narr">🔊 Narrate: Off</button>
+  <button class="ibtn" id="btn-dir">☰ Directory</button>
+</div>
+
+<!-- Directory -->
+<nav id="dir">
+  <h3>The Holy Ones — Watchers of the Throne</h3>
+  <div class="act"><button id="dir-replay">↻ Replay the Intercession</button></div>
+  <div id="dir-list"></div>
+</nav>
+
+<!-- Lore panel -->
+<aside id="panel"><button class="close" id="panel-close">×</button><div id="panel-body"></div></aside>
+
+<!-- touch -->
+<div id="joy"><div class="stick"></div></div>
+<button id="tap-e">READ</button>
+<audio id="voiceAudio" crossorigin="anonymous"></audio>
+<audio id="musicAudio" loop crossorigin="anonymous"></audio>
+
+<!-- error -->
+<div id="err"><div>
+  <h2>The Hall Could Not Be Raised</h2>
+  <p id="err-msg">This experience builds a real-time 3D world and needs WebGL plus a one-time download of the 3D engine from the internet. If you opened this file offline, connect and reload.</p>
+</div></div>
+
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+let THREE;
+async function init(){
+try{
+  THREE = await import('three');
+  const {RoomEnvironment}   = await import('three/addons/environments/RoomEnvironment.js');
+  const {EffectComposer}    = await import('three/addons/postprocessing/EffectComposer.js');
+  const {RenderPass}        = await import('three/addons/postprocessing/RenderPass.js');
+  const {UnrealBloomPass}   = await import('three/addons/postprocessing/UnrealBloomPass.js');
+  const {GLTFLoader}        = await import('three/addons/loaders/GLTFLoader.js');
+  const {DRACOLoader}       = await import('three/addons/loaders/DRACOLoader.js');
+  const {FBXLoader}         = await import('three/addons/loaders/FBXLoader.js');
+  const {mergeGeometries}   = await import('three/addons/utils/BufferGeometryUtils.js');
+  let VRButton=null; try{ ({VRButton} = await import('three/addons/webxr/VRButton.js')); }catch(e){}
+  boot({THREE,RoomEnvironment,EffectComposer,RenderPass,UnrealBloomPass,GLTFLoader,DRACOLoader,FBXLoader,mergeGeometries,VRButton});
+}catch(err){
+  console.error(err);
+  document.getElementById('err').style.display='flex';
+  document.getElementById('err-msg').textContent =
+    'The 3D engine failed to load ('+ (err?.message||err) +'). A network connection is required the first time. Connect and reload.';
+}
+}
+
+/* =========================================================================
+   THE LORE — sourced from 1 Enoch (Book of the Watchers ch.6–11; Similitudes
+   ch.69, R.H. Charles 1917 transl.), the Book of Giants (Qumran 4Q + Manichaean
+   fragments), Genesis 6, Leviticus 16, and clearly-labelled later tradition.
+
+   NOTE ON ACCURACY: of the twenty captains listed in 1 Enoch 6:7, only about
+   nine have a teaching recorded against them (1 Enoch 8). The remaining chiefs
+   are named but given NO forbidden art — their entries say so plainly rather
+   than inventing powers, which is the common error of popular demonologies.
+   ========================================================================= */
+const ANGELS = [
+{ key:'michael', name:'Michael', rank:'Prince of the Heavenly Host · Captain of the Lord’s Army',
+  aka:'Mikha’el · "Who is like God?"', glow:'#ffdf7a',
+  palette:{stone:0x9a9488,emissive:0xffcf52,accent:0xfff0c0}, glyph:'sword', wings:true,
+  domain:'The war against evil and the guarding of the people of God. In the Book of the Watchers it was Michael who was sent to bind Semjaza and his company beneath the earth for seventy generations.',
+  lineage:'First of the seven who stand before the Throne; the great prince who stands for the children of thy people (Daniel 12:1).',
+  offspring:'The sword and the scales — the warrior, and the weigher of souls.',
+  fate:'Daniel 10–12; 1 Enoch 9–10, 20:5; Jude 9; Revelation 12:7–9.',
+  story:`<p><em>Michael</em> is the captain of the armies of heaven, the prince who contends with the dragon and casts him down. When the cry of the ravaged earth rose up, it was Michael — with Gabriel, Raphael and Uriel — who carried the plea before the Most High.</p>
+  <p>To him was given the binding of the fallen: he chained <em>Semjaza</em> and the Watchers in the valleys of the earth, to await the day of judgment. His name is itself a question and a banner — "Who is like God?"</p>`,
+  src:'Daniel 10–12; 1 Enoch 9–10, 20:5; Jude 9; Revelation 12:7–9.' },
+
+{ key:'gabriel', name:'Gabriel', rank:'The Herald · Watcher over Paradise',
+  aka:'Gavri’el · "God is my strength"', glow:'#dbe7ff',
+  palette:{stone:0x9a9488,emissive:0xcfe0ff,accent:0xffffff}, glyph:'trumpet', wings:true,
+  domain:'The bearing of God’s word to mankind, and the charge of Paradise, the serpents and the Cherubim. In 1 Enoch 10 he was sent against the giants — to set the Nephilim each against the other until they perished.',
+  lineage:'Of the seven who stand before the Throne; the angel who stands in the presence of God (Luke 1:19).',
+  offspring:'The trumpet and the lily — the herald’s call and the annunciation.',
+  fate:'Daniel 8–9; 1 Enoch 9–10, 20:7; Luke 1:11–38.',
+  story:`<p><em>Gabriel</em> is the voice of heaven among men. He unsealed the visions of Daniel, foretold the births of John and of the Lord, and was set as guardian over Paradise and the cherubim.</p>
+  <p>Against the giants born of the Watchers he was sent: to stir up the Nephilim against one another, that they should destroy themselves before the Flood.</p>`,
+  src:'Daniel 8:16; 9:21; 1 Enoch 9–10; 20:7; Luke 1:11–38.' },
+
+{ key:'raphael', name:'Raphael', rank:'The Healer · Keeper of the Spirits of Men',
+  aka:'Rapha’el · "God heals"', glow:'#7fe6b0',
+  palette:{stone:0x9a9488,emissive:0x5fe0a0,accent:0xd6ffe6}, glyph:'serpent', wings:true,
+  domain:'The healing of the earth and of the spirits of men. It was Raphael who bound Azazel hand and foot and cast him into the darkness of Dudael, and who was charged to heal the earth the angels had defiled.',
+  lineage:'Of the seven who stand before the Throne; one of the holy angels "who present the prayers of the saints" (Tobit 12:15).',
+  offspring:'The staff and the fish — the pilgrim’s guide, and the cure of Tobit’s blindness.',
+  fate:'Tobit 3–12; 1 Enoch 10:4–7; 20:3; 22.',
+  story:`<p><em>Raphael</em> is the medicine of God. In the Book of Tobit he walks unknown beside Tobias, binds the demon Asmodeus, and gives sight again to the blind.</p>
+  <p>Upon the fallen he was both judgment and mending: he bound <em>Azazel</em> beneath the jagged rocks of Dudael, and was sent to heal the earth that the Watchers had corrupted.</p>`,
+  src:'Tobit 3:17; 12:15; 1 Enoch 10:4–7; 20:3.' },
+
+{ key:'uriel', name:'Uriel', rank:'Fire of God · Regent of the Lights',
+  aka:'Uri’el · "God is my light"', glow:'#ffb24a',
+  palette:{stone:0x9a9488,emissive:0xff9a2e,accent:0xffd89a}, glyph:'sun', wings:true,
+  domain:'The host of the luminaries — sun, moon and stars — and the ordering of the seasons; and the watch over the world and over Tartarus. It was Uriel who was sent to warn Noah of the coming Flood.',
+  lineage:'Of the seven who stand before the Throne; "set over the world and over Tartarus" (1 Enoch 20:2).',
+  offspring:'The flame and the open scroll — the fire of wisdom and the secrets of the heavens.',
+  fate:'1 Enoch 9–10, 20:2, 21, 33; 2 Esdras 4–5.',
+  story:`<p><em>Uriel</em> is the fire and the light of God, who led Enoch through the courses of the stars and the chambers of the winds, and who keeps the reckoning of the calendar of heaven.</p>
+  <p>When the Flood was decreed, it was Uriel who was sent to Noah, son of Lamech, to warn him to hide himself — that a remnant of mankind might be saved.</p>`,
+  src:'1 Enoch 9:1; 10:1–3; 20:2; 21; 33; 2 Esdras 4–5.' },
+
+{ key:'raguel', name:'Raguel', rank:'The Avenger · Friend of God',
+  aka:'Ragu’el · "Friend of God"', glow:'#e8c66a',
+  palette:{stone:0x9a9488,emissive:0xe0b84a,accent:0xfff0bf}, glyph:'scales', wings:true,
+  domain:'The justice of heaven: he "takes vengeance on the world of the luminaries" — calling even the powers of light to account when they stray, and keeping the harmony of the host.',
+  lineage:'Of the seven who stand before the Throne (1 Enoch 20:4).',
+  offspring:'The balance and the banner — judgment held even.',
+  fate:'1 Enoch 20:4; 23:4.',
+  story:`<p><em>Raguel</em> is the friend of God and the keeper of His justice among the very stars. Where a power oversteps its bounds, it is Raguel who brings the reckoning, that the order of heaven be not broken.</p>`,
+  src:'1 Enoch 20:4; 23:4.' },
+
+{ key:'saraqael', name:'Saraqael', rank:'Warden of the Erring Spirits',
+  aka:'Saraqa’el · Sariel (?)', glow:'#c9a8ff',
+  palette:{stone:0x9a9488,emissive:0xb98bff,accent:0xe6d6ff}, glyph:'oath', wings:true,
+  domain:'Set "over the spirits of the children of men who sin in the spirit" — the archangel who watches the souls that go astray, and answers for them before the Throne.',
+  lineage:'Of the seven who stand before the Throne (1 Enoch 20:6).',
+  offspring:'The sealed ring — the binding and the keeping of erring souls.',
+  fate:'1 Enoch 20:6.',
+  story:`<p><em>Saraqael</em> keeps the watch over the spirits that transgress — not in the flesh, but in the spirit. Of the seven who stand in the presence of the Holy, his is the most inward charge: the secret faults of the soul.</p>`,
+  src:'1 Enoch 20:6.' },
+
+{ key:'remiel', name:'Remiel', rank:'Angel of Hope · Leader of the Risen',
+  aka:'Remi’el · Jeremiel · "Mercy of God"', glow:'#ff9fb0',
+  palette:{stone:0x9a9488,emissive:0xff8aa0,accent:0xffd0d8}, glyph:'stars', wings:true,
+  domain:'Set by God "over those who rise" — the archangel of hope, who leads the souls of the faithful into the dawn of the resurrection, and presides over true visions.',
+  lineage:'Of the seven who stand before the Throne (1 Enoch 20:8).',
+  offspring:'The morning star — the first light after the long night.',
+  fate:'1 Enoch 20:8; 2 Baruch 55:3; 63:6; 2 Esdras 4:36.',
+  story:`<p><em>Remiel</em> — "the mercy of God" — is the keeper of true visions and the shepherd of the risen, who leads the faithful up out of death into the morning.</p>
+  <p>A poignant shadow attends his name: a fallen Watcher was also called Ramiel. Here the two stand worlds apart — one who guides souls to the dawn, one who chose the dark.</p>`,
+  src:'1 Enoch 20:8; 2 Baruch 55:3; 63:6; 2 Esdras 4:36.' },
+
+{ key:'metatron', name:'Metatron', rank:'Prince of the Countenance · Scribe of Heaven',
+  aka:'Metatron · "the Lesser YHWH" · Enoch transfigured', glow:'#fff2c0',
+  palette:{stone:0x9a9488,emissive:0xfff0d0,accent:0xffffff}, glyph:'scroll', wings:true,
+  domain:'To stand within the veil before the Throne and to record the deeds of all worlds in the heavenly books — the greatest of the recording angels, voice and scribe of the Holy One.',
+  lineage:'In 3 Enoch he is the patriarch Enoch, son of Jared, taken up alive and transfigured into an angel of fire with six-and-thirty wings. (Merkabah / 3 Enoch tradition.)',
+  offspring:'The scroll and the quill of fire — the record of heaven.',
+  fate:'3 Enoch (Sefer Hekhalot); Talmud b. Sanhedrin 38b; b. Hagigah 15a.',
+  story:`<p><em>Metatron</em> is the Prince of the Countenance, who stands where no other angel may, and writes the chronicle of creation. The Merkabah mystics tell that he is <em>Enoch</em> himself — the seventh from Adam who "walked with God, and was not" — raised up, clothed in fire, made a scribe before the Throne.</p>
+  <p>So near is he to the Glory that he is called, with trembling, "the lesser Name."</p>`,
+  src:'3 Enoch 3–16; Talmud b. Sanhedrin 38b; b. Hagigah 15a; Genesis 5:24. (Later mystical tradition.)' },
+
+{ key:'sandalphon', name:'Sandalphon', rank:'Weaver of Prayers · Brother of Metatron',
+  aka:'Sandalphon · Elijah transfigured', glow:'#9fb4ff',
+  palette:{stone:0x9a9488,emissive:0x7f9cff,accent:0xd0dcff}, glyph:'crown', wings:true,
+  domain:'To gather the prayers of the faithful from the earth and weave them into garlands and crowns, that they may rise and rest upon the brow of the Holy One.',
+  lineage:'Counted the twin or brother of Metatron, and the transfigured prophet Elijah, who went up in the chariot of fire. (Talmud / Kabbalah.)',
+  offspring:'The woven crown of prayer.',
+  fate:'Talmud b. Hagigah 13b; later Kabbalah; 2 Kings 2:11.',
+  story:`<p><em>Sandalphon</em> stands so tall, the sages say, that it would take five hundred years to climb his height; he labours at the threshold of heaven, binding the prayers of the world into crowns of glory.</p>`,
+  src:'Talmud b. Hagigah 13b; Kabbalistic tradition; 2 Kings 2:11. (Later tradition.)' },
+
+{ key:'raziel', name:'Raziel', rank:'Keeper of Mysteries · Secret of God',
+  aka:'Razi’el · "Secret of God"', glow:'#8aa0ff',
+  palette:{stone:0x9a9488,emissive:0x6f86ff,accent:0xc2d0ff}, glyph:'scroll', wings:true,
+  domain:'To stand beside the Throne and hear all that is uttered there, and to keep the mysteries of creation. He is said to have given to Adam the Book of Raziel, the book of all celestial and earthly wisdom.',
+  lineage:'Chief of the angels of the supreme mysteries. (Kabbalah / Sefer Raziel.)',
+  offspring:'The book and the key — wisdom sealed, and given.',
+  fate:'Sefer Raziel HaMalakh; the Zohar; Targum Ecclesiastes 10:20.',
+  story:`<p><em>Raziel</em> — "the secret of God" — stands closest to the place where the decrees of heaven are spoken, and writes them in a book of sapphire. Tradition tells that he gave that book to Adam at the gate of Eden, that mankind might not be left wholly in the dark.</p>`,
+  src:'Sefer Raziel HaMalakh; Zohar; Targum Ecclesiastes 10:20. (Later mystical tradition.)' },
+
+{ key:'camael', name:'Camael', rank:'Angel of Strength · Lord of Severity',
+  aka:'Qemu’el · Chamuel · "He who sees God"', glow:'#ff7a5a',
+  palette:{stone:0x9a9488,emissive:0xff5a3a,accent:0xffb08a}, glyph:'sword', wings:true,
+  domain:'The strength and severity of God — the rigour by which evil is held back. He is reckoned the ruling power of Geburah, the fifth sphere on the Tree of Life, and is sometimes named the guardian of the flaming sword at Eden’s gate.',
+  lineage:'Chief of the Powers; regent of Geburah (Severity / Strength). (Kabbalah.)',
+  offspring:'The flaming sword — the bound and bridled fire of judgment.',
+  fate:'Kabbalistic tradition (Geburah); Genesis 3:24.',
+  story:`<p><em>Camael</em> — "he who sees God" — is the archangel of holy strength, the disciplined fire that defends the order of heaven. On the Tree of Life he governs Geburah, the sphere of severity; and some say it is his sword of flame that turns at the gate of Eden.</p>`,
+  src:'Kabbalistic tradition (Geburah); Genesis 3:24. (Later tradition.)' },
+
+{ key:'zadkiel', name:'Zadkiel', rank:'Angel of Mercy · Lord of Benevolence',
+  aka:'Tzadqi’el · "Righteousness of God"', glow:'#9d8bff',
+  palette:{stone:0x9a9488,emissive:0x8a7bff,accent:0xcabfff}, glyph:'oath', wings:true,
+  domain:'The mercy and loving-kindness of God — the open hand that answers Camael’s sword. He rules Chesed, the fourth sphere on the Tree of Life; and tradition names him the angel who stayed Abraham’s hand upon Mount Moriah.',
+  lineage:'Regent of Chesed (Mercy / Loving-kindness). (Kabbalah / Talmud.)',
+  offspring:'The stayed knife and the open hand.',
+  fate:'Kabbalistic tradition (Chesed); Genesis 22:11–12.',
+  story:`<p><em>Zadkiel</em> — "the righteousness of God" — is the archangel of mercy, who tempers severity with grace. On the Tree of Life he governs Chesed, the sphere of loving-kindness; and tradition holds that it was his hand that stayed Abraham from the sacrifice of Isaac.</p>`,
+  src:'Kabbalistic tradition (Chesed); Genesis 22:11–12. (Later tradition.)' }
+];
+
+/* =========================================================================
+   3D MODELS (.glb)  —  drop real photoreal models here.
+   Each entry replaces the procedural BODY of a statue (wings/halo/sigil are kept).
+   Loaded meshes are re-skinned as marble so any figure reads as statuary.
+   Two live, CORS-accessible demos are wired below to prove the pipeline; add
+   your own by putting files in a /models folder, e.g.
+       semjaza:{ url:'models/semjaza.glb', targetHeight:3.6, rotationY:Math.PI }
+   Sources for free models: Khronos glTF-Sample-Assets, Poly Haven, Smithsonian
+   Open Access, Sketchfab (filter: Downloadable + CC0).  DRACO-compressed files
+   are supported automatically.
+   ========================================================================= */
+// OFF by default — the upgraded procedural angel-statues render with no downloads.
+// To use a REAL model: download a .glb, drop it in a `models/` folder beside this file,
+// and add an entry. A loaded model replaces the procedural BODY (wings/halo/sigil are
+// kept) and is re-skinned as marble so any mesh reads as carved statuary.
+//
+// VETTED, REAL sources (free download → place in models/ ; check each model's own licence):
+//   • "Scanned Angel Statue Collection" (photoscanned, photoreal):
+//       https://sketchfab.com/3d-models/scanned-angel-statue-collection-8ac9f760bc7e4931a491d56a57986199
+//   • "Angel statue" by AK STUDIO (free):
+//       https://sketchfab.com/3d-models/angel-statue-ad7d6f9a90754c78b09c86dfade50975
+//   • CC0 angel models in GLB:  https://www.meshy.ai/tags/angel
+//   • Smithsonian Open Access statuary (GLB): https://3d.si.edu  ·  Poly Haven: https://polyhaven.com
+//
+// Example once files are in place:
+//   const MODELS = {
+//     semjaza:  { url:'models/angel-statue.glb', targetHeight:3.6, rotationY:Math.PI },
+//     azazel:   { url:'models/winged-warrior.glb', targetHeight:3.7, rotationY:Math.PI },
+//     nephilim: { url:'models/colossus.glb',     targetHeight:9.0, rotationY:Math.PI },
+//   };
+// Real angel sculpts re-skinned as luminous marble; each keeps its glowing halo + emblem (keepHalo).
+// A few free CC models reused across the host (CREDIT: cemetery-angel — misterdevious/Furey;
+// winged-angel — ItsKrish7; veiled — Giordani_Mathieu). Loader caches+clones, so 1 download serves many.
+const MODELS = {
+  michael:    { url:'models/cemetery-angel.glb',     targetHeight:3.7, rotationY:Math.PI, color:0xe2dccb, keepHalo:true },
+  gabriel:    { url:'models/winged-angel.glb',       targetHeight:3.7, rotationY:Math.PI, color:0xe6e1d2, keepHalo:true },
+  raphael:    { url:'models/cemetery-angel.glb',     targetHeight:3.7, rotationY:Math.PI, color:0xdfe6d6, keepHalo:true },
+  uriel:      { url:'models/winged-angel.glb',       targetHeight:3.7, rotationY:Math.PI, color:0xe8ddc4, keepHalo:true },
+  raguel:     { url:'models/cemetery-angel.glb',     targetHeight:3.7, rotationY:Math.PI, color:0xe4dcc2, keepHalo:true },
+  saraqael:   { url:'models/veiled-fallen-angel.glb',targetHeight:3.3, rotationY:Math.PI, color:0xdcd6e6, keepHalo:true },
+  remiel:     { url:'models/winged-angel.glb',       targetHeight:3.7, rotationY:Math.PI, color:0xe8d8d8, keepHalo:true },
+  metatron:   { url:'models/veiled-fallen-angel.glb',targetHeight:3.3, rotationY:Math.PI, color:0xeae4d0, keepHalo:true },
+  sandalphon: { url:'models/cemetery-angel.glb',     targetHeight:3.7, rotationY:Math.PI, color:0xd6dcea, keepHalo:true },
+  raziel:     { url:'models/veiled-fallen-angel.glb',targetHeight:3.3, rotationY:Math.PI, color:0xd6dcea, keepHalo:true },
+  camael:     { url:'models/winged-angel.glb',       targetHeight:3.7, rotationY:Math.PI, color:0xeacfc4, keepHalo:true },
+  zadkiel:    { url:'models/cemetery-angel.glb',     targetHeight:3.7, rotationY:Math.PI, color:0xd9d2ea, keepHalo:true }
+};
+
+/* =========================================================================
+   THE HALL
+   ========================================================================= */
+function boot(LIB){
+  const {THREE,RoomEnvironment,EffectComposer,RenderPass,UnrealBloomPass,GLTFLoader,DRACOLoader,FBXLoader,mergeGeometries,VRButton}=LIB;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+  const easeIO=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  const YAXIS=new THREE.Vector3(0,1,0);
+  const isTouch=('ontouchstart'in window)&&matchMedia('(pointer:coarse)').matches;
+
+  // renderer
+  const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.16;
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.xr.enabled=true;
+  document.body.appendChild(renderer.domElement);
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0b1020);
+  scene.fog=new THREE.FogExp2(0x0b1020,0.012);
+  const pmrem=new THREE.PMREMGenerator(renderer);
+  scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+
+  // camera + player dolly
+  const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,500);
+  const player=new THREE.Group(); player.add(camera); scene.add(player);
+  const EYE=1.65; camera.position.set(0,EYE,0); player.position.set(0,0,6);
+
+  // composer / bloom
+  const composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.95,0.6,0.82);
+  composer.addPass(bloom);
+
+  // model loaders
+  const draco=new DRACOLoader(); draco.setDecoderPath('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/jsm/libs/draco/gltf/');
+  const gltfLoader=new GLTFLoader(); gltfLoader.setDRACOLoader(draco);
+  const fbxLoader=new FBXLoader();
+
+  // ===================== LIGHTING (pooled for many exhibits) =====================
+  scene.add(new THREE.HemisphereLight(0xaebfe6,0x20242f,0.62));
+  const moon=new THREE.DirectionalLight(0xfff2da,0.6); moon.position.set(-30,60,20); scene.add(moon);
+
+  const focusLight=new THREE.SpotLight(0xfff0d0,0,70,Math.PI/7,0.5,1.4);
+  focusLight.castShadow=true; focusLight.shadow.mapSize.set(1024,1024); focusLight.shadow.bias=-0.0006;
+  focusLight.shadow.camera.near=2; focusLight.shadow.camera.far=42;
+  scene.add(focusLight); scene.add(focusLight.target);
+
+  // a small pool of warm lights that follow the nearest braziers
+  const POOL=5, pool=[];
+  for(let i=0;i<POOL;i++){ const l=new THREE.PointLight(0xffa64d,0,18,2); scene.add(l); pool.push(l); }
+
+  // ===================== MATERIALS =====================
+  const marble=new THREE.MeshStandardMaterial({color:0x252b3c,roughness:0.16,metalness:0.5,envMapIntensity:0.95});
+  const wallMat=new THREE.MeshStandardMaterial({color:0x141a2a,roughness:0.9,metalness:0.05});
+  const stoneTrim=new THREE.MeshStandardMaterial({color:0x2c3246,roughness:0.65,metalness:0.25});
+  const carpetMat=new THREE.MeshStandardMaterial({color:0x1b2f63,roughness:0.92,metalness:0.05});
+
+  // ===================== ARCHITECTURE =====================
+  const chiefs=ANGELS.filter(a=>!a.giant);
+  const HALF=20, FRONT=9, XW=15, ROWS=Math.ceil(chiefs.length/2);
+  const lastRowZ=FRONT-12-(ROWS-1)*16;
+  const NEPH_Z=lastRowZ-22, BACK=NEPH_Z-14;
+  const HALL=new THREE.Group(); scene.add(HALL);
+
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(HALF*2,FRONT-BACK+8),marble);
+  floor.rotation.x=-Math.PI/2; floor.position.set(0,0,(FRONT+BACK)/2); floor.receiveShadow=true; HALL.add(floor);
+  const carpet=new THREE.Mesh(new THREE.PlaneGeometry(5,FRONT-BACK+6),carpetMat);
+  carpet.rotation.x=-Math.PI/2; carpet.position.set(0,0.01,(FRONT+BACK)/2); carpet.receiveShadow=true; HALL.add(carpet);
+
+  function wall(x){ const w=new THREE.Mesh(new THREE.BoxGeometry(0.6,16,FRONT-BACK+8),wallMat);
+    w.position.set(x,8,(FRONT+BACK)/2); w.receiveShadow=true; HALL.add(w); }
+  wall(-HALF); wall(HALF);
+  const backWall=new THREE.Mesh(new THREE.BoxGeometry(HALF*2,16,0.6),wallMat); backWall.position.set(0,8,BACK); HALL.add(backWall);
+  const frontWall=new THREE.Mesh(new THREE.BoxGeometry(HALF*2,16,0.6),wallMat); frontWall.position.set(0,8,FRONT+3); HALL.add(frontWall);
+  // ceiling with a central slit to the void
+  const ceilL=new THREE.Mesh(new THREE.PlaneGeometry(HALF-4,FRONT-BACK+8),wallMat);
+  ceilL.rotation.x=Math.PI/2; ceilL.position.set(-(HALF/2+2),16,(FRONT+BACK)/2);
+  const ceilR=ceilL.clone(); ceilR.position.x=HALF/2+2; HALL.add(ceilL); HALL.add(ceilR);
+
+  // hall starfield
+  (function stars(){ const N=2200,g=new THREE.BufferGeometry(),p=new Float32Array(N*3);
+    for(let i=0;i<N;i++){p[i*3]=(Math.random()-0.5)*120;p[i*3+1]=17+Math.random()*46;p[i*3+2]=FRONT-Math.random()*(FRONT-BACK+10);}
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    HALL.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x9fb4ff,size:0.18,transparent:true,opacity:0.8,depthWrite:false}))); })();
+
+  // columns + braziers
+  const braziers=[];
+  function column(x,z){
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.8,15,18),stoneTrim); c.position.set(x,7.5,z); c.castShadow=true; HALL.add(c);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.1,0.5,18),stoneTrim); base.position.set(x,0.25,z); HALL.add(base);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.85,0.6,18),stoneTrim); cap.position.set(x,15.2,z); HALL.add(cap);
+    const bx=x>0?x-1.2:x+1.2;
+    const bowl=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.28,0.45,14),new THREE.MeshStandardMaterial({color:0x1a140e,metalness:0.8,roughness:0.4}));
+    bowl.position.set(bx,3.4,z); HALL.add(bowl);
+    const flame=new THREE.Mesh(new THREE.SphereGeometry(0.42,10,10),new THREE.MeshBasicMaterial({color:0xffb24d,transparent:true,opacity:0.95}));
+    flame.position.set(bx,3.8,z); HALL.add(flame);
+    braziers.push({flame,pos:new THREE.Vector3(bx,3.8,z),seed:Math.random()*9});
+  }
+  for(let r=0;r<=ROWS+1;r++){ const z=FRONT-6-r*16; column(-HALF+2,z); column(HALF-2,z); }
+
+  // volumetric light shafts (god-rays) down the central ceiling slit + drifting dust
+  const shafts=[];
+  function lightShaft(x,z,h,topR,botR,color,opacity,tilt){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(topR,botR,h,14,1,true),
+      new THREE.MeshBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false}));
+    m.position.set(x,h/2-2,z); m.rotation.z=tilt||0; HALL.add(m); shafts.push({m,base:opacity,seed:Math.random()*9});
+  }
+  for(let r=0;r<=ROWS;r++){ const z=FRONT-9-r*16; lightShaft((Math.random()-0.5)*3.2,z,17,0.5,1.85,0xfff0c8,0.08,(Math.random()-0.5)*0.16); }
+  const dust=(function(){ const N=isTouch?240:520,g=new THREE.BufferGeometry(),p=new Float32Array(N*3),sp=new Float32Array(N);
+    for(let i=0;i<N;i++){ p[i*3]=(Math.random()-0.5)*10; p[i*3+1]=Math.random()*16; p[i*3+2]=FRONT-Math.random()*(FRONT-BACK); sp[i]=0.05+Math.random()*0.2; }
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    const pts=new THREE.Points(g,new THREE.PointsMaterial({color:0xcdd9ff,size:0.05,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false})); pts.userData={sp}; HALL.add(pts); return pts; })();
+
+  // ===================== FIGURE BUILDER =====================
+  const fS=new THREE.Shape(); fS.moveTo(0,0); fS.bezierCurveTo(0.16,0.35,0.13,0.8,0,1.05); fS.bezierCurveTo(-0.13,0.8,-0.16,0.35,0,0);
+  const featherGeo=new THREE.ExtrudeGeometry(fS,{depth:0.025,bevelEnabled:false}); featherGeo.translate(0,0,-0.0125);
+  // wing rows: primaries(long,drooping) → secondaries → coverts → shoulder coverts
+  const WROWS=isTouch
+    ?[{n:8,len:2.4,arc:1.7,droop:0.7,span:0.72,row:0},{n:6,len:1.5,arc:1.4,droop:0.35,span:0.55,row:2}]
+    :[{n:13,len:2.9,arc:1.8,droop:0.75,span:0.78,row:0},
+      {n:11,len:2.2,arc:1.6,droop:0.55,span:0.66,row:1},
+      {n:9, len:1.4,arc:1.35,droop:0.35,span:0.52,row:2},
+      {n:7, len:0.85,arc:1.15,droop:0.2,span:0.4,row:3}];
+  function buildWing(stoneMat,accentMat){
+    // feathers laid along a curved wing-bone arc (rises from shoulder, droops at the tips)
+    const stoneGeos=[],accentGeos=[],q=new THREE.Quaternion(),Z=new THREE.Vector3(0,0,1);
+    WROWS.forEach((r)=>{ for(let i=0;i<r.n;i++){ const t=i/(r.n-1); const em=(r.row===0&&i%4===0);
+      const g=featherGeo.clone();
+      const bx=t*r.span*3.1;                                   // outward along the bone
+      const by=Math.sin(t*Math.PI*0.55)*0.85 - t*t*r.droop*2.1; // arch up then droop down
+      const bz=r.row*0.13 + t*0.18;                            // layered depth
+      q.setFromAxisAngle(Z,-(0.08+t*r.arc));                   // fan, tips angled down
+      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(bx,by,bz),q,new THREE.Vector3(0.33,r.len*(1-0.4*t),1)));
+      (em?accentGeos:stoneGeos).push(g); }});
+    const wing=new THREE.Group();
+    if(stoneGeos.length){ const m=new THREE.Mesh(mergeGeometries(stoneGeos,false),stoneMat); m.castShadow=true; wing.add(m); }
+    if(accentGeos.length){ const m=new THREE.Mesh(mergeGeometries(accentGeos,false),accentMat); m.castShadow=true; wing.add(m); }
+    wing.rotation.x=0.26; return wing;
+  }
+  function buildGlyph(type,color){
+    const g=new THREE.Group(); const em=new THREE.MeshStandardMaterial({color:0x0,emissive:color,emissiveIntensity:2.4,roughness:0.4,metalness:0.3});
+    const add=m=>{g.add(m);return m;};
+    switch(type){
+      case 'stars': for(let i=0;i<9;i++){const a=i/9*Math.PI*2,r=0.55;const s=new THREE.Mesh(new THREE.IcosahedronGeometry(0.07+Math.random()*0.05,0),em);s.position.set(Math.cos(a)*r,Math.sin(a*1.3)*0.25,Math.sin(a)*r);add(s);} add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.12,0),em)); break;
+      case 'sun': add(new THREE.Mesh(new THREE.CircleGeometry(0.3,32),em)); for(let i=0;i<16;i++){const a=i/16*Math.PI*2;const r=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.34,0.02),em);r.position.set(Math.cos(a)*0.5,Math.sin(a)*0.5,0);r.rotation.z=a-Math.PI/2;add(r);} break;
+      case 'moon': {const t=add(new THREE.Mesh(new THREE.TorusGeometry(0.34,0.07,12,28,Math.PI*1.35),em));t.rotation.z=0.6;} break;
+      case 'lightning': {const seq=[[0,0.5],[0.16,0.18],[-0.05,0.1],[0.18,-0.16],[0,-0.5]];for(let i=0;i<seq.length-1;i++){const a=seq[i],b=seq[i+1];const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);const s=new THREE.Mesh(new THREE.BoxGeometry(0.06,len,0.04),em);s.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,0);s.rotation.z=Math.atan2(dy,dx)-Math.PI/2;add(s);}} break;
+      case 'sword': {const bl=add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.62,0.03),em));bl.position.y=0.15;const gu=add(new THREE.Mesh(new THREE.BoxGeometry(0.34,0.07,0.05),em));gu.position.y=-0.18;const hi=add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.22,0.04),em));hi.position.y=-0.34;} break;
+      case 'scroll': {const c=add(new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.6,16),em));c.rotation.z=Math.PI/2;for(let i=0;i<4;i++){const ln=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.018,0.01),em);ln.position.set(0,0.16-i*0.1,0.02);add(ln);}} break;
+      case 'serpent': {const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-0.3,-0.3,0),new THREE.Vector3(0.25,-0.1,0.1),new THREE.Vector3(-0.22,0.18,0),new THREE.Vector3(0.2,0.42,0.1)]);add(new THREE.Mesh(new THREE.TubeGeometry(curve,40,0.05,8,false),em));} break;
+      case 'earth': {add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.3,0),em));for(let i=0;i<5;i++){const a=i/5*Math.PI*2;const b=new THREE.Mesh(new THREE.IcosahedronGeometry(0.06,0),em);b.position.set(Math.cos(a)*0.5,Math.sin(a*1.7)*0.2,Math.sin(a)*0.5);add(b);}} break;
+      case 'cloud': for(let i=0;i<6;i++){const s=new THREE.Mesh(new THREE.SphereGeometry(0.16+Math.random()*0.08,12,12),em);s.position.set((Math.random()-0.5)*0.7,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3);add(s);} break;
+      case 'trumpet': {const bell=add(new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.2,0.66,18,1,true),em));bell.rotation.z=Math.PI*0.5;bell.position.x=0.12;const stem=add(new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.34,12),em));stem.rotation.z=Math.PI*0.5;stem.position.x=-0.24;} break;
+      case 'scales': {add(new THREE.Mesh(new THREE.BoxGeometry(0.72,0.04,0.04),em));const post=add(new THREE.Mesh(new THREE.BoxGeometry(0.04,0.5,0.04),em));post.position.y=0.25;[-0.33,0.33].forEach(x=>{const pan=add(new THREE.Mesh(new THREE.TorusGeometry(0.12,0.02,8,24,Math.PI),em));pan.position.set(x,-0.14,0);pan.rotation.x=Math.PI;const ch=add(new THREE.Mesh(new THREE.BoxGeometry(0.012,0.16,0.012),em));ch.position.set(x,-0.06,0);});} break;
+      case 'crown': {add(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.12,24,1,true),em));for(let i=0;i<7;i++){const a=i/7*Math.PI*2;const pk=add(new THREE.Mesh(new THREE.ConeGeometry(0.05,0.22,8),em));pk.position.set(Math.cos(a)*0.3,0.13,Math.sin(a)*0.3);}const j=add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.07,0),em));j.position.y=0.06;} break;
+      default: add(new THREE.Mesh(new THREE.TorusGeometry(0.34,0.045,12,40),em)); for(let i=0;i<8;i++){const a=i/8*Math.PI*2;const d=new THREE.Mesh(new THREE.IcosahedronGeometry(0.05,0),em);d.position.set(Math.cos(a)*0.34,Math.sin(a)*0.34,0);add(d);} break;
+    }
+    return g;
+  }
+  function makeArm(side,shoulderPos,mat,pose,giant){
+    const g=new THREE.Group(); g.position.copy(shoulderPos); const parts=[];
+    let outZ=side*0.2, fwdX=0.15, bend=0.55;
+    if(pose==='oath'){ outZ=side*0.5; fwdX=1.0; bend=1.6; }          // forearms raised to the heart
+    else if(pose==='present'){ if(side>0){ outZ=side*0.35; fwdX=1.45; bend=0.55; } else { outZ=side*0.22; fwdX=0.12; bend=0.45; } } // right arm presents the sigil
+    else if(pose==='bless'){ outZ=side*0.55; fwdX=0.45; bend=0.8; }  // arms open, palms forward
+    else if(pose==='colossus'){ outZ=side*0.62; fwdX=0.12; bend=0.3; } // wide, looming
+    const uaLen=giant?1.7:0.95, faLen=giant?1.5:0.82, rad=giant?0.22:0.12;
+    const upper=new THREE.Group(); upper.rotation.set(fwdX,0,outZ);
+    const ua=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*0.85,uaLen,10),mat); ua.position.y=-uaLen/2; ua.castShadow=true; upper.add(ua); parts.push(ua);
+    const elbow=new THREE.Group(); elbow.position.y=-uaLen; elbow.rotation.x=bend;
+    const fa=new THREE.Mesh(new THREE.CylinderGeometry(rad*0.85,rad*0.7,faLen,10),mat); fa.position.y=-faLen/2; fa.castShadow=true; elbow.add(fa); parts.push(fa);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(rad*0.95,10,8),mat); hand.scale.set(1,1.35,0.65); hand.position.y=-faLen-0.05; elbow.add(hand); parts.push(hand);
+    upper.add(elbow); g.add(upper);
+    return {g,parts};
+  }
+  function buildFigure(a){
+    const grp=new THREE.Group(); const p=a.palette; const bodyParts=[];
+    const stoneMat=new THREE.MeshStandardMaterial({color:p.stone,roughness:0.6,metalness:0.3,emissive:new THREE.Color(p.emissive),emissiveIntensity:0.1,envMapIntensity:1.0});
+    const accentMat=new THREE.MeshStandardMaterial({color:0x000000,emissive:new THREE.Color(p.emissive),emissiveIntensity:2.6,roughness:0.4,metalness:0.2});
+    const giant=!!a.giant;
+    const way=giant
+      ?[[2.1,0],[2.0,0.3],[1.7,0.9],[1.3,2.2],[1.4,3.4],[1.15,4.4],[0.75,4.95]]
+      :[[1.55,0],[1.5,0.18],[1.18,0.6],[0.92,1.2],[0.78,1.9],[0.7,2.5],[0.62,3.05],[0.56,3.4],[0.5,3.6]];
+    const prof=way.map(w=>new THREE.Vector2(w[0],w[1])); const top=way[way.length-1][1];
+    const robe=new THREE.Mesh(new THREE.LatheGeometry(prof,48),stoneMat); robe.castShadow=true; robe.receiveShadow=true; grp.add(robe); bodyParts.push(robe);
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(giant?1.0:0.52,20,16),stoneMat); sh.scale.set(1.7,0.6,0.85); sh.position.y=top-0.12; sh.castShadow=true; grp.add(sh); bodyParts.push(sh);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(giant?0.28:0.15,giant?0.34:0.18,giant?0.5:0.28,12),stoneMat); neck.position.y=top+(giant?0.18:0.1); grp.add(neck); bodyParts.push(neck);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(giant?0.55:0.32,28,22),stoneMat); head.scale.set(0.92,1.08,0.96); head.position.y=top+(giant?0.72:0.47); head.castShadow=true; grp.add(head); bodyParts.push(head);
+    const hood=new THREE.Mesh(new THREE.SphereGeometry(giant?0.72:0.43,24,20,0,Math.PI*2,0,Math.PI*0.6),stoneMat); hood.position.copy(head.position); hood.position.y+=0.05; grp.add(hood); bodyParts.push(hood);
+    const nose=new THREE.Mesh(new THREE.ConeGeometry(giant?0.07:0.04,giant?0.22:0.13,6),stoneMat); nose.position.set(0,head.position.y-(giant?0.02:0.01),-(giant?0.5:0.3)); nose.rotation.x=Math.PI*0.5; grp.add(nose); bodyParts.push(nose);
+    const eyeGeo=new THREE.SphereGeometry(giant?0.07:0.043,8,8);
+    [-1,1].forEach(s=>{const e=new THREE.Mesh(eyeGeo,accentMat);e.position.set(s*(giant?0.18:0.1),head.position.y+(giant?0.05:0.03),-(giant?0.45:0.27));grp.add(e);bodyParts.push(e);});
+    const cl=new THREE.Mesh(new THREE.TorusGeometry(giant?0.5:0.27,0.03,8,24),accentMat); cl.position.set(0,top-(giant?1.1:0.66),-(giant?0.95:0.5)); grp.add(cl); bodyParts.push(cl);
+    // posed arms
+    const poseMap={sword:'present',scroll:'present',sun:'present',oath:'oath',moon:'bless',cloud:'bless',stars:'bless',earth:'bless',lightning:'bless',serpent:'present'};
+    const pose=giant?'colossus':(poseMap[a.glyph]||(a.glyph?'bless':'oath'));
+    const shX=giant?1.1:0.56, shY=top-(giant?0.25:0.16);
+    [-1,1].forEach(s=>{ const arm=makeArm(s,new THREE.Vector3(s*shX,shY,0),stoneMat,pose,giant); grp.add(arm.g); arm.parts.forEach(pt=>bodyParts.push(pt)); bodyParts.push(arm.g); });
+
+    const wings=[];
+    if(a.wings){ const wl=buildWing(stoneMat,accentMat); wl.position.set(0.4,top-0.15,0.3); grp.add(wl); wings.push(wl);
+      const wr=buildWing(stoneMat,accentMat); wr.position.set(-0.4,top-0.15,0.3); wr.scale.x=-1; grp.add(wr); wings.push(wr); }
+    let glyphObj=null;
+    if(a.glyph){ glyphObj=buildGlyph(a.glyph,new THREE.Color(p.emissive)); glyphObj.position.set(0,top+(giant?1.7:1.2),-(giant?0.2:0.05)); glyphObj.scale.setScalar(giant?1.7:1.0); grp.add(glyphObj); }
+    const halo=new THREE.Mesh(new THREE.TorusGeometry(giant?0.85:0.5,0.025,10,48),accentMat); halo.position.set(0,head.position.y+(giant?0.7:0.45),0); halo.rotation.x=Math.PI/2; grp.add(halo);
+    return {grp,bodyParts,wings,halo,glyphObj,emissiveColor:new THREE.Color(p.emissive)};
+  }
+  function buildAura(color,giant){
+    const N=giant?260:140,g=new THREE.BufferGeometry(),pos=new Float32Array(N*3),spd=new Float32Array(N);
+    const R=giant?2.6:1.4,H=giant?9:5;
+    for(let i=0;i<N;i++){const a=Math.random()*Math.PI*2,r=Math.random()*R;pos[i*3]=Math.cos(a)*r;pos[i*3+1]=Math.random()*H;pos[i*3+2]=Math.sin(a)*r;spd[i]=0.2+Math.random()*0.6;}
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const pts=new THREE.Points(g,new THREE.PointsMaterial({color,size:giant?0.09:0.06,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false}));
+    pts.userData={spd,H}; return pts;
+  }
+
+  // load a .glb to replace the procedural body (keeps wings/halo/glyph)
+  const _mcache={};
+  function loadModelFor(node,fig,spec,a){
+    const isFbx=/\.fbx$/i.test(spec.url);
+    const place=(src)=>{
+      const m=src.clone(true); // clone so one download serves many statues (shared geometry)
+      const mat=new THREE.MeshStandardMaterial({color:spec.color||0xb8b2a4,roughness:0.72,metalness:0.05,emissive:new THREE.Color(spec.emissive!=null?spec.emissive:0x2e2a22),emissiveIntensity:spec.emissiveIntensity!=null?spec.emissiveIntensity:0.16,envMapIntensity:1.35});
+      const skinned=[];
+      m.traverse(o=>{ if(o.isSkinnedMesh){ skinned.push(o); } else if(o.isMesh){ o.material=mat; o.castShadow=o.receiveShadow=true; o.frustumCulled=false; } });
+      skinned.forEach(o=>{ const plain=new THREE.Mesh(o.geometry,mat); plain.position.copy(o.position); plain.quaternion.copy(o.quaternion); plain.scale.copy(o.scale); plain.castShadow=plain.receiveShadow=true; plain.frustumCulled=false; (o.parent||m).add(plain); o.visible=false; });
+      const wrap=new THREE.Group(); if(spec.rotationX) wrap.rotation.x=spec.rotationX; if(spec.rotationY) wrap.rotation.y=spec.rotationY; wrap.add(m); node.add(wrap);
+      node.updateWorldMatrix(true,true);
+      let box=new THREE.Box3().setFromObject(wrap); const size=new THREE.Vector3(); box.getSize(size);
+      wrap.scale.setScalar((spec.targetHeight||(a.giant?9:3.4))/(size.y||1)*(spec.scale||1));
+      node.updateWorldMatrix(true,true);
+      box=new THREE.Box3().setFromObject(wrap); const ctr=new THREE.Vector3(); box.getCenter(ctr);
+      const nodeW=new THREE.Vector3(); node.getWorldPosition(nodeW); const pedTop=a.giant?1.2:1.1;
+      const tgt=node.worldToLocal(new THREE.Vector3(nodeW.x, nodeW.y+pedTop, nodeW.z));
+      const cur=node.worldToLocal(new THREE.Vector3(ctr.x, box.min.y, ctr.z));
+      wrap.position.add(tgt.sub(cur)); wrap.position.y+=(spec.yOffset||0);
+      fig.bodyParts.forEach(pt=>{ fig.grp.remove(pt); pt.geometry&&pt.geometry.dispose&&pt.geometry.dispose(); });
+      if(!spec.keepWings){ (fig.wings||[]).forEach(w=>fig.grp.remove(w)); }
+      if(!spec.keepHalo){ if(fig.halo)fig.grp.remove(fig.halo); if(fig.glyphObj)fig.grp.remove(fig.glyphObj); }
+      const fill=new THREE.PointLight(0xfff1dc, a.giant?34:14, a.giant?24:13, 2); fill.position.set(0,(a.giant?6.5:3.4),-2.6); node.add(fill);
+      if(started) showToast(`✦ <b>${a.name}</b> — 3D model loaded`);
+    };
+    if(_mcache[spec.url]){ place(_mcache[spec.url]); return; }
+    (isFbx?fbxLoader:gltfLoader).load(spec.url, res=>{ const s=isFbx?res:res.scene; _mcache[spec.url]=s; place(s); }, undefined, err=>{ console.warn('[model] kept procedural figure for',a.key,'—',err?.message||err); });
+  }
+
+  // ===================== PLACE EXHIBITS =====================
+  const exhibits=[];
+  ANGELS.forEach((a)=>{
+    const isNeph=!!a.giant; let x,z,faceY;
+    if(isNeph){ x=0; z=NEPH_Z; faceY=0; }
+    else{ const i=chiefs.indexOf(a), row=Math.floor(i/2), side=i%2; x=side?XW:-XW; z=FRONT-12-row*16; faceY=side?Math.PI/2:-Math.PI/2; }
+    const node=new THREE.Group(); node.position.set(x,0,z); node.rotation.y=faceY; scene.add(node);
+
+    const ped=new THREE.Mesh(new THREE.CylinderGeometry(isNeph?2.4:1.3,isNeph?2.8:1.5,isNeph?1.2:1.1,32),
+      new THREE.MeshStandardMaterial({color:0x39405a,roughness:0.28,metalness:0.5,envMapIntensity:0.85}));
+    ped.position.y=isNeph?0.6:0.55; ped.castShadow=true; ped.receiveShadow=true; node.add(ped);
+    const trim=new THREE.Mesh(new THREE.TorusGeometry(isNeph?2.45:1.32,0.04,8,48),new THREE.MeshStandardMaterial({color:0x000,emissive:a.palette.emissive,emissiveIntensity:1.6}));
+    trim.rotation.x=Math.PI/2; trim.position.y=isNeph?1.18:1.08; node.add(trim);
+    if(!isNeph){
+      const niche=new THREE.Mesh(new THREE.BoxGeometry(5,11,0.4),new THREE.MeshStandardMaterial({color:0x08070b,roughness:0.95})); niche.position.set(0,5.5,2.6); node.add(niche);
+      const frame=new THREE.Mesh(new THREE.TorusGeometry(2.3,0.06,8,40,Math.PI),new THREE.MeshStandardMaterial({color:0x000,emissive:a.palette.emissive,emissiveIntensity:0.9})); frame.position.set(0,7.2,2.4); node.add(frame);
+    }
+    const fig=buildFigure(a); fig.grp.position.y=isNeph?1.2:1.1; node.add(fig.grp);
+    const aura=buildAura(fig.emissiveColor,isNeph); aura.position.y=isNeph?1.2:1.1; node.add(aura);
+    if(MODELS[a.key]) loadModelFor(node,fig,MODELS[a.key],a);
+
+    exhibits.push({a,node,pos:new THREE.Vector3(x,0,z),glowColor:new THREE.Color(a.glow),glyphObj:fig.glyphObj,halo:fig.halo,aura,isNeph});
+  });
+
+  // ===================== MOUNT HERMON CINEMATIC =====================
+  const hermon=new THREE.Group(); hermon.visible=false; hermon.position.set(0,0,-300); scene.add(hermon);
+  const HPEAK=new THREE.Vector3(0,18,-60-300+300); // peak in hermon-local handled below
+  // build in local space, group offset by -300 z keeps it far from hall
+  (function buildHermon(){
+    const peakLocalZ=-60;
+    const mtn=new THREE.Mesh(new THREE.ConeGeometry(46,42,7,1,true),new THREE.MeshStandardMaterial({color:0x3c4660,roughness:1,metalness:0,flatShading:true,emissive:0x141a2a,emissiveIntensity:0.4}));
+    mtn.position.set(0,11,peakLocalZ); hermon.add(mtn);
+    const ridge1=new THREE.Mesh(new THREE.ConeGeometry(30,26,6,1,true),new THREE.MeshStandardMaterial({color:0x333d56,roughness:1,flatShading:true})); ridge1.position.set(-34,3,peakLocalZ+20); hermon.add(ridge1);
+    const ridge2=ridge1.clone(); ridge2.position.set(36,2,peakLocalZ+26); ridge2.scale.set(1.2,1.1,1.2); hermon.add(ridge2);
+    const snow=new THREE.Mesh(new THREE.ConeGeometry(16,12,7),new THREE.MeshStandardMaterial({color:0xeef2ff,roughness:0.7,emissive:0xbcd0ff,emissiveIntensity:0.4})); snow.position.set(0,27,peakLocalZ); hermon.add(snow);
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({color:0x0c1020,roughness:1})); ground.rotation.x=-Math.PI/2; ground.position.set(0,-10,peakLocalZ); hermon.add(ground);
+    const moonDisc=new THREE.Mesh(new THREE.CircleGeometry(11,48),new THREE.MeshBasicMaterial({color:0xfff4d6})); moonDisc.position.set(0,64,peakLocalZ-70); hermon.add(moonDisc);
+    const mlight=new THREE.PointLight(0xffeec4,70,460,1.1); mlight.position.set(0,66,peakLocalZ-30); hermon.add(mlight);
+    // dense sky stars
+    const N=2600,g=new THREE.BufferGeometry(),p=new Float32Array(N*3);
+    for(let i=0;i<N;i++){p[i*3]=(Math.random()-0.5)*420;p[i*3+1]=Math.random()*200-10;p[i*3+2]=peakLocalZ-Math.random()*260;}
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    hermon.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x9fb4ff,size:0.5,transparent:true,opacity:0.85,depthWrite:false})));
+    // 200 descending fallers
+    const M=200; const fg=new THREE.BufferGeometry(); const fp=new Float32Array(M*3);
+    const start=[],end=[];
+    for(let i=0;i<M;i++){ const a=Math.random()*Math.PI*2,r=8+Math.random()*16;
+      start.push(new THREE.Vector3((Math.random()-0.5)*120,90+Math.random()*70,peakLocalZ-40-Math.random()*120));
+      end.push(new THREE.Vector3(Math.cos(a)*r,16+Math.random()*8,peakLocalZ+Math.sin(a)*r));
+      fp[i*3]=start[i].x;fp[i*3+1]=start[i].y;fp[i*3+2]=start[i].z; }
+    fg.setAttribute('position',new THREE.BufferAttribute(fp,3));
+    const fallers=new THREE.Points(fg,new THREE.PointsMaterial({color:0xfff0c8,size:0.9,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+    hermon.add(fallers);
+    const flash=new THREE.Mesh(new THREE.TorusGeometry(2,0.5,16,60),new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+    flash.position.set(0,15,peakLocalZ); flash.rotation.x=Math.PI/2; hermon.add(flash);
+    // moonlight god-ray shafts streaming over the peak
+    for(let i=0;i<5;i++){ const sh=new THREE.Mesh(new THREE.CylinderGeometry(1.5,9,170,16,1,true),
+      new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.06,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false}));
+      sh.position.set(i*7-14,60,peakLocalZ-20-i*5); sh.rotation.z=(i-2)*0.06; sh.rotation.x=-0.1; hermon.add(sh); }
+    // ground mist motes
+    const DN=600,dg=new THREE.BufferGeometry(),dp=new Float32Array(DN*3);
+    for(let i=0;i<DN;i++){ dp[i*3]=(Math.random()-0.5)*180; dp[i*3+1]=Math.random()*40; dp[i*3+2]=peakLocalZ+ (Math.random()-0.5)*180; }
+    dg.setAttribute('position',new THREE.BufferAttribute(dp,3));
+    hermon.add(new THREE.Points(dg,new THREE.PointsMaterial({color:0xffe9c4,size:0.35,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending,depthWrite:false})));
+    hermon.userData={start,end,fallers,flash,peakLocalZ,M};
+  })();
+
+  const BEATS=[
+    {t:"From the earth a great cry went up — blood, and ruin, and all the works the Watchers had taught.",c:"1 Enoch 8:4",d:7},
+    {t:"Then Michael, Gabriel, Raphael and Uriel looked down from heaven, and beheld the blood shed upon it.",c:"1 Enoch 9:1",d:7.5},
+    {t:"And they brought the cause of mankind before the Most High: “Thou seest what Azazel hath done, who hath taught all unrighteousness.”",c:"1 Enoch 9:6",d:8},
+    {t:"And the Holy One answered, and sent forth his archangels.",c:"1 Enoch 10:1",d:6},
+    {t:"Uriel — go unto Noah; tell him the end approaches, that he may escape, and his seed be preserved.",c:"1 Enoch 10:1–3",d:7.5},
+    {t:"Raphael — bind Azazel hand and foot; cast him into the darkness of Dudael; and heal the earth.",c:"1 Enoch 10:4–7",d:7.5},
+    {t:"Gabriel, against the giants; and Michael, bind Semjaza and his hosts beneath the hills, till the day of judgment.",c:"1 Enoch 10:9–12",d:8}
+  ];
+  let cineStart=-1, oathDone=false;
+  const cineEl=document.getElementById('cine'), cineText=document.getElementById('cine-text'),
+        cineCite=document.getElementById('cine-cite'), cineFade=document.getElementById('cine-fade'),
+        cineTitle=document.getElementById('cine-title');
+  let curBeat=-1;
+  function aim(from,to){ const d=new THREE.Vector3().subVectors(to,from).normalize();
+    return {yaw:Math.atan2(-d.x,-d.z), pitch:Math.asin(clamp(d.y,-1,1))}; }
+
+  function startCinematic(){
+    inCinematic=true; oathDone=false; curBeat=-1; cineStart=clock.getElapsedTime();
+    HALL.visible=false; exhibits.forEach(e=>e.node.visible=false);
+    hermon.visible=true; musicSetMode('cinematic');
+    cineEl.style.display='block'; cineFade.style.opacity='1';
+    cineTitle.style.opacity='0'; cineText.style.opacity='0'; cineCite.style.opacity='0';
+    requestAnimationFrame(()=>{ cineFade.style.opacity='0'; cineTitle.style.opacity='1'; });
+    intro.style.opacity='0'; setTimeout(()=>intro.style.display='none',1000);
+  }
+  function totalCine(){ return BEATS.reduce((s,b)=>s+b.d,0); }
+  function updateCinematic(now){
+    const el=now-cineStart, tot=totalCine(), p=clamp(el/tot,0,1);
+    // camera path (in hermon-local; hermon is offset -300 z, so add)
+    const pk=hermon.userData.peakLocalZ;
+    const from=new THREE.Vector3(lerp(0,0,p), lerp(30,16,easeIO(p)), lerp(pk+72,pk+12,easeIO(p)));
+    const look=new THREE.Vector3(0,14,pk);
+    const camWorld=from.clone().add(hermon.position);
+    const lookWorld=look.clone().add(hermon.position);
+    player.position.copy(camWorld); const a=aim(camWorld,lookWorld); yaw=a.yaw; pitch=a.pitch;
+    // fallers descend (converge as p grows; mostly between beats 3..6)
+    const fp=hermon.userData.fallers.geometry.attributes.position, st=hermon.userData.start, en=hermon.userData.end;
+    const fprog=clamp((el-12)/(tot-16),0,1), fe=easeIO(fprog);
+    for(let i=0;i<hermon.userData.M;i++){ const wob=Math.sin(now*2+i)*0.6*(1-fe);
+      fp.setX(i,lerp(st[i].x,en[i].x,fe)+wob); fp.setY(i,lerp(st[i].y,en[i].y,fe)); fp.setZ(i,lerp(st[i].z,en[i].z,fe)); }
+    fp.needsUpdate=true; hermon.userData.fallers.rotation.y=0;
+    // beats
+    let acc=0,bi=0; for(let i=0;i<BEATS.length;i++){ if(el>=acc){bi=i;} acc+=BEATS[i].d; }
+    if(bi!==curBeat){ curBeat=bi; const b=BEATS[bi];
+      cineText.style.opacity='0'; cineCite.style.opacity='0';
+      setTimeout(()=>{ cineText.textContent=b.t; cineCite.textContent=b.c; cineText.style.opacity='1'; cineCite.style.opacity='1'; },420);
+    }
+    // oath flash on beat 3
+    const fl=hermon.userData.flash;
+    if(curBeat>=3 && !oathDone){ oathDone=true; musicCue('oath'); }
+    if(oathDone){ const since=el-(BEATS.slice(0,4).reduce((s,b)=>s+b.d,0)); // time after oath beat start
+      const k=clamp(1-Math.abs(since)/2,0,1); fl.material.opacity=k*0.9; fl.scale.setScalar(1+ (1-k)*10 + Math.max(0,since)*3);
+      renderer.toneMappingExposure=1.08+k*0.5;
+    } else { renderer.toneMappingExposure=1.08; }
+    if(el>=tot){ endCinematic(); }
+  }
+  function endCinematic(){
+    if(!inCinematic) return;
+    cineFade.style.opacity='1'; cineText.style.opacity='0'; cineCite.style.opacity='0'; cineTitle.style.opacity='0';
+    renderer.toneMappingExposure=1.08;
+    setTimeout(()=>{
+      inCinematic=false; hermon.visible=false; HALL.visible=true; exhibits.forEach(e=>e.node.visible=true);
+      player.position.set(0,0,6); yaw=0; pitch=0; musicSetMode('hall');
+      enterHall(true);
+      setTimeout(()=>{ cineEl.style.display='none'; cineFade.style.opacity='1'; },1700);
+    },1300);
+  }
+  document.getElementById('cine-skip').onclick=endCinematic;
+
+  // ===================== NAVIGATION =====================
+  const keys={}; let yaw=0,pitch=0,locked=false,inCinematic=false,started=false,activeExhibit=null;
+  const canvas=renderer.domElement;
+  addEventListener('keydown',e=>{ keys[e.code]=true;
+    if(inCinematic && (e.code==='Space'||e.code==='Enter')) endCinematic();
+    if(!started) return;
+    if(e.code==='KeyE') readActive();
+    if(e.code==='KeyN') toggleNarrateActive();
+    if(e.code==='KeyM') toggleDir();
+    if(e.code==='Escape') closePanels();
+  });
+  addEventListener('keyup',e=>keys[e.code]=false);
+  canvas.addEventListener('click',()=>{ if(started&&!inCinematic&&!isTouch) canvas.requestPointerLock(); });
+  document.addEventListener('pointerlockchange',()=>locked=(document.pointerLockElement===canvas));
+  document.addEventListener('mousemove',e=>{ if(!locked||inCinematic)return; yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.35,1.35); });
+
+  let touchMove={x:0,y:0},lookId=null,lastLook={x:0,y:0};
+  if(isTouch){
+    document.body.classList.add('touch');
+    const joy=document.getElementById('joy'),stick=joy.querySelector('.stick'); let jid=null,cx=0,cy=0;
+    joy.addEventListener('pointerdown',e=>{jid=e.pointerId;const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;joy.setPointerCapture(jid);});
+    joy.addEventListener('pointermove',e=>{if(e.pointerId!==jid)return;let dx=e.clientX-cx,dy=e.clientY-cy;const m=Math.hypot(dx,dy),lim=50;if(m>lim){dx*=lim/m;dy*=lim/m;}stick.style.transform=`translate(${dx}px,${dy}px)`;touchMove.x=dx/lim;touchMove.y=dy/lim;});
+    const endJoy=e=>{if(e.pointerId!==jid)return;jid=null;touchMove={x:0,y:0};stick.style.transform='translate(0,0)';};
+    joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
+    canvas.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*0.45||inCinematic)return;lookId=e.pointerId;lastLook={x:e.clientX,y:e.clientY};});
+    canvas.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-lastLook.x)*0.005;pitch=clamp(pitch-(e.clientY-lastLook.y)*0.005,-1.35,1.35);lastLook={x:e.clientX,y:e.clientY};});
+    canvas.addEventListener('pointerup',e=>{if(e.pointerId===lookId)lookId=null;});
+    document.getElementById('tap-e').addEventListener('click',readActive);
+  }
+
+  // ===================== UI =====================
+  const intro=document.getElementById('intro'),hud=document.getElementById('hud'),
+        toastEl=document.getElementById('toast'),topbar=document.getElementById('topbar'),
+        panel=document.getElementById('panel'),panelBody=document.getElementById('panel-body'),dir=document.getElementById('dir');
+
+  const dirList=document.getElementById('dir-list');
+  exhibits.forEach((ex,i)=>{ const d=document.createElement('div'); d.className='item';
+    d.innerHTML=`<span class="n">${ex.isNeph?'※':String(i+1).padStart(2,'0')}</span><span><span class="nm">${ex.a.name}</span><span class="dm">${ex.a.rank}</span></span>`;
+    d.onclick=()=>{teleport(ex);toggleDir(true);}; dirList.appendChild(d); });
+  document.getElementById('btn-dir').onclick=()=>toggleDir();
+  document.getElementById('panel-close').onclick=()=>{stopNarrate();panel.classList.remove('open');};
+  document.getElementById('dir-replay').onclick=()=>{ toggleDir(true); closePanels(); stopNarrate(); hud.style.opacity='0'; startCinematic(); };
+  function toggleDir(forceClose){ dir.classList.toggle('open',forceClose?false:!dir.classList.contains('open')); }
+  function closePanels(){ stopNarrate(); panel.classList.remove('open'); dir.classList.remove('open'); }
+
+  function teleport(ex){
+    const sx=ex.pos.x, sz=ex.pos.z; let px,pz;
+    if(ex.isNeph){ px=0; pz=sz+9; } else { px=sx+(sx>0?-1:1)*6.5; pz=sz; }
+    player.position.set(px,0,pz);
+    const a=aim(new THREE.Vector3(px,EYE,pz), new THREE.Vector3(sx, ex.isNeph?4.5:2.6, sz));
+    yaw=a.yaw; pitch=a.pitch*0.5;
+    showPanel(ex);
+  }
+  let toastTimer=null;
+  function showToast(html,hold){ toastEl.innerHTML=html; toastEl.style.opacity='1'; if(toastTimer)clearTimeout(toastTimer); if(hold)toastTimer=setTimeout(hideToast,hold); }
+  function hideToast(){ toastEl.style.opacity='0'; }
+
+  function showPanel(ex){
+    const a=ex.a; panel.style.setProperty('--glow',a.glow);
+    panelBody.innerHTML=`
+      <div class="rank">${a.rank}</div>
+      <h2>${a.name}</h2>
+      <div class="aka">${a.aka}</div>
+      <button class="narrate" id="narrate-btn">🔊 Narrate this account</button>
+      <div class="divider"></div>
+      <div class="story">${a.story}</div>
+      <div class="field"><div class="label">Charge</div><div class="val">${a.domain}</div></div>
+      <div class="field"><div class="label">Rank in the Host</div><div class="val">${a.lineage}</div></div>
+      <div class="field"><div class="label">Emblem</div><div class="val">${a.offspring}</div></div>
+      <div class="field"><div class="label">Appears In</div><div class="val">${a.fate}</div></div>
+      <div class="divider"></div>
+      <div class="src"><b>Sources:</b> ${a.src}</div>
+      <div class="src" style="margin-top:8px;opacity:.7">Drawn from scripture, the Books of Enoch, and clearly-labelled later tradition — preserved for study.</div>
+      <div class="glyphmark">✦ &nbsp; ${a.name.toUpperCase()} &nbsp; ✦</div>`;
+    panelActive=a;
+    const nb=document.getElementById('narrate-btn');
+    if(nb) nb.onclick=()=>{ if(narrating){stopNarrate();} else narrate(a); };
+    updateNarrateBtn();
+    panel.classList.add('open');
+    if(autoNarrate) narrate(a);
+  }
+  function readActive(){ if(activeExhibit) showPanel(activeExhibit); }
+
+  // ===================== NARRATION (TTS + optional audio files) =====================
+  let narrating=false, autoNarrate=false, currentVoice=null, panelActive=null;
+  const voiceAudio=document.getElementById('voiceAudio');
+  function pickVoice(){ if(!('speechSynthesis'in window))return; const vs=speechSynthesis.getVoices()||[];
+    currentVoice = vs.find(v=>/en[-_]GB/i.test(v.lang)&&/male|daniel|george|arthur/i.test(v.name))
+      || vs.find(v=>/daniel|david|george|arthur|male/i.test(v.name)&&/^en/i.test(v.lang))
+      || vs.find(v=>/^en/i.test(v.lang)) || vs[0] || null; }
+  if('speechSynthesis'in window){ speechSynthesis.onvoiceschanged=pickVoice; pickVoice(); }
+  const stripHtml=s=>s.replace(/<[^>]+>/g,' ').replace(/&[a-z]+;/g,' ').replace(/\s+/g,' ').trim();
+  function ttsNarrate(a){ if(!('speechSynthesis'in window)) return;
+    const text=`${a.name}. ${a.rank.replace(/·/g,', ')}. ${stripHtml(a.story)}  Forbidden art: ${stripHtml(a.domain)}  Their doom: ${stripHtml(a.fate)}`;
+    const u=new SpeechSynthesisUtterance(text); if(currentVoice)u.voice=currentVoice; u.rate=0.9; u.pitch=0.78; u.volume=1;
+    u.onstart=()=>{narrating=true;updateNarrateBtn();}; u.onend=()=>{narrating=false;updateNarrateBtn();}; u.onerror=()=>{narrating=false;updateNarrateBtn();};
+    speechSynthesis.speak(u);
+  }
+  let voiceHooked=false;
+  function hookVoiceReverb(){ if(voiceHooked||!audio.ctx)return; try{ const src=audio.ctx.createMediaElementSource(voiceAudio); const g=audio.ctx.createGain(); g.gain.value=0.95; src.connect(g); g.connect(audio.master); g.connect(audio.conv); voiceHooked=true; }catch(e){} }
+  // prefer a recorded file at audio/<key>.mp3 (or a.voiceUrl); fall back to live TTS
+  function narrate(a){
+    stopNarrate(); let done=false;
+    const fallback=()=>{ if(done)return; done=true; ttsNarrate(a); };
+    const url=a.voiceUrl||('audio/'+a.key+'.mp3');
+    voiceAudio.onerror=fallback;
+    voiceAudio.oncanplay=()=>{ if(done)return; done=true; hookVoiceReverb(); voiceAudio.play().then(()=>{narrating=true;updateNarrateBtn();}).catch(fallback); };
+    voiceAudio.onended=()=>{narrating=false;updateNarrateBtn();};
+    try{ voiceAudio.src=url; voiceAudio.load(); }catch(e){ fallback(); return; }
+    setTimeout(()=>{ if(!done && voiceAudio.readyState<2) fallback(); },1200);
+  }
+  function stopNarrate(){ try{ if('speechSynthesis'in window)speechSynthesis.cancel(); }catch(e){}
+    try{ voiceAudio.onended=voiceAudio.oncanplay=voiceAudio.onerror=null; voiceAudio.pause(); }catch(e){} narrating=false; updateNarrateBtn(); }
+  function updateNarrateBtn(){ const nb=document.getElementById('narrate-btn'); if(nb){ nb.textContent= narrating?'■ Stop narration':'🔊 Narrate this account'; nb.classList.toggle('on',narrating); } }
+  function toggleNarrateActive(){ if(narrating){stopNarrate();return;} const a=panelActive||(activeExhibit&&activeExhibit.a); if(a)narrate(a); }
+  const btnNarr=document.getElementById('btn-narr');
+  btnNarr.onclick=()=>{ autoNarrate=!autoNarrate; btnNarr.textContent='🔊 Narrate: '+(autoNarrate?'On':'Off'); btnNarr.classList.toggle('on',autoNarrate);
+    if(autoNarrate && panel.classList.contains('open') && panelActive) narrate(panelActive); if(!autoNarrate) stopNarrate(); };
+
+  // ===================== ENTER =====================
+  function enterHall(skipFade){
+    started=true; hud.style.opacity='1';
+    if(!skipFade){ intro.style.opacity='0'; setTimeout(()=>intro.style.display='none',1200); }
+    if(!isTouch && !inCinematic) canvas.requestPointerLock();
+    startAudio(); musicSetMode('hall');
+    showToast('Walk the hall. Approach an archangel and press <span class="key">E</span> to read, <span class="key">N</span> to hear it spoken.',7000);
+  }
+  document.getElementById('enter').onclick=()=>{ startAudio(); startCinematic(); };
+  document.getElementById('skiplink').onclick=()=>{ startAudio(); enterHall(false); };
+
+  // VR button
+  if(VRButton && navigator.xr){ try{ const vb=VRButton.createButton(renderer); vb.style.zIndex='40'; document.body.appendChild(vb);}catch(e){} }
+
+  // ===================== GENERATIVE SCORE + AUDIO =====================
+  // A procedural cathedral/choir score (no audio files needed). Drop a `music.mp3`
+  // beside this file to override it. Voice-over also routes through the shared reverb.
+  let audio={ctx:null,on:true,started:false,mode:'hall'};
+  const MUSIC_URL='music-archangels.mp3'; // real angelic choir (Pixabay, royalty-free) — overrides the synth
+  const A1=55, hz=s=>A1*Math.pow(2,s/12);
+  const PROG=[{root:3,t:[0,4,7]},{root:-2,t:[0,4,7]},{root:0,t:[0,3,7]},{root:-4,t:[0,4,7]}]; // C–G–Am–F (luminous / major)
+  function makeIR(ctx,sec,decay){ const rate=ctx.sampleRate,len=Math.floor(sec*rate),buf=ctx.createBuffer(2,len,rate);
+    for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);} return buf; }
+  function startAudio(){
+    if(audio.started){ if(audio.ctx&&audio.ctx.state==='suspended')audio.ctx.resume(); return; }
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; const ctx=new AC(); audio.ctx=ctx; audio.started=true;
+      const master=ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination); audio.master=master;
+      // long, lush cathedral reverb
+      const conv=ctx.createConvolver(); conv.buffer=makeIR(ctx,4.8,1.9); const wet=ctx.createGain(); wet.gain.value=0.44; conv.connect(wet).connect(master); audio.conv=conv;
+      const musicGain=ctx.createGain(); musicGain.gain.value=0.0001; musicGain.connect(master); musicGain.connect(conv); audio.musicGain=musicGain;
+      const bus=ctx.createGain(); bus.connect(musicGain); audio.bus=bus;
+      // soft organ-pedal foundation (gentle, not a rumble)
+      const sub=ctx.createOscillator(); sub.type='triangle'; sub.frequency.value=hz(-12); const sg=ctx.createGain(); sg.gain.value=0.08; sub.connect(sg).connect(bus); sub.start(); audio.sub=sub;
+      // warm pad — pure triangles, slightly detuned (wide), through an OPEN low-Q filter (no eerie wah)
+      const pf=ctx.createBiquadFilter(); pf.type='lowpass'; pf.frequency.value=2300; pf.Q.value=0.55; pf.connect(bus); audio.pf=pf;
+      audio.pad=[]; for(let i=0;i<5;i++){ const o=ctx.createOscillator(); o.type='triangle'; o.detune.value=(i-2)*4; const g=ctx.createGain(); g.gain.value=0.044; o.connect(g).connect(pf); o.start(); audio.pad.push({o,g}); }
+      // angelic choir an octave up, gently detuned, with a slow vibrato (vox angelica)
+      audio.choir=[]; for(let i=0;i<4;i++){ const o=ctx.createOscillator(); o.type='sine'; o.detune.value=(i-1.5)*5; const g=ctx.createGain(); g.gain.value=0.034; o.connect(g).connect(bus); o.start(); audio.choir.push({o,g}); }
+      const vib=ctx.createOscillator(); vib.type='sine'; vib.frequency.value=4.6; const vg=ctx.createGain(); vg.gain.value=3.5; vib.connect(vg); audio.choir.forEach(v=>vg.connect(v.o.detune)); vib.start();
+      // a very gentle, slow brightness drift on the already-open filter (sheen, not a sweep)
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.035; const lg=ctx.createGain(); lg.gain.value=240; lfo.connect(lg).connect(pf.frequency); lfo.start();
+      audio.chordIdx=0; applyChord(0);
+      musicGain.gain.linearRampToValueAtTime(audio.on?0.18:0.0001, ctx.currentTime+6);
+      loopChords(); loopBells(); tryMusicFile();
+    }catch(e){ console.warn('audio failed',e); }
+  }
+  function applyChord(idx){ const ctx=audio.ctx; if(!ctx)return; const c=PROG[idx%PROG.length], tt=ctx.currentTime;
+    audio.pad.forEach((v,i)=>v.o.frequency.setTargetAtTime(hz(c.root+c.t[i%c.t.length]+(i>=c.t.length?12:0)),tt,2.2));
+    audio.choir.forEach((v,i)=>v.o.frequency.setTargetAtTime(hz(c.root+c.t[i%c.t.length]+12),tt,2.6));
+    audio.sub.frequency.setTargetAtTime(hz(c.root-12),tt,2.6);
+  }
+  function loopChords(){ if(!audio.ctx)return; audio.chordIdx=(audio.chordIdx+1)%PROG.length; applyChord(audio.chordIdx);
+    audio._ct=setTimeout(loopChords, audio.mode==='cinematic'?9000:15000); }
+  function bell(semi,gain){ const ctx=audio.ctx; if(!ctx)return; const t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=hz(semi); const g=ctx.createGain(); g.gain.value=0; o.connect(g).connect(audio.bus);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+4.6); o.start(t); o.stop(t+4.7); }
+  function loopBells(){ if(!audio.ctx)return; bell(PROG[audio.chordIdx%PROG.length].root+24, 0.04+Math.random()*0.03);
+    audio._bt=setTimeout(loopBells, 14000+Math.random()*12000); }
+  function musicSetMode(m){ audio.mode=m; const ctx=audio.ctx; if(!ctx)return; const t=ctx.currentTime;
+    if(m==='cinematic'){ audio.pf.frequency.setTargetAtTime(3000,t,3); audio.choir.forEach(v=>v.g.gain.setTargetAtTime(0.05,t,3)); if(audio.on)audio.musicGain.gain.setTargetAtTime(0.22,t,3); }
+    else{ audio.pf.frequency.setTargetAtTime(2300,t,4); audio.choir.forEach(v=>v.g.gain.setTargetAtTime(0.034,t,4)); if(audio.on)audio.musicGain.gain.setTargetAtTime(0.18,t,4); } }
+  function musicCue(name){ const ctx=audio.ctx; if(!ctx)return; const t=ctx.currentTime;
+    if(name==='oath'||name==='glory'){ const c=PROG[audio.chordIdx%PROG.length];
+      // a rising chime of the chord (glory), then a soft ascending swell
+      [0,4,7,12].forEach((iv,k)=>setTimeout(()=>bell(c.root+12+iv,0.085),k*150));
+      const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(hz(c.root+12),t); o.frequency.exponentialRampToValueAtTime(hz(c.root+24),t+2.4);
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.13,t+0.7); g.gain.exponentialRampToValueAtTime(0.0001,t+3.4); o.connect(g).connect(audio.bus); o.start(t); o.stop(t+3.5);
+      if(audio.on){ audio.musicGain.gain.setTargetAtTime(0.3,t,0.5); setTimeout(()=>{ if(audio.ctx&&audio.on)audio.musicGain.gain.setTargetAtTime(audio.mode==='cinematic'?0.22:0.18,audio.ctx.currentTime,2.8); },2000); } } }
+  function tryMusicFile(){ try{ const el=document.getElementById('musicAudio'); if(!el)return; el.loop=true; el.volume=1;
+    el.oncanplaythrough=()=>{ try{ const src=audio.ctx.createMediaElementSource(el); src.connect(audio.musicGain); }catch(e){}
+      el.play().then(()=>{ audio.bus.gain.setTargetAtTime(0.0001,audio.ctx.currentTime,3); }).catch(()=>{}); };
+    el.onerror=()=>{}; el.src=MUSIC_URL; el.load(); }catch(e){} }
+  function toggleMusic(){ audio.on=!audio.on; const b=document.getElementById('btn-music'); if(b){ b.textContent='♪ Music: '+(audio.on?'On':'Off'); b.classList.toggle('on',!audio.on); }
+    if(audio.ctx&&audio.musicGain) audio.musicGain.gain.setTargetAtTime(audio.on?(audio.mode==='cinematic'?0.2:0.16):0.0001, audio.ctx.currentTime,0.6); }
+  { const bm=document.getElementById('btn-music'); if(bm) bm.onclick=toggleMusic; }
+
+  // ===================== RESIZE =====================
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight); bloom.setSize(innerWidth,innerHeight); });
+
+  // ===================== LOOP =====================
+  const clock=new THREE.Clock();
+  const fwd=new THREE.Vector3(),right=new THREE.Vector3(),move=new THREE.Vector3(),tmp=new THREE.Vector3();
+  const _warm=new THREE.Color(0xfff0d0),_tint=new THREE.Color();
+  const Z0=BACK+3, Z1=FRONT-2;
+
+  function animate(){
+    const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+    const presenting=renderer.xr.isPresenting;
+
+    if(inCinematic){
+      player.rotation.y=yaw; camera.rotation.set(pitch,0,0); camera.position.set(0,0,0);
+      updateCinematic(t);
+      // twinkle hall stars irrelevant; render hermon
+      presenting?renderer.render(scene,camera):composer.render();
+      return;
+    }
+
+    if(!presenting){ player.rotation.y=yaw; camera.rotation.set(pitch,0,0); camera.position.set(0,EYE,0); }
+    else{ camera.position.set(0,0,0); player.rotation.y=yaw; }
+
+    if(started){
+      let fb=0,lr=0;
+      if(keys['KeyW']||keys['ArrowUp'])fb+=1; if(keys['KeyS']||keys['ArrowDown'])fb-=1;
+      if(keys['KeyA']||keys['ArrowLeft'])lr-=1; if(keys['KeyD']||keys['ArrowRight'])lr+=1;
+      if(isTouch){ fb-=touchMove.y; lr+=touchMove.x; }
+      const speed=(keys['ShiftLeft']||keys['ShiftRight'])?14:7;
+      if(fb||lr){ fwd.set(0,0,-1).applyAxisAngle(YAXIS,yaw); right.set(1,0,0).applyAxisAngle(YAXIS,yaw);
+        move.set(0,0,0).addScaledVector(fwd,fb).addScaledVector(right,lr).normalize().multiplyScalar(speed*dt); player.position.add(move); }
+      if(presenting){ const s=renderer.xr.getSession(); if(s)for(const src of s.inputSources){ if(src.gamepad&&src.gamepad.axes.length>=4){
+        const ax=src.gamepad.axes,lx=ax[2]||0,ly=ax[3]||0; if(Math.abs(lx)>0.15||Math.abs(ly)>0.15){
+          fwd.set(0,0,-1).applyAxisAngle(YAXIS,yaw); right.set(1,0,0).applyAxisAngle(YAXIS,yaw);
+          move.set(0,0,0).addScaledVector(fwd,-ly).addScaledVector(right,lx).multiplyScalar(6*dt); player.position.add(move); } } } }
+    }
+    player.position.x=clamp(player.position.x,-HALF+1.5,HALF-1.5);
+    player.position.z=clamp(player.position.z,Z0,Z1); player.position.y=0;
+
+    // nearest exhibit → focus light + prompt
+    let near=null,nd=1e9; for(const ex of exhibits){const d=ex.pos.distanceToSquared(player.position); if(d<nd){nd=d;near=ex;}}
+    const dist=Math.sqrt(nd);
+    if(near){
+      focusLight.position.lerp(tmp.set(near.pos.x,12,near.pos.z+(near.isNeph?6:0)),0.06);
+      focusLight.target.position.lerp(tmp.set(near.pos.x,near.isNeph?4:2.5,near.pos.z),0.1);
+      focusLight.intensity=lerp(focusLight.intensity,(dist<15?1:0)*230,0.06);
+      focusLight.color.lerp(_tint.copy(_warm).lerp(near.glowColor,0.32),0.05);
+      if(dist<7){ if(activeExhibit!==near){ activeExhibit=near; topbar.textContent=near.a.name+' — '+near.a.rank;
+          showToast(`<b>${near.a.name}</b> · ${near.a.aka.split('·')[0].trim()}<br>press <span class="key">E</span> to read · <span class="key">N</span> to hear`); } }
+      else if(dist>9 && activeExhibit){ activeExhibit=null; topbar.textContent='The Hall of the Watchers'; hideToast(); }
+    }
+
+    // brazier light pool → nearest braziers
+    braziers.sort((a,b)=>a.pos.distanceToSquared(player.position)-b.pos.distanceToSquared(player.position));
+    for(let i=0;i<POOL;i++){ const b=braziers[i]; if(b){ const f=0.7+0.4*Math.sin(t*9+b.seed)+0.15*Math.sin(t*23+b.seed*2);
+      pool[i].position.copy(b.pos); pool[i].intensity=22*(0.7+0.5*Math.abs(f)); } else pool[i].intensity=0; }
+    for(const b of braziers){ const f=0.85+0.25*Math.sin(t*9+b.seed); b.flame.scale.setScalar(f); }
+
+    // exhibits anim
+    for(const ex of exhibits){
+      if(ex.glyphObj){ ex.glyphObj.rotation.y+=dt*0.4; }
+      if(ex.halo){ ex.halo.rotation.z+=dt*0.25; }
+      const pos=ex.aura.geometry.attributes.position, sp=ex.aura.userData.spd, H=ex.aura.userData.H;
+      for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+sp[i]*dt; if(y>H)y-=H; pos.setY(i,y); } pos.needsUpdate=true; ex.aura.rotation.y+=dt*0.08;
+    }
+
+    // god-ray shimmer + dust drift
+    for(const s of shafts){ s.m.material.opacity=s.base*(0.65+0.5*Math.sin(t*0.6+s.seed)); }
+    { const dp=dust.geometry.attributes.position,dsp=dust.userData.sp; for(let i=0;i<dp.count;i++){ let y=dp.getY(i)+dsp[i]*dt; if(y>16)y-=16; dp.setY(i,y); } dp.needsUpdate=true; }
+
+    presenting?renderer.render(scene,camera):composer.render();
+  }
+  renderer.setAnimationLoop(animate);
+
+  window.__go=(k)=>{const e=exhibits.find(x=>x.a.key===k);if(!e)return'no';teleport(e);closePanels();return'at '+k;};
+  window.__count=(k)=>{const e=exhibits.find(x=>x.a.key===k);if(!e)return'no';let m=0;const b=new THREE.Box3();e.node.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){m++;b.expandByObject(o);}});const s=new THREE.Vector3();b.getSize(s);return JSON.stringify({meshes:m,sizeY:+s.y.toFixed(2),minY:+b.min.y.toFixed(2)});};
+  document.getElementById('loadnote').textContent='the host is gathered';
+  const enterBtn=document.getElementById('enter'); enterBtn.disabled=false; enterBtn.focus();
+}
+
+init();
+</script>
+</body>
+</html>
