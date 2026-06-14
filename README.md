@@ -12,6 +12,10 @@ must be *served*. Pages does exactly that.
 - Hub: `https://atxgreene.github.io/greene-halls/`
 - Watchers: `https://atxgreene.github.io/greene-halls/hall-of-the-watchers.html`
 - Archangels: `https://atxgreene.github.io/greene-halls/hall-of-archangels.html`
+- Revelation: `https://atxgreene.github.io/greene-halls/the-revelation.html`
+
+`the-revelation.html` is fully self-contained — it builds its world procedurally and only needs
+Three.js r160 from the CDN (no `.glb`/`.mp3` fetches), so it also runs by double-clicking the file.
 
 ## Pushing the content (from the Windows authoring PC)
 
@@ -30,6 +34,7 @@ robocopy "$src\audio"  ".\audio"  /E
 Copy-Item "$src\index.html" .
 Copy-Item "$src\hall-of-the-watchers.html" .
 Copy-Item "$src\hall-of-archangels.html" .
+Copy-Item "$src\the-revelation.html" .
 Copy-Item "$src\music-archangels.mp3" .
 git status            # review exactly what is staged before committing — public repo
 git add -A

@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>The Revelation of John — A Vision in Eleven Visions</title>
+<!--
+  THE REVELATION OF JOHN  ·  an immersive WebXR vision-engine for the Greene Museum (Theology wing)
+  ------------------------------------------------------------------------------------------------
+  A single self-contained HTML file. Three.js r160 + addons load from CDN (needs internet the first
+  time); everything else is procedural — no external models, textures, or audio are required.
+
+  ARCHITECTURE (read this before extending):
+    • boot(LIB)            — sets up renderer, scene, camera, player dolly, bloom composer, audio.
+    • SCENES[]             — the eleven visions. Each entry is { key, title, range, symbols[],
+                             captions[], build(api) }. build() returns { group, update(t,dt),
+                             spawn, env } and may register its own particle systems / lights.
+    • SceneManager        — fades to black, disposes the previous scene's group (geometry+materials),
+                             builds the next, re-seats the player, and re-tunes fog / bloom / audio.
+    • Shared helpers      — glowSprite(), label3D(), particleField(), figureOfLight(), etc. Reuse
+                             these so new scenes stay light and consistent.
+
+  TO ADD A VISION: push a new object onto SCENES with a build() that returns the same shape. The
+  floating timeline, captions, symbol overlay, prev/next, and audio all pick it up automatically.
+-->
+<style>
+  :root{
+    --gold:#d9b463; --ink:#07060a; --parch:#e9dcc0; --crim:#b8121a;
+    --emerald:#3fd6a0; --sapphire:#6f9cff; --violet:#b98bff; --pearl:#f3ecd8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;background:#000;color:var(--parch);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased}
+  canvas{display:block;position:fixed;inset:0}
+
+  /* ---------------- INTRO ---------------- */
+  #intro{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:radial-gradient(ellipse at 50% 38%,#120d18 0%,#070608 58%,#000 100%);
+    transition:opacity 1.4s ease;padding:6vh 24px}
+  #intro h1{font-size:clamp(34px,7vw,78px);letter-spacing:.14em;font-weight:400;color:var(--parch);
+    text-shadow:0 0 40px rgba(217,180,99,.45),0 2px 2px #000;line-height:1.05}
+  #intro h1 small{display:block;font-size:.3em;letter-spacing:.52em;color:var(--gold);margin-top:1.3em;text-transform:uppercase;opacity:.85}
+  #intro p.sub{max-width:680px;margin:28px auto 0;font-size:clamp(14px,2vw,18px);line-height:1.75;color:#b9ac90;font-style:italic}
+  #intro .verse{max-width:600px;margin:30px auto 0;font-size:13px;color:#7e745f;line-height:1.85;letter-spacing:.02em}
+  #enter{margin-top:42px;padding:16px 48px;font:inherit;font-size:18px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(180deg,#e7c878,#b9923f);border:none;border-radius:2px;cursor:pointer;
+    box-shadow:0 0 44px rgba(217,180,99,.35);transition:transform .2s,box-shadow .2s}
+  #enter:hover{transform:translateY(-2px);box-shadow:0 0 66px rgba(217,180,99,.62)}
+  #enter:disabled{opacity:.4;cursor:wait;filter:grayscale(.6)}
+  #skiplink{display:block;margin-top:18px;font-size:12px;letter-spacing:.16em;color:#8a7f66;text-transform:uppercase;
+    cursor:pointer;background:none;border:none;font-family:inherit}
+  #skiplink:hover{color:var(--gold)}
+  #loadnote{margin-top:20px;font-size:12px;color:#6b6354;letter-spacing:.1em;height:16px}
+  .controls-hint{margin-top:26px;font-size:12px;color:#80765f;letter-spacing:.07em;max-width:700px;line-height:1.7}
+  .controls-hint b{color:var(--gold);font-weight:400}
+
+  /* ---------------- TRANSITION VEIL ---------------- */
+  #veil{position:fixed;inset:0;z-index:48;background:#000;opacity:0;pointer-events:none;transition:opacity 1.1s ease}
+  #veil.on{opacity:1}
+
+  /* ---------------- HUD ---------------- */
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity 1s}
+  #hud.on{opacity:1}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%)}
+  #crosshair{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;
+    background:rgba(233,220,192,.55);box-shadow:0 0 6px rgba(0,0,0,.8)}
+  /* top bar: current vision + scripture range */
+  #topbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+  #topbar .num{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);opacity:.85}
+  #topbar .vtitle{font-size:clamp(16px,2.4vw,22px);letter-spacing:.18em;color:var(--parch);text-shadow:0 1px 6px #000;margin-top:3px}
+  #topbar .vrange{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#9a8e72;margin-top:4px}
+  /* caption */
+  #captionwrap{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);width:min(880px,88vw);text-align:center;
+    transition:opacity .9s ease;opacity:0}
+  #caption{font-size:clamp(18px,3vw,30px);line-height:1.42;color:var(--parch);font-style:italic;
+    text-shadow:0 0 26px rgba(0,0,0,.92),0 0 50px rgba(0,0,0,.6)}
+  #captionref{margin-top:14px;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);opacity:.9}
+  /* toast */
+  #toast{position:absolute;left:50%;bottom:30%;transform:translateX(-50%);background:rgba(8,7,9,.72);
+    border:1px solid rgba(217,180,99,.32);backdrop-filter:blur(6px);padding:10px 22px;border-radius:3px;font-size:14px;
+    letter-spacing:.04em;color:var(--parch);opacity:0;transition:opacity .4s;text-align:center;max-width:80vw}
+  #toast .key{display:inline-block;border:1px solid var(--gold);border-radius:3px;padding:1px 7px;margin:0 2px;font-size:12px;color:var(--gold)}
+
+  /* ---------------- CONTROL BUTTONS ---------------- */
+  #ui-btns{position:fixed;z-index:30;top:14px;right:14px;display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;max-width:62vw}
+  .ibtn{pointer-events:auto;background:rgba(10,9,11,.66);border:1px solid rgba(217,180,99,.3);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.1em;padding:9px 12px;border-radius:3px;cursor:pointer;backdrop-filter:blur(6px);transition:.18s}
+  .ibtn:hover{background:rgba(217,180,99,.16)}
+  .ibtn.off{opacity:.5}
+  .ibtn.warm{border-color:var(--crim);color:#f1c9c0}
+
+  /* prev / next vision */
+  #nav-prev,#nav-next{position:fixed;z-index:28;top:50%;transform:translateY(-50%);pointer-events:auto;
+    background:rgba(9,8,11,.5);border:1px solid rgba(217,180,99,.28);color:var(--gold);font-family:inherit;
+    width:54px;height:84px;border-radius:4px;cursor:pointer;font-size:24px;backdrop-filter:blur(5px);transition:.18s;opacity:.7}
+  #nav-prev{left:14px}#nav-next{right:14px}
+  #nav-prev:hover,#nav-next:hover{opacity:1;background:rgba(217,180,99,.16)}
+
+  /* ---------------- TIMELINE (chapter nav) ---------------- */
+  #timeline{position:fixed;top:0;left:0;height:100%;width:min(360px,90vw);z-index:34;
+    background:linear-gradient(180deg,rgba(13,11,16,.97),rgba(7,6,9,.98));border-right:1px solid rgba(217,180,99,.25);
+    transform:translateX(-105%);transition:transform .48s cubic-bezier(.2,.8,.2,1);overflow-y:auto;padding:24px 0 40px;pointer-events:auto}
+  #timeline.open{transform:translateX(0)}
+  #timeline::-webkit-scrollbar{width:8px}#timeline::-webkit-scrollbar-thumb{background:rgba(217,180,99,.3);border-radius:4px}
+  #timeline h3{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);padding:4px 26px 6px}
+  #timeline .lead{font-size:11.5px;font-style:italic;color:#8a7f66;padding:0 26px 14px;line-height:1.6}
+  .tl-item{padding:12px 24px;cursor:pointer;border-left:3px solid transparent;transition:.16s;display:flex;gap:12px;align-items:baseline}
+  .tl-item:hover{background:rgba(217,180,99,.07);border-left-color:var(--gold)}
+  .tl-item.active{background:rgba(217,180,99,.1);border-left-color:var(--gold)}
+  .tl-item .rn{font-size:11px;color:#6f6552;width:20px;flex:none;letter-spacing:.06em}
+  .tl-item .tt{font-size:15.5px;color:#cabfa3;line-height:1.3}
+  .tl-item.active .tt{color:var(--parch)}
+  .tl-item .rr{display:block;font-size:10.5px;color:#7c725d;font-style:italic;margin-top:2px;letter-spacing:.04em}
+
+  /* ---------------- SYMBOL OVERLAY ---------------- */
+  #symbols{position:fixed;top:0;right:0;height:100%;width:min(420px,92vw);z-index:34;
+    background:linear-gradient(180deg,rgba(14,11,14,.97),rgba(8,7,9,.98));border-left:1px solid rgba(217,180,99,.3);
+    box-shadow:-30px 0 80px rgba(0,0,0,.6);transform:translateX(105%);transition:transform .5s cubic-bezier(.2,.8,.2,1);
+    overflow-y:auto;pointer-events:auto;padding:30px 32px 60px}
+  #symbols.open{transform:translateX(0)}
+  #symbols::-webkit-scrollbar{width:8px}#symbols::-webkit-scrollbar-thumb{background:rgba(217,180,99,.3);border-radius:4px}
+  #symbols .close{position:absolute;top:14px;right:18px;font-size:26px;color:#8a8068;cursor:pointer;line-height:1;background:none;border:none;font-family:inherit}
+  #symbols .close:hover{color:var(--gold)}
+  #symbols .rn{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.85}
+  #symbols h2{font-size:30px;font-weight:400;letter-spacing:.04em;color:var(--parch);margin:6px 0 2px}
+  #symbols .rr{font-size:12px;font-style:italic;color:#9a8e72;margin-bottom:16px}
+  #symbols .divider{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:14px 0;opacity:.6}
+  #symbols .sym{margin:14px 0}
+  #symbols .sym .label{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  #symbols .sym .label::after{content:"";flex:1;height:1px;background:rgba(217,180,99,.18)}
+  #symbols .sym .val{font-size:14.5px;line-height:1.66;color:#cabfa3}
+
+  /* ---------------- TOUCH ---------------- */
+  #joy{position:fixed;left:24px;bottom:24px;width:128px;height:128px;z-index:26;border-radius:50%;
+    border:1px solid rgba(217,180,99,.25);background:rgba(10,9,11,.32);display:none;touch-action:none;pointer-events:auto}
+  #joy .stick{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px;border-radius:50%;background:rgba(217,180,99,.4)}
+  body.touch #joy{display:block}
+
+  /* ---------------- ERROR ---------------- */
+  #err{position:fixed;inset:0;z-index:99;display:none;align-items:center;justify-content:center;background:#070608;padding:40px;text-align:center}
+  #err div{max-width:560px}#err h2{color:var(--crim);font-weight:400;margin-bottom:16px;letter-spacing:.1em}
+  #err p{color:#b9ac90;line-height:1.7;font-size:15px}
+
+  .credit{position:fixed;left:12px;bottom:8px;z-index:22;font-size:10.5px;letter-spacing:.12em;color:#5d5648;pointer-events:none;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <h1>The Revelation of John<small>A Vision in Eleven Visions</small></h1>
+  <p class="sub">An exile on Patmos was carried in the Spirit beyond the veil of the world, and shown the
+    end and the renewing of all things. Here you do not read his vision. You stand inside it.</p>
+  <p class="verse">"I was on the island called Patmos… and I heard behind me a great voice, as of a trumpet."<br>— Revelation 1:9–10</p>
+  <button id="enter" disabled>Enter the Vision</button>
+  <button id="skiplink">› begin in the throne room of heaven</button>
+  <div id="loadnote">opening the door in heaven…</div>
+  <div class="controls-hint">
+    <b>W A S D / arrows</b> walk · <b>mouse / drag</b> look · <b>Shift</b> hasten ·
+    <b>← →</b> move between visions · <b>C</b> captions · <b>I</b> symbols · <b>T</b> timeline · <b>P</b> pause motion · <b>Esc</b> release cursor
+  </div>
+</div>
+
+<!-- TRANSITION VEIL -->
+<div id="veil"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="vignette"></div>
+  <div id="crosshair"></div>
+  <div id="topbar"><div class="num"></div><div class="vtitle"></div><div class="vrange"></div></div>
+  <div id="captionwrap"><div id="caption"></div><div id="captionref"></div></div>
+  <div id="toast"></div>
+</div>
+
+<!-- CONTROL BUTTONS -->
+<div id="ui-btns">
+  <button class="ibtn" id="btn-timeline">☰ Visions</button>
+  <button class="ibtn" id="btn-symbols">✦ Symbols</button>
+  <button class="ibtn" id="btn-captions">“ ” Scripture</button>
+  <button class="ibtn" id="btn-audio">♪ Audio</button>
+  <button class="ibtn" id="btn-comfort">◐ Motion</button>
+  <button class="ibtn" id="btn-patmos">↩ Patmos</button>
+</div>
+<button id="nav-prev" title="Previous vision">‹</button>
+<button id="nav-next" title="Next vision">›</button>
+
+<!-- TIMELINE -->
+<nav id="timeline">
+  <h3>The Visions of the Revelation</h3>
+  <div class="lead">Walk the vision in order, or step into any chapter. The default is a guided cinematic descent.</div>
+  <div id="tl-list"></div>
+</nav>
+
+<!-- SYMBOL OVERLAY -->
+<aside id="symbols"><button class="close" id="sym-close">×</button><div id="sym-body"></div></aside>
+
+<!-- TOUCH -->
+<div id="joy"><div class="stick"></div></div>
+
+<div class="credit">The Greene Museum · Theology Wing · Revelation</div>
+
+<!-- ERROR -->
+<div id="err"><div>
+  <h2>The Vision Could Not Be Opened</h2>
+  <p id="err-msg">This experience builds a real-time 3D world and needs WebGL plus a one-time download of the 3D engine from the internet. If you opened this file offline, connect and reload.</p>
+</div></div>
+
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+let THREE;
+async function init(){
+try{
+  THREE = await import('three');
+  const {EffectComposer}  = await import('three/addons/postprocessing/EffectComposer.js');
+  const {RenderPass}      = await import('three/addons/postprocessing/RenderPass.js');
+  const {UnrealBloomPass} = await import('three/addons/postprocessing/UnrealBloomPass.js');
+  let VRButton=null; try{ ({VRButton} = await import('three/addons/webxr/VRButton.js')); }catch(e){}
+  boot({THREE,EffectComposer,RenderPass,UnrealBloomPass,VRButton});
+}catch(err){
+  console.error(err);
+  document.getElementById('err').style.display='flex';
+  document.getElementById('err-msg').textContent =
+    'The 3D engine failed to load ('+(err?.message||err)+'). A network connection is required the first time. Connect and reload.';
+}
+}
+
+function boot(LIB){
+  const {THREE,EffectComposer,RenderPass,UnrealBloomPass,VRButton}=LIB;
+
+  /* ===================== small math / util ===================== */
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const easeIO=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const YAXIS=new THREE.Vector3(0,1,0);
+  const isTouch=('ontouchstart'in window)&&matchMedia('(pointer:coarse)').matches;
+  const TAU=Math.PI*2;
+
+  /* ===================== renderer / scene / camera ===================== */
+  const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.1;
+  renderer.shadowMap.enabled=false; // scenes lean on emissive + bloom, not shadow maps (keeps 11 scenes cheap)
+  renderer.xr.enabled=true;
+  document.body.appendChild(renderer.domElement);
+  const canvas=renderer.domElement;
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x05060b);
+  scene.fog=new THREE.FogExp2(0x05060b,0.02);
+
+  const camera=new THREE.PerspectiveCamera(64,innerWidth/innerHeight,0.05,4000);
+  const player=new THREE.Group(); player.add(camera); scene.add(player);
+  const EYE=1.65; camera.position.set(0,EYE,0); player.position.set(0,0,8);
+
+  // bloom is the primary "glory" tool across every vision
+  const composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.1,0.7,0.78);
+  composer.addPass(bloom);
+
+  // ambient rig reused by every scene (scenes re-tint these instead of making new lights)
+  const hemi=new THREE.HemisphereLight(0xbfd0ff,0x14121a,0.5); scene.add(hemi);
+  const key=new THREE.DirectionalLight(0xfff2da,0.7); key.position.set(-30,60,20); scene.add(key);
+  const fill=new THREE.PointLight(0xffffff,0,200,2); scene.add(fill);
+
+  /* ===================== shared procedural-texture helpers ===================== */
+  // radial soft glow sprite (cached texture) — the workhorse for stars, flames, divine light
+  let _glowTex=null;
+  function glowTexture(){
+    if(_glowTex) return _glowTex;
+    const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+    const g=x.createRadialGradient(64,64,0,64,64,64);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.25,'rgba(255,255,255,.7)');
+    g.addColorStop(0.55,'rgba(255,255,255,.18)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g; x.fillRect(0,0,128,128);
+    _glowTex=new THREE.CanvasTexture(c); _glowTex.colorSpace=THREE.SRGBColorSpace; return _glowTex;
+  }
+  function glow(color,size,opacity){
+    const m=new THREE.SpriteMaterial({map:glowTexture(),color,transparent:true,opacity:opacity==null?1:opacity,
+      blending:THREE.AdditiveBlending,depthWrite:false});
+    const s=new THREE.Sprite(m); s.scale.setScalar(size||1); return s;
+  }
+  // text → sprite (illuminated-manuscript captions in 3D space: "Holy Holy Holy", "King of Kings"…)
+  function label3D(text,opts={}){
+    const fs=opts.fs||64, pad=opts.pad||24, font=opts.font||'serif';
+    const c=document.createElement('canvas'), x=c.getContext('2d');
+    x.font=`${opts.italic?'italic ':''}${fs}px ${font}`;
+    const w=Math.ceil(x.measureText(text).width)+pad*2, h=fs+pad*2;
+    c.width=w; c.height=h; x.font=`${opts.italic?'italic ':''}${fs}px ${font}`;
+    x.textAlign='center'; x.textBaseline='middle';
+    x.shadowColor=opts.glow||'#d9b463'; x.shadowBlur=opts.blur==null?22:opts.blur;
+    x.fillStyle=opts.color||'#f3ecd8';
+    x.fillText(text,w/2,h/2);
+    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4;
+    const m=new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,
+      blending:opts.add?THREE.AdditiveBlending:THREE.NormalBlending,opacity:opts.opacity==null?1:opts.opacity});
+    const s=new THREE.Sprite(m); const sc=(opts.size||1); s.scale.set(sc*w/h,sc,1); s.userData.baseOpacity=m.opacity; return s;
+  }
+
+  // generic particle field. region(i)->[x,y,z]; returns {points, pos, drift()} — drift is optional per-scene.
+  function particleField(count,region,color,size,opt={}){
+    const n=Math.floor(count*(isTouch?0.5:1)*(comfort?0.6:1));
+    const g=new THREE.BufferGeometry(), p=new Float32Array(n*3);
+    for(let i=0;i<n;i++){ const v=region(i,n); p[i*3]=v[0]; p[i*3+1]=v[1]; p[i*3+2]=v[2]; }
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    const mat=new THREE.PointsMaterial({color,size,map:opt.soft?glowTexture():null,transparent:true,
+      opacity:opt.opacity==null?0.85:opt.opacity,depthWrite:false,
+      blending:opt.add===false?THREE.NormalBlending:THREE.AdditiveBlending,sizeAttenuation:opt.attenuate!==false});
+    const pts=new THREE.Points(g,mat); pts.frustumCulled=false; return {points:pts,pos:p,n};
+  }
+
+  // a robed "figure of light" — silhouette + radiant core, per the prompt's no-literal-faces direction.
+  function figureOfLight(height,coreColor,robeColor){
+    const grp=new THREE.Group();
+    const pts=[];
+    for(let i=0;i<=14;i++){ const t=i/14;
+      const r=0.05 + Math.sin(t*Math.PI*0.92)*0.42*(1-t*0.25) + (t>0.86?(t-0.86)*2.2:0);
+      pts.push(new THREE.Vector2(Math.max(0.04,r),t*height)); }
+    const robe=new THREE.Mesh(new THREE.LatheGeometry(pts,28),
+      new THREE.MeshStandardMaterial({color:robeColor||0x0c0c14,roughness:0.85,metalness:0.1,
+        emissive:coreColor,emissiveIntensity:0.25,side:THREE.DoubleSide}));
+    grp.add(robe);
+    const core=glow(coreColor,height*0.9,0.9); core.position.y=height*0.62; grp.add(core);
+    const halo=glow(coreColor,height*1.7,0.4); halo.position.y=height*0.66; grp.add(halo);
+    grp.userData={core,halo};
+    return grp;
+  }
+
+  // dispose every geometry/material under a node when a scene is torn down
+  function disposeNode(node){
+    node.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+      if(o.material){ const ms=Array.isArray(o.material)?o.material:[o.material];
+        ms.forEach(m=>{ if(m.map&&m.map!==_glowTex) m.map.dispose(); m.dispose(); }); }
+    });
+  }
+
+  /* ============================================================================================
+     THE ELEVEN VISIONS
+     Each scene: { key, title, range, symbols:[{t,d}], captions:[{at,t,ref}], build(api) }
+     build(api) returns { group, update(t,dt), spawn:{pos:[x,y,z],yaw}, env:{bg,fog,exposure,bloom}, audio }
+     api gives the shared helpers so scene code stays compact.
+     ============================================================================================ */
+  const api={THREE,glow,label3D,particleField,figureOfLight,rand,lerp,clamp,easeIO,TAU,isTouch};
+
+  const SCENES=[
+  /* ---------------------------------------------------------------- 1 · PATMOS */
+  { key:'patmos', title:'Patmos: The Opening Vision', range:'Revelation 1',
+    symbols:[
+      {t:'The Seven Lampstands',d:'The seven churches of Asia — the whole people of God, held as light before His face.'},
+      {t:'One like a Son of Man',d:'Robed to the feet, hair white as wool, eyes of flame, voice of many waters. Glory shown by light and silhouette, never a painted face.'},
+      {t:'The Two-Edged Sword',d:'Proceeding from His mouth — the word that judges and divides, sharper than any blade of iron.'},
+      {t:'The Seven Stars',d:'Held in His right hand — the angels (messengers) of the seven churches.'}],
+    captions:[
+      {at:0,t:'On the island called Patmos, an exile keeps watch as the day dies into the sea.',ref:'Revelation 1:9'},
+      {at:8,t:'Behind him, a voice like a trumpet: “Write what you see.”',ref:'Revelation 1:10–11'},
+      {at:16,t:'He turned — and seven golden lampstands stood blazing in the dark.',ref:'Revelation 1:12'},
+      {at:24,t:'Among them, One like a son of man: eyes of fire, a voice of many waters, His face as the sun.',ref:'Revelation 1:13–16'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // sea — a dark displaced plane that breathes
+      const seaGeo=new THREE.PlaneGeometry(600,600,80,80);
+      const sea=new THREE.Mesh(seaGeo,new THREE.MeshStandardMaterial({color:0x070b14,roughness:0.25,metalness:0.6}));
+      sea.rotation.x=-Math.PI/2; sea.position.y=-3.4; g.add(sea);
+      const base=seaGeo.attributes.position.array.slice();
+      // rugged volcanic island / cliff the viewer stands on
+      const rockMat=new THREE.MeshStandardMaterial({color:0x1a1813,roughness:0.95,metalness:0.05});
+      const island=new THREE.Mesh(new THREE.CylinderGeometry(11,15,5,9,1),rockMat); island.position.y=-2.6; g.add(island);
+      for(let i=0;i<26;i++){ const r=new THREE.Mesh(new THREE.DodecahedronGeometry(api.rand(0.4,1.8),0),rockMat);
+        const a=api.rand(0,api.TAU),rad=api.rand(2,10); r.position.set(Math.cos(a)*rad,api.rand(-0.4,0.6),Math.sin(a)*rad-2);
+        r.rotation.set(api.rand(0,3),api.rand(0,3),api.rand(0,3)); r.scale.y=api.rand(0.5,1.4); g.add(r); }
+      // sparse dry grass (thin lines that sway)
+      const grass=new THREE.Group();
+      for(let i=0;i<(isTouch?40:90);i++){ const h=api.rand(0.3,0.7);
+        const b=new THREE.Mesh(new THREE.ConeGeometry(0.02,h,4),new THREE.MeshStandardMaterial({color:0x4a431f,roughness:1}));
+        const a=api.rand(0,api.TAU),rad=api.rand(3,9); b.position.set(Math.cos(a)*rad,h/2-0.1,Math.sin(a)*rad-2); grass.add(b);} g.add(grass);
+      // oil lamp at the cave-mouth — a warm point of human prayer in the dark
+      const lampLight=new THREE.PointLight(0xffaa44,2.4,18,2); lampLight.position.set(2.4,0.4,4); g.add(lampLight);
+      const lampFlame=glow(0xffb24d,0.7,0.95); lampFlame.position.copy(lampLight.position); g.add(lampFlame);
+      const lampBowl=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.1,0.12,12),new THREE.MeshStandardMaterial({color:0x2a1c10,metalness:0.7,roughness:0.4}));
+      lampBowl.position.set(2.4,0.18,4); g.add(lampBowl);
+      // faint manuscript scroll
+      const scroll=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.7,12),new THREE.MeshStandardMaterial({color:0xcdbf93,roughness:0.9,emissive:0x2a2415,emissiveIntensity:0.4}));
+      scroll.rotation.z=Math.PI/2; scroll.position.set(1.7,0.12,4.3); g.add(scroll);
+      // sky + stars + distant storm horizon
+      const stars=particleField(1400,()=>{const a=api.rand(0,api.TAU),el=api.rand(0.02,1.2),rad=200;
+        return [Math.cos(a)*Math.cos(el)*rad,Math.sin(el)*rad+10,Math.sin(a)*Math.cos(el)*rad];},0xaecbff,1.3,{soft:true,opacity:0.8});
+      g.add(stars.points);
+      const horizon=glow(0x24304e,140,0.5); horizon.position.set(0,2,-200); g.add(horizon);
+      // distant thunder flashes
+      const stormFlash=new THREE.PointLight(0x9fb4ff,0,300,2); stormFlash.position.set(-80,40,-180); g.add(stormFlash);
+      // --- THE THEOPHANY (appears partway through the vision) ---
+      const theo=new THREE.Group(); theo.position.set(0,0.5,-16); theo.visible=false; g.add(theo);
+      const tear=glow(0xfff3cf,40,0); tear.position.y=12; theo.add(tear); // the sky tearing open in gold-white light
+      const lamps=[];
+      for(let i=0;i<7;i++){ const x=(i-3)*1.5;
+        const stand=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.1,2.2,10),new THREE.MeshStandardMaterial({color:0xc79a44,metalness:0.9,roughness:0.25}));
+        stand.position.set(x,1.1,0); theo.add(stand);
+        const fl=glow(0xffd27a,0.9,0); fl.position.set(x,2.35,0); theo.add(fl); lamps.push(fl); }
+      const figure=figureOfLight(3.2,0xfff0c0,0x0c0a12); figure.position.set(0,0.2,0.2); figure.scale.setScalar(0); theo.add(figure);
+      // seven stars orbiting His right hand
+      const starGrp=new THREE.Group(); starGrp.position.set(1.5,2.2,0.4); theo.add(starGrp);
+      for(let i=0;i<7;i++){ const s=glow(0xffffff,0.4,0.95); const a=i/7*api.TAU; s.position.set(Math.cos(a)*0.7,Math.sin(a)*0.4,Math.sin(a)*0.3); starGrp.add(s);}
+      // a thin blade of light = the two-edged sword from His mouth
+      const sword=new THREE.Mesh(new THREE.ConeGeometry(0.12,3.2,4),new THREE.MeshBasicMaterial({color:0xfff6da,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+      sword.rotation.z=-Math.PI/2; sword.position.set(2.4,2.5,0.4); theo.add(sword);
+
+      return {
+        group:g, spawn:{pos:[0,0,7],yaw:Math.PI}, // start facing the sea; the voice is "behind", toward the theophany
+        env:{bg:0x05070e,fog:{c:0x05070e,d:0.018},exposure:1.04,bloom:{s:1.0,r:0.7,t:0.8}},
+        audio:{drone:[-17,-10,-5],noise:0.5,filter:520,wind:true,sea:true,texture:'patmos'},
+        update(t,dt){
+          // sea swell
+          const arr=seaGeo.attributes.position.array;
+          for(let i=0;i<arr.length;i+=3){ const x=base[i],y=base[i+1]; arr[i+2]=base[i+2]+Math.sin(x*0.12+t*0.7)*0.5+Math.cos(y*0.1+t*0.5)*0.4; }
+          seaGeo.attributes.position.needsUpdate=true;
+          lampFlame.scale.setScalar(0.6+0.18*Math.sin(t*9)+0.1*Math.sin(t*21)); lampLight.intensity=2.0+0.6*Math.sin(t*8);
+          // distant thunder
+          if(Math.random()<0.004){ stormFlash.intensity=rand(2,6); } else stormFlash.intensity*=0.9;
+          // reveal the theophany after ~14s of dwelling on Patmos (or immediately if user advanced)
+          const rev=clamp((sceneClock-13)/8,0,1);
+          theo.visible=rev>0.001;
+          if(rev>0){ const e=easeIO(rev);
+            tear.material.opacity=0.85*e; tear.scale.setScalar(20+e*40);
+            figure.scale.setScalar(e*1); figure.userData.core.material.opacity=0.9*e; figure.userData.halo.material.opacity=0.4*e;
+            lamps.forEach((l,i)=>{ l.material.opacity=e*(0.8+0.2*Math.sin(t*7+i)); l.scale.setScalar(0.9*(0.85+0.15*Math.sin(t*6+i))); });
+            starGrp.rotation.z+=dt*0.4; sword.material.opacity=0.5*e;
+            renderer.toneMappingExposure=lerp(1.04,1.4,e*0.6);
+          }
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 2 · THRONE ROOM */
+  { key:'throne', title:'The Throne Room of Heaven', range:'Revelation 4',
+    symbols:[
+      {t:'The Emerald Rainbow',d:'A halo of mercy encircling the throne — covenant light around absolute holiness.'},
+      {t:'The Sea of Glass',d:'Before the throne, clear as crystal: the stilled, transparent order of heaven.'},
+      {t:'The Twenty-Four Elders',d:'Crowned and robed in white — the whole people of God, the redeemed, casting down their crowns.'},
+      {t:'The Four Living Creatures',d:'Lion, ox, man, eagle — full of eyes, six-winged. Holy and alien, the highest worship of creation.'},
+      {t:'Holy, Holy, Holy',d:'The unceasing cry. Holiness threefold: there is none beside Him.'}],
+    captions:[
+      {at:0,t:'A door stood open in heaven, and a voice called John upward.',ref:'Revelation 4:1'},
+      {at:8,t:'At once he was in the Spirit — and there before him was a throne, and One seated on it.',ref:'Revelation 4:2'},
+      {at:16,t:'Around the throne an emerald rainbow; before it a sea like glass, clear as crystal.',ref:'Revelation 4:3,6'},
+      {at:24,t:'And the four living creatures never cease: “Holy, holy, holy is the Lord God Almighty.”',ref:'Revelation 4:8'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // infinite floor — a dark mirror = the sea of glass
+      const glassMat=new THREE.MeshStandardMaterial({color:0x0a1424,roughness:0.08,metalness:0.9,envMapIntensity:1});
+      const glassPlane=new THREE.Mesh(new THREE.CircleGeometry(220,72),glassMat); glassPlane.rotation.x=-Math.PI/2; glassPlane.position.y=-0.02; g.add(glassPlane);
+      // celestial columns receding into infinity
+      const colMat=new THREE.MeshStandardMaterial({color:0x1b2236,roughness:0.4,metalness:0.4,emissive:0x10243a,emissiveIntensity:0.4});
+      for(let ring=1;ring<=5;ring++){ const rad=20+ring*16, count=8+ring*4;
+        for(let i=0;i<count;i++){ const a=i/count*api.TAU; const c=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.4,60,12),colMat);
+          c.position.set(Math.cos(a)*rad,30,Math.sin(a)*rad); g.add(c);} }
+      // THE THRONE at the center of reality
+      const throne=new THREE.Group(); throne.position.set(0,0,-26); g.add(throne);
+      const dais=new THREE.Mesh(new THREE.CylinderGeometry(6,8,2,40),new THREE.MeshStandardMaterial({color:0x16203a,roughness:0.3,metalness:0.6}));
+      dais.position.y=1; throne.add(dais);
+      const seat=new THREE.Mesh(new THREE.BoxGeometry(5,6,3),new THREE.MeshStandardMaterial({color:0x1a2748,roughness:0.25,metalness:0.7,emissive:0x2a3f7a,emissiveIntensity:0.5}));
+      seat.position.set(0,5,-1); throne.add(seat);
+      const gloryCore=glow(0xfff6e0,26,0.95); gloryCore.position.set(0,7,0); throne.add(gloryCore);
+      const gloryHalo=glow(0xffe9b0,60,0.4); gloryHalo.position.set(0,7,0); throne.add(gloryHalo);
+      // emerald rainbow ring around the throne
+      const rainbow=new THREE.Mesh(new THREE.TorusGeometry(11,0.7,16,80),new THREE.MeshBasicMaterial({color:0x2fd49a,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending}));
+      rainbow.position.set(0,7,0); rainbow.rotation.x=Math.PI/2.4; throne.add(rainbow);
+      const rainbow2=new THREE.Mesh(new THREE.TorusGeometry(13,0.4,16,80),new THREE.MeshBasicMaterial({color:0x8ef0c8,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending}));
+      rainbow2.position.set(0,7,0); rainbow2.rotation.x=Math.PI/2.4; throne.add(rainbow2);
+      // seven burning lamps before the throne (the seven spirits of God)
+      const lamps=[]; for(let i=0;i<7;i++){ const a=(i/6-0.5)*1.5; const fl=glow(0xffcf6a,1.4,0.95);
+        fl.position.set(Math.sin(a)*9,4,Math.cos(a)*-9+6); throne.add(fl); lamps.push(fl);
+        const pl=new THREE.PointLight(0xffb24d,1.2,30,2); pl.position.copy(fl.position); throne.add(pl); }
+      // twenty-four elders — a ring of crowned white-robed seats
+      const elders=new THREE.Group(); throne.add(elders);
+      for(let i=0;i<24;i++){ const a=i/24*api.TAU, rad=18;
+        const e=new THREE.Group(); e.position.set(Math.cos(a)*rad,0,Math.sin(a)*rad); e.lookAt(0,3,0);
+        const robe=figureOfLight(2.2,0xffffff,0x141822); robe.scale.setScalar(0.8); e.add(robe);
+        const crown=new THREE.Mesh(new THREE.TorusGeometry(0.32,0.06,8,16),new THREE.MeshStandardMaterial({color:0xe7c878,metalness:1,roughness:0.2,emissive:0x6b5418,emissiveIntensity:0.6}));
+        crown.rotation.x=Math.PI/2; crown.position.y=2.0; e.add(crown); elders.add(e); }
+      // FOUR LIVING CREATURES — winged, eye-studded, slow and alien. distinct emissive tints.
+      const creatures=[]; const ctints=[0xffcf6a/*lion*/,0xd8b48a/*ox*/,0xbfd0ff/*man*/,0xeaf2ff/*eagle*/];
+      for(let i=0;i<4;i++){ const a=i/4*api.TAU+Math.PI/4, rad=10;
+        const cg=new THREE.Group(); cg.position.set(Math.cos(a)*rad,7,Math.sin(a)*rad); cg.lookAt(0,7,-26);
+        const body=new THREE.Mesh(new THREE.IcosahedronGeometry(1.5,1),new THREE.MeshStandardMaterial({color:0x0e1220,roughness:0.6,metalness:0.3,emissive:ctints[i],emissiveIntensity:0.35}));
+        cg.add(body);
+        // six wings
+        const wings=new THREE.Group(); cg.add(wings);
+        for(let w=0;w<6;w++){ const wing=new THREE.Mesh(new THREE.PlaneGeometry(3,1.1),new THREE.MeshBasicMaterial({color:ctints[i],transparent:true,opacity:0.18,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
+          const wa=(w-2.5)*0.5; wing.position.set(Math.sign(wa||1)*1.2,Math.sin(wa)*1.2,0); wing.rotation.y=wa*0.7+Math.PI/2; wings.add(wing); }
+        // eyes shimmering across the form
+        const eyes=particleField(60,()=>{const u=api.rand(0,api.TAU),v=Math.acos(api.rand(-1,1)),r=1.7;
+          return [Math.sin(v)*Math.cos(u)*r,Math.sin(v)*Math.sin(u)*r,Math.cos(v)*r];},0xffffff,0.16,{soft:true,opacity:0.9});
+        cg.add(eyes.points);
+        g.add(cg); creatures.push({cg,wings,eyes}); }
+      // floating "Holy, Holy, Holy" glyphs
+      const holies=[]; for(let i=0;i<10;i++){ const s=label3D('Holy',{fs:54,color:'#ffe6a8',glow:'#d9b463',size:1.8,add:true,opacity:0.0});
+        const a=api.rand(0,api.TAU),rad=api.rand(14,40); s.position.set(Math.cos(a)*rad,api.rand(6,24),Math.sin(a)*rad-12); g.add(s); holies.push(s); }
+      // rising incense / star motes
+      const motes=particleField(900,()=>[api.rand(-60,60),api.rand(0,50),api.rand(-80,30)],0xffe9b0,0.5,{soft:true,opacity:0.5}); g.add(motes.points);
+
+      return {
+        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        env:{bg:0x060a14,fog:{c:0x060a14,d:0.006},exposure:1.16,bloom:{s:1.25,r:0.7,t:0.72}},
+        audio:{drone:[-12,-8,-5,0],noise:0.12,filter:1800,choir:true,texture:'throne'},
+        update(t,dt){
+          gloryCore.scale.setScalar(24+2*Math.sin(t*1.3)); gloryHalo.material.opacity=0.35+0.1*Math.sin(t*0.8);
+          rainbow.rotation.z+=dt*0.05; rainbow2.rotation.z-=dt*0.04;
+          lamps.forEach((l,i)=>l.scale.setScalar(1.3+0.3*Math.sin(t*7+i)));
+          creatures.forEach((c,i)=>{ c.wings.children.forEach((w,k)=>w.rotation.z=Math.sin(t*1.1+k+i)*0.25);
+            c.eyes.points.rotation.y+=dt*0.2; c.cg.position.y=7+Math.sin(t*0.6+i)*0.3; });
+          const mp=motes.points.geometry.attributes.position; for(let i=0;i<mp.count;i++){ let y=mp.getY(i)+dt*(0.4+(i%5)*0.1); if(y>50)y-=50; mp.setY(i,y);} mp.needsUpdate=true;
+          // the Holy glyphs pulse in and slowly rise
+          holies.forEach((s,i)=>{ s.material.opacity=lerp(s.material.opacity,0.5+0.4*Math.sin(t*0.7+i),0.04); s.position.y+=dt*0.15; if(s.position.y>26)s.position.y=6; });
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 3 · SEALS & THE LAMB */
+  { key:'seals', title:'The Scroll and the Seven Seals', range:'Revelation 5',
+    symbols:[
+      {t:'The Sealed Scroll',d:'In the right hand of the One on the throne — the title-deed of history, shut with seven seals.'},
+      {t:'Who is Worthy?',d:'No one in heaven or earth or under the earth could open it. John wept much.'},
+      {t:'The Lamb, Slain yet Standing',d:'Seven horns (complete power), seven eyes (the Spirit sent into all the earth). Glory by radiance and wound, not literal depiction.'},
+      {t:'Golden Bowls of Incense',d:'The prayers of the saints, rising like galaxies as heaven erupts in worship.'}],
+    captions:[
+      {at:0,t:'In the right hand of the throne, a scroll — sealed with seven seals.',ref:'Revelation 5:1'},
+      {at:8,t:'And no one was found worthy to open it. John wept much.',ref:'Revelation 5:3–4'},
+      {at:16,t:'Then a Lamb, slain yet standing, took the scroll from the throne.',ref:'Revelation 5:6–7'},
+      {at:24,t:'And heaven answered in worship: “Worthy is the Lamb who was slain.”',ref:'Revelation 5:12'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      const floor=new THREE.Mesh(new THREE.CircleGeometry(200,64),new THREE.MeshStandardMaterial({color:0x090c16,roughness:0.2,metalness:0.7}));
+      floor.rotation.x=-Math.PI/2; g.add(floor);
+      // distant throne glory (carried over from scene 2, dimmer here)
+      const throneGlow=glow(0xfff0d0,18,0.7); throneGlow.position.set(0,9,-30); g.add(throneGlow);
+      // the scroll, held in light
+      const scroll=new THREE.Group(); scroll.position.set(0,6,-22); g.add(scroll);
+      const parch=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,3.4,24),new THREE.MeshStandardMaterial({color:0xd8c79a,roughness:0.85,emissive:0x3a3115,emissiveIntensity:0.4}));
+      parch.rotation.z=Math.PI/2; scroll.add(parch);
+      const seals=[]; for(let i=0;i<7;i++){ const s=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,0.08,12),new THREE.MeshStandardMaterial({color:0x8a1018,emissive:0xb8121a,emissiveIntensity:0.6,metalness:0.3,roughness:0.5}));
+        s.rotation.x=Math.PI/2; s.position.set((i-3)*0.48,0.72,0); scroll.add(s); seals.push(s); }
+      // THE LAMB — radiant, seven horns, seven eyes, ascends to take the scroll
+      const lamb=new THREE.Group(); lamb.position.set(0,1.5,-10); g.add(lamb);
+      const lambCore=glow(0xffffff,5,0.95); lamb.add(lambCore);
+      const lambHalo=glow(0xfff0d0,12,0.5); lamb.add(lambHalo);
+      const lambBody=new THREE.Mesh(new THREE.IcosahedronGeometry(1.1,1),new THREE.MeshStandardMaterial({color:0xf3ecd8,roughness:0.5,metalness:0.1,emissive:0xffe9b0,emissiveIntensity:0.6}));
+      lamb.add(lambBody);
+      const horns=[]; for(let i=0;i<7;i++){ const a=i/7*api.TAU; const h=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.6,8),new THREE.MeshStandardMaterial({color:0xffe9b0,emissive:0xffd27a,emissiveIntensity:0.8,metalness:0.6,roughness:0.3}));
+        h.position.set(Math.cos(a)*0.9,0.9,Math.sin(a)*0.9); h.lookAt(lamb.position.clone()); h.rotation.x+=Math.PI/2; horns.push(h); lamb.add(h);}
+      const eyes=[]; for(let i=0;i<7;i++){ const a=i/7*api.TAU+0.4; const e=glow(0x8ef0ff,0.5,0.95); e.position.set(Math.cos(a)*1.2,Math.sin(a)*0.6,Math.sin(a)*0.5); lamb.add(e); eyes.push(e);}
+      const lambLight=new THREE.PointLight(0xffffff,0,60,2); lamb.add(lambLight);
+      // golden bowls of incense, spiraling up like galaxies on worship
+      const incense=particleField(1600,(i,n)=>{ const arm=i%3, a=i/n*api.TAU*6+arm*api.TAU/3, r=api.rand(2,40);
+        return [Math.cos(a)*r,api.rand(0,2),Math.sin(a)*r-18];},0xffd27a,0.6,{soft:true,opacity:0.0});
+      g.add(incense.points);
+      // harps as drifting golden glints in a great ring
+      const harps=particleField(400,()=>{const a=api.rand(0,api.TAU),r=api.rand(20,46);return[Math.cos(a)*r,api.rand(2,16),Math.sin(a)*r-18];},0xfff0c8,0.7,{soft:true,opacity:0.6});
+      g.add(harps.points);
+
+      let worship=0;
+      return {
+        group:g, spawn:{pos:[0,0,4],yaw:Math.PI},
+        env:{bg:0x070810,fog:{c:0x070810,d:0.01},exposure:1.0,bloom:{s:1.2,r:0.75,t:0.7}},
+        audio:{drone:[-15,-10,-3],noise:0.18,filter:900,texture:'seals'},
+        update(t,dt){
+          // grief: collapsing light for the first stretch, then the Lamb rises and glory returns
+          const grief=clamp(1-(sceneClock-6)/3,0,1);    // 1 → 0 as Lamb approaches
+          const taken=clamp((sceneClock-10)/3,0,1);      // Lamb takes the scroll
+          worship=clamp((sceneClock-13)/4,0,1);          // heaven erupts
+          throneGlow.material.opacity=lerp(0.7,0.18,grief);
+          renderer.toneMappingExposure=lerp(0.78,1.18,1-grief);
+          // Lamb ascends toward the scroll
+          const e=easeIO(taken);
+          lamb.position.set(0,lerp(1.5,5.4,e),lerp(-10,-21,e));
+          lambCore.scale.setScalar(4+1.2*Math.sin(t*2)+worship*4); lambLight.intensity=lerp(0,30,1-grief)+worship*20;
+          horns.forEach(h=>{}); eyes.forEach((ey,i)=>ey.material.opacity=0.7+0.3*Math.sin(t*5+i));
+          lamb.rotation.y+=dt*0.2;
+          // worship eruption: incense spirals brighten and rise, scroll seals glow
+          const ip=incense.points.geometry.attributes.position;
+          incense.points.material.opacity=lerp(incense.points.material.opacity,worship*0.7,0.05);
+          incense.points.rotation.y+=dt*0.15*worship;
+          for(let i=0;i<ip.count;i++){ let y=ip.getY(i)+dt*(0.5+worship*1.5); if(y>26)y-=26; ip.setY(i,y);} ip.needsUpdate=true;
+          seals.forEach((s,i)=>s.material.emissiveIntensity=0.4+worship*0.6*Math.abs(Math.sin(t*4+i)));
+          throneGlow.material.opacity+=worship*0.5;
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 4 · FOUR HORSEMEN */
+  { key:'horsemen', title:'The Four Horsemen', range:'Revelation 6',
+    symbols:[
+      {t:'White Horse — Conquest',d:'A crown given, a bow, going out conquering. Cold, regal, and unsettling.'},
+      {t:'Red Horse — War',d:'Power to take peace from the earth; a great sword. The rivers run blood-red.'},
+      {t:'Black Horse — Famine',d:'A pair of scales: a day’s wage for a loaf. Grain weighed out in dearth.'},
+      {t:'Pale Horse — Death',d:'Its rider named Death, and Hades following. Ash and silence over ruined cities.'}],
+    captions:[
+      {at:0,t:'The Lamb opened the first seal — and a white horse went out, conquering.',ref:'Revelation 6:1–2'},
+      {at:8,t:'The second seal: a red horse, to take peace from the earth.',ref:'Revelation 6:3–4'},
+      {at:16,t:'The third: a black horse, with a pair of scales — a loaf for a day’s wage.',ref:'Revelation 6:5–6'},
+      {at:24,t:'The fourth: a pale horse. Its rider’s name was Death, and Hades came after.',ref:'Revelation 6:7–8'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // vast cracked plain under a darkened, blood-tinged sky
+      const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800,1,1),new THREE.MeshStandardMaterial({color:0x14100e,roughness:1}));
+      ground.rotation.x=-Math.PI/2; ground.position.y=-0.1; g.add(ground);
+      // cracks of fire across the ground
+      const cracks=particleField(700,()=>{const a=api.rand(0,api.TAU),r=api.rand(5,120);return[Math.cos(a)*r,0.05,Math.sin(a)*r-30];},0xff5a1e,0.5,{soft:true,opacity:0.5}); g.add(cracks.points);
+      const skyGlow=glow(0x4a1414,200,0.6); skyGlow.position.set(0,30,-160); g.add(skyGlow);
+      // distant ruined-city silhouettes
+      for(let i=0;i<40;i++){ const b=new THREE.Mesh(new THREE.BoxGeometry(api.rand(2,6),api.rand(3,16),api.rand(2,6)),new THREE.MeshStandardMaterial({color:0x0a0908,roughness:1}));
+        const a=api.rand(0,api.TAU),r=api.rand(90,150); b.position.set(Math.cos(a)*r,b.geometry.parameters.height/2,Math.sin(a)*r-40); g.add(b);}
+      // FOUR HORSEMEN — enormous silhouettes emerging through cosmic fractures
+      const tints=[0xeef2ff,0xb8121a,0x20242c,0x9aa39a];
+      const riders=[]; const positions=[[-30,-60],[14,-72],[-12,-90],[26,-100]];
+      for(let i=0;i<4;i++){ const rg=new THREE.Group(); rg.position.set(positions[i][0],0,positions[i][1]); g.add(rg);
+        // the cosmic fracture (a glowing rift they emerge through)
+        const rift=new THREE.Mesh(new THREE.PlaneGeometry(10,40),new THREE.MeshBasicMaterial({color:tints[i],transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+        rift.position.y=18; rg.add(rift);
+        // horse + rider as a single dark mass, lit from within
+        const mass=new THREE.Group(); rg.add(mass);
+        const horse=new THREE.Mesh(new THREE.BoxGeometry(9,9,18),new THREE.MeshStandardMaterial({color:0x06060a,roughness:1,emissive:tints[i],emissiveIntensity:0.12}));
+        horse.position.y=8; mass.add(horse);
+        const neck=new THREE.Mesh(new THREE.BoxGeometry(4,9,4),new THREE.MeshStandardMaterial({color:0x06060a,roughness:1,emissive:tints[i],emissiveIntensity:0.12}));
+        neck.position.set(0,12,8); neck.rotation.x=-0.5; mass.add(neck);
+        const rider=new THREE.Mesh(new THREE.BoxGeometry(3.4,7,3),new THREE.MeshStandardMaterial({color:0x04040a,roughness:1,emissive:tints[i],emissiveIntensity:0.18}));
+        rider.position.set(0,15,-1); mass.add(rider);
+        const aura=glow(tints[i],26,0.0); aura.position.set(0,12,0); rg.add(aura);
+        // legs for scale (four columns)
+        [[-3,4],[3,4],[-3,-5],[3,-5]].forEach(p=>{const leg=new THREE.Mesh(new THREE.BoxGeometry(1.6,8,1.6),horse.material);leg.position.set(p[0],4,p[1]+8);mass.add(leg);});
+        // signature emblem per rider
+        if(i===0){ const crown=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.3,8,20),new THREE.MeshStandardMaterial({color:0xe7c878,emissive:0xffd27a,emissiveIntensity:0.7,metalness:1,roughness:0.2})); crown.position.set(0,19,-1); crown.rotation.x=Math.PI/2; mass.add(crown);}
+        if(i===1){ const sword=new THREE.Mesh(new THREE.BoxGeometry(0.5,9,0.5),new THREE.MeshStandardMaterial({color:0x6a0a0e,emissive:0xb8121a,emissiveIntensity:0.7})); sword.position.set(3,17,-1); sword.rotation.z=-0.6; mass.add(sword);}
+        if(i===2){ const beam=new THREE.Mesh(new THREE.BoxGeometry(4,0.2,0.2),new THREE.MeshStandardMaterial({color:0xffd27a,emissive:0xffd27a,emissiveIntensity:0.8})); beam.position.set(3,16,-1); mass.add(beam);
+          [-1.6,1.6].forEach(x=>{const pan=new THREE.Mesh(new THREE.TorusGeometry(0.7,0.08,6,16,Math.PI),new THREE.MeshStandardMaterial({color:0xc79a44,emissive:0x6b5418,emissiveIntensity:0.5,metalness:1,roughness:0.3}));pan.position.set(3+x,15.2,-1);pan.rotation.x=Math.PI;mass.add(pan);});}
+        if(i===3){ const scythe=new THREE.Mesh(new THREE.TorusGeometry(2,0.18,8,20,Math.PI),new THREE.MeshStandardMaterial({color:0x2a2a2a,emissive:0x556055,emissiveIntensity:0.4,metalness:0.8,roughness:0.4})); scythe.position.set(3,19,-1); mass.add(scythe);}
+        riders.push({rg,rift,aura,mass}); }
+      // pale-horse ash mist
+      const ash=particleField(900,()=>[api.rand(-80,80),api.rand(0,30),api.rand(-140,-40)],0x9aa39a,0.7,{soft:true,opacity:0.0}); g.add(ash.points);
+
+      return {
+        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        env:{bg:0x0c0707,fog:{c:0x130a0a,d:0.009},exposure:0.98,bloom:{s:1.1,r:0.7,t:0.74}},
+        audio:{drone:[-19,-14,-7],noise:0.4,filter:420,hooves:true,texture:'horsemen'},
+        update(t,dt){
+          skyGlow.material.opacity=0.5+0.12*Math.sin(t*0.5);
+          // each rider emerges in sequence as its seal opens (~6s apart), then advances slowly toward the viewer
+          riders.forEach((r,i)=>{ const emerge=clamp((sceneClock-i*5.5-2)/4,0,1); const e=easeIO(emerge);
+            r.rift.material.opacity=Math.sin(emerge*Math.PI)*0.6;
+            r.aura.material.opacity=e*0.5;
+            r.rg.position.z=lerp(positions[i][1],positions[i][1]+34,e);  // advance toward viewer but never reach
+            r.mass.position.y=lerp(-30,0,e);                              // rise out of the fracture
+            r.mass.children[0].rotation.x=Math.sin(t*1.2+i)*0.03;
+          });
+          const cp=cracks.points.geometry.attributes; cracks.points.material.opacity=0.4+0.2*Math.sin(t*0.8);
+          ash.points.material.opacity=lerp(ash.points.material.opacity,clamp((sceneClock-20)/4,0,1)*0.5,0.04);
+          const ap=ash.points.geometry.attributes.position; for(let i=0;i<ap.count;i++){ap.setX(i,ap.getX(i)+dt*0.4*Math.sin(i));} ap.needsUpdate=true;
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 5 · TRUMPETS */
+  { key:'trumpets', title:'The Trumpets and Cosmic Judgments', range:'Revelation 8–9',
+    symbols:[
+      {t:'The Burning Mountain',d:'A great mountain, ablaze, hurled into the sea — a third of it turned to blood.'},
+      {t:'Wormwood',d:'A blazing star falls on the rivers; the waters turn bitter. Wormwood: bitterness, judgment.'},
+      {t:'The Darkened Lights',d:'A third of sun, moon, and stars struck — the day loses a third of its light.'},
+      {t:'The Abyss Opened',d:'Smoke rises from the bottomless pit, and from it a locust-army of torment.'}],
+    captions:[
+      {at:0,t:'Seven angels were given seven trumpets. And the first sounded.',ref:'Revelation 8:2,7'},
+      {at:8,t:'A great mountain, burning, was thrown into the sea.',ref:'Revelation 8:8'},
+      {at:16,t:'A star called Wormwood fell, and the waters turned bitter.',ref:'Revelation 8:10–11'},
+      {at:24,t:'The abyss was opened, and smoke darkened the sun.',ref:'Revelation 9:1–2'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // a dark sea below, a shattering sky above
+      const sea=new THREE.Mesh(new THREE.PlaneGeometry(800,800,60,60),new THREE.MeshStandardMaterial({color:0x0a0d14,roughness:0.3,metalness:0.6}));
+      sea.rotation.x=-Math.PI/2; sea.position.y=-2; g.add(sea); const seaBase=sea.geometry.attributes.position.array.slice();
+      // the burning mountain falling into the sea
+      const mountain=new THREE.Group(); g.add(mountain);
+      const mnt=new THREE.Mesh(new THREE.ConeGeometry(10,20,7),new THREE.MeshStandardMaterial({color:0x1a0e08,roughness:1,emissive:0xff4a14,emissiveIntensity:0.7}));
+      mountain.add(mnt); const mntGlow=glow(0xff6a1e,30,0.8); mountain.add(mntGlow);
+      const mntTrail=particleField(500,()=>[api.rand(-4,4),api.rand(0,24),api.rand(-4,4)],0xff7a2e,0.8,{soft:true,opacity:0.7}); mountain.add(mntTrail.points);
+      // Wormwood — a blazing star with a long meteoric trail
+      const worm=new THREE.Group(); g.add(worm);
+      const wormCore=glow(0xeaffd0,6,0.95); worm.add(wormCore);
+      const wormTrail=particleField(400,(i,n)=>[0,i/n*60,i/n*60],0xbfffa0,0.7,{soft:true,opacity:0.7}); worm.add(wormTrail.points);
+      // dimmed sun & moon discs
+      const sun=glow(0xffe6a8,30,0.9); sun.position.set(-70,46,-150); g.add(sun);
+      const moon=glow(0xcdd9ff,16,0.7); moon.position.set(70,52,-150); g.add(moon);
+      // smoke from the abyss
+      const abyss=new THREE.Mesh(new THREE.CircleGeometry(8,32),new THREE.MeshBasicMaterial({color:0x000000})); abyss.rotation.x=-Math.PI/2; abyss.position.set(20,-1.9,-40); g.add(abyss);
+      const smoke=particleField(1200,()=>[20+api.rand(-8,8),api.rand(0,40),-40+api.rand(-8,8)],0x2a2622,1.4,{soft:true,opacity:0.0,add:false}); g.add(smoke.points);
+      // locust-like swarm rising from the smoke
+      const locusts=particleField(1400,()=>[20+api.rand(-30,30),api.rand(0,30),-40+api.rand(-30,30)],0x6a5a2a,0.5,{soft:true,opacity:0.0}); g.add(locusts.points);
+      // shattering skybox shards (meteoric debris drifting)
+      const shards=particleField(600,()=>{const a=api.rand(0,api.TAU),el=api.rand(0.1,1.3),r=180;return[Math.cos(a)*Math.cos(el)*r,Math.sin(el)*r,Math.sin(a)*Math.cos(el)*r];},0xffb27a,1.0,{soft:true,opacity:0.6}); g.add(shards.points);
+      const burnFlash=new THREE.PointLight(0xff6a2e,0,200,2); g.add(burnFlash);
+
+      return {
+        group:g, spawn:{pos:[0,0,6],yaw:Math.PI},
+        env:{bg:0x070608,fog:{c:0x0a0808,d:0.008},exposure:1.02,bloom:{s:1.3,r:0.7,t:0.7}},
+        audio:{drone:[-21,-14,-9],noise:0.5,filter:300,impacts:true,texture:'trumpets'},
+        update(t,dt){
+          const arr=sea.geometry.attributes.position.array;
+          for(let i=0;i<arr.length;i+=3){ arr[i+2]=seaBase[i+2]+Math.sin(seaBase[i]*0.1+t)*0.6; } sea.geometry.attributes.position.needsUpdate=true;
+          // trumpet 1: mountain falls (0-8s)
+          const m=clamp((sceneClock-1)/6,0,1); mountain.position.set(-20,lerp(120,4,easeIO(m)),-60); mntGlow.scale.setScalar(28+4*Math.sin(t*6));
+          if(m>0.95&&burnFlash.intensity<1){burnFlash.position.set(-20,4,-60);burnFlash.intensity=80;} burnFlash.intensity*=0.94;
+          // trumpet 2: Wormwood (8-16s)
+          const w=clamp((sceneClock-8)/6,0,1); worm.position.set(lerp(60,12,easeIO(w)),lerp(120,6,easeIO(w)),lerp(-120,-30,easeIO(w))); worm.visible=w>0.01; wormCore.scale.setScalar(5+Math.sin(t*8));
+          // trumpet 3-4: dim the lights (16-24s)
+          const d=clamp((sceneClock-16)/6,0,1); sun.material.opacity=lerp(0.9,0.3,d); moon.material.opacity=lerp(0.7,0.24,d); renderer.toneMappingExposure=lerp(1.02,0.82,d);
+          // trumpet 5: abyss + locusts (24s+)
+          const ab=clamp((sceneClock-22)/6,0,1);
+          smoke.points.material.opacity=lerp(smoke.points.material.opacity,ab*0.6,0.04);
+          const sp=smoke.points.geometry.attributes.position; for(let i=0;i<sp.count;i++){let y=sp.getY(i)+dt*(0.6+(i%4)*0.3);if(y>40)y-=40;sp.setY(i,y);} sp.needsUpdate=true;
+          locusts.points.material.opacity=lerp(locusts.points.material.opacity,ab*0.6,0.03);
+          const lp=locusts.points.geometry.attributes.position; for(let i=0;i<lp.count;i++){lp.setX(i,lp.getX(i)+Math.sin(t*3+i)*0.05);lp.setY(i,lp.getY(i)+dt*0.2);} lp.needsUpdate=true;
+          // drifting debris + meteor trails
+          worm.children[1].rotation.y+=dt*0.1;
+          shards.points.rotation.y+=dt*0.01;
+          const mtp=mntTrail.points.geometry.attributes.position; for(let i=0;i<mtp.count;i++){let y=mtp.getY(i)+dt*4;if(y>24)y-=24;mtp.setY(i,y);} mtp.needsUpdate=true;
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 6 · WOMAN, DRAGON, WAR */
+  { key:'dragon', title:'The Woman, the Dragon, and War in Heaven', range:'Revelation 12',
+    symbols:[
+      {t:'The Woman Clothed with the Sun',d:'The moon under her feet, a crown of twelve stars — the covenant people bringing forth the Child.'},
+      {t:'The Great Red Dragon',d:'Seven heads, ten horns, seven crowns; his tail sweeps a third of the stars from heaven. The ancient serpent.'},
+      {t:'War in Heaven',d:'Michael and his angels fought the dragon. Weapons of light and sacred geometry, not iron.'},
+      {t:'The Dragon Cast Down',d:'There was no longer any place for them in heaven. He was hurled to the earth.'}],
+    captions:[
+      {at:0,t:'A great sign in heaven: a woman clothed with the sun, the moon beneath her feet.',ref:'Revelation 12:1'},
+      {at:8,t:'And another sign: a great red dragon, seven heads and ten horns.',ref:'Revelation 12:3'},
+      {at:16,t:'Then war broke out in heaven. Michael and his angels fought the dragon.',ref:'Revelation 12:7'},
+      {at:24,t:'The great dragon was hurled down — that ancient serpent who deceives the world.',ref:'Revelation 12:9'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // a starfield void — this is heaven itself
+      const stars=particleField(2200,()=>{const a=api.rand(0,api.TAU),el=api.rand(-1.4,1.4),r=200;return[Math.cos(a)*Math.cos(el)*r,Math.sin(el)*r,Math.sin(a)*Math.cos(el)*r];},0xbfd0ff,1.2,{soft:true,opacity:0.8}); g.add(stars.points);
+      // THE WOMAN — radiant sun-disc, moon under feet, crown of twelve stars
+      const woman=new THREE.Group(); woman.position.set(-26,18,-50); g.add(woman);
+      const sunDisc=glow(0xfff3cf,28,0.9); woman.add(sunDisc);
+      const figure=figureOfLight(7,0xfff0d0,0x141018); figure.position.y=-3.5; woman.add(figure);
+      const moonF=new THREE.Mesh(new THREE.SphereGeometry(2,20,20),new THREE.MeshStandardMaterial({color:0xcdd9ff,emissive:0x6a7aa0,emissiveIntensity:0.5,roughness:0.6})); moonF.position.y=-4.5; woman.add(moonF);
+      const crown=new THREE.Group(); crown.position.y=4.6; woman.add(crown);
+      for(let i=0;i<12;i++){const a=i/12*api.TAU;const s=glow(0xffffff,0.7,0.95);s.position.set(Math.cos(a)*2.4,Math.sin(a)*0.8,Math.sin(a)*1.2);crown.add(s);}
+      // THE DRAGON — seven serpent heads, ten horns, seven crowns, vast wings
+      const dragon=new THREE.Group(); dragon.position.set(26,12,-64); g.add(dragon);
+      const dBody=new THREE.Mesh(new THREE.IcosahedronGeometry(6,1),new THREE.MeshStandardMaterial({color:0x2a0608,roughness:0.7,metalness:0.2,emissive:0xb8121a,emissiveIntensity:0.35})); dragon.add(dBody);
+      const heads=[]; for(let i=0;i<7;i++){ const a=(i/6-0.5)*1.6; const head=new THREE.Group();
+        const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.5,1,8,8),dBody.material); neck.position.set(Math.sin(a)*5,4+Math.cos(a)*2,3); neck.rotation.z=-Math.sin(a)*0.5; head.add(neck);
+        const skull=new THREE.Mesh(new THREE.ConeGeometry(0.9,2,7),dBody.material); skull.position.set(Math.sin(a)*7,7+Math.cos(a)*2.5,4); skull.rotation.x=Math.PI/2; head.add(skull);
+        const eye=glow(0xff3a1e,0.6,0.95); eye.position.copy(skull.position); head.add(eye);
+        // a crown on each head, and horns
+        const cr=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.1,6,14),new THREE.MeshStandardMaterial({color:0x8a1018,emissive:0xb8121a,emissiveIntensity:0.6,metalness:1,roughness:0.3})); cr.position.copy(skull.position); cr.position.y+=0.8; cr.rotation.x=Math.PI/2; head.add(cr);
+        dragon.add(head); heads.push(head); }
+      // wings
+      const dWings=new THREE.Group(); dragon.add(dWings);
+      [-1,1].forEach(s=>{const w=new THREE.Mesh(new THREE.PlaneGeometry(16,10),new THREE.MeshBasicMaterial({color:0x6a0a0e,transparent:true,opacity:0.3,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));w.position.set(s*8,2,-2);w.rotation.y=s*0.5;dWings.add(w);});
+      // the dragon's tail sweeping stars (a stream of falling star-motes)
+      const sweptStars=particleField(700,()=>[26+api.rand(-30,30),api.rand(-20,30),-64+api.rand(-20,20)],0xfff0c8,0.9,{soft:true,opacity:0.0}); g.add(sweptStars.points);
+      // WAR IN HEAVEN — beams of light between Michael's host and the dragon's
+      const beams=new THREE.Group(); g.add(beams);
+      const beamLines=[]; for(let i=0;i<40;i++){ const b=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1,5),new THREE.MeshBasicMaterial({color:i%2?0x8ef0ff:0xff5a3a,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+        beams.add(b); beamLines.push(b); }
+      // collapsing star-spirals where stars die in the battle
+      const spirals=particleField(900,(i,n)=>{const a=i/n*api.TAU*8,r=(1-i/n)*30;return[Math.cos(a)*r,api.rand(-10,30),Math.sin(a)*r-50];},0xcdb4ff,0.6,{soft:true,opacity:0.0}); g.add(spirals.points);
+
+      return {
+        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        env:{bg:0x05060e,fog:{c:0x05060e,d:0.004},exposure:1.08,bloom:{s:1.3,r:0.7,t:0.7}},
+        audio:{drone:[-16,-9,-2],noise:0.3,filter:700,battle:true,texture:'dragon'},
+        update(t,dt){
+          stars.points.rotation.y+=dt*0.005;
+          sunDisc.scale.setScalar(26+3*Math.sin(t*1.4)); crown.rotation.z+=dt*0.2; woman.position.y=18+Math.sin(t*0.5)*0.6;
+          dragon.rotation.y=Math.sin(t*0.3)*0.2; heads.forEach((h,i)=>h.rotation.y=Math.sin(t*1.3+i)*0.15);
+          dWings.children.forEach((w,i)=>w.rotation.z=Math.sin(t*1.5+i)*0.2);
+          // tail sweeps the stars down (8-16s)
+          const sweep=clamp((sceneClock-8)/6,0,1); sweptStars.points.material.opacity=sweep*0.7;
+          const ssp=sweptStars.points.geometry.attributes.position; for(let i=0;i<ssp.count;i++){let y=ssp.getY(i)-dt*8*sweep;if(y<-30)y+=50;ssp.setY(i,y);} ssp.needsUpdate=true;
+          // war (16-24s): beams flash between the two hosts
+          const war=clamp((sceneClock-15)/8,0,1);
+          beamLines.forEach((b,i)=>{ if(Math.random()<war*0.3){ const from=new THREE.Vector3(rand(-30,-10),rand(0,30),rand(-60,-40)); const to=new THREE.Vector3(rand(10,34),rand(0,28),rand(-74,-54));
+              b.position.copy(from).lerp(to,0.5); b.scale.y=from.distanceTo(to); b.lookAt(to); b.rotateX(Math.PI/2); b.material.opacity=0.9; } b.material.opacity*=0.88; });
+          spirals.points.material.opacity=lerp(spirals.points.material.opacity,war*0.6,0.03); spirals.points.rotation.z+=dt*0.4*war;
+          // dragon cast down (24s+)
+          const fall=clamp((sceneClock-24)/5,0,1); dragon.position.y=lerp(12,-30,easeIO(fall)); dBody.material.emissiveIntensity=0.35+fall*0.5;
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 7 · THE BEASTS */
+  { key:'beasts', title:'The Beast from the Sea and from the Earth', range:'Revelation 13',
+    symbols:[
+      {t:'The Beast from the Sea',d:'Ten horns, seven heads, blasphemous names; leopard body, bear’s feet, lion’s mouth — empire given the dragon’s authority.'},
+      {t:'The Beast from the Earth',d:'Two horns like a lamb, but it speaks like a dragon — the false prophet, deceiving with spectacle.'},
+      {t:'The Image',d:'It makes an image of the first beast and gives it breath, demanding worship.'},
+      {t:'The Mark',d:'No one may buy or sell without it — an ancient machine of allegiance, commerce, and worship. Not a barcode: a system of the heart.'}],
+    captions:[
+      {at:0,t:'Out of the raging sea rose a beast — ten horns, seven heads, names of blasphemy.',ref:'Revelation 13:1'},
+      {at:8,t:'The dragon gave it his power, his throne, and great authority.',ref:'Revelation 13:2'},
+      {at:16,t:'Then a second beast rose from the earth — two horns like a lamb, a voice like a dragon.',ref:'Revelation 13:11'},
+      {at:24,t:'It set up an image, and a mark, that none might buy or sell without it.',ref:'Revelation 13:14–17'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // a storming sea under a bruised sky
+      const sea=new THREE.Mesh(new THREE.PlaneGeometry(800,800,80,80),new THREE.MeshStandardMaterial({color:0x070a10,roughness:0.2,metalness:0.7}));
+      sea.rotation.x=-Math.PI/2; sea.position.y=-1.5; g.add(sea); const seaBase=sea.geometry.attributes.position.array.slice();
+      const skyGlow=glow(0x2a1424,180,0.5); skyGlow.position.set(0,40,-150); g.add(skyGlow);
+      // lightning
+      const bolt=new THREE.PointLight(0xb98bff,0,300,2); bolt.position.set(0,60,-100); g.add(bolt);
+      // BEAST FROM THE SEA
+      const beast=new THREE.Group(); beast.position.set(0,0,-46); g.add(beast);
+      const body=new THREE.Mesh(new THREE.BoxGeometry(16,10,26),new THREE.MeshStandardMaterial({color:0x0c0a10,roughness:0.85,metalness:0.2,emissive:0x3a1020,emissiveIntensity:0.25}));
+      body.position.y=8; beast.add(body);
+      const sHeads=[]; for(let i=0;i<7;i++){ const a=(i/6-0.5)*1.8; const head=new THREE.Group();
+        const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.8,1.4,9,8),body.material); neck.position.set(Math.sin(a)*7,12,12); neck.rotation.z=-Math.sin(a)*0.4; head.add(neck);
+        const sk=new THREE.Mesh(new THREE.ConeGeometry(1.4,3,7),body.material); sk.position.set(Math.sin(a)*9,16,14); sk.rotation.x=Math.PI/2.2; head.add(sk);
+        const mouth=glow(0xff7a2e,1.0,0.8); mouth.position.copy(sk.position); head.add(mouth);
+        beast.add(head); sHeads.push(head); }
+      // ten horns crowned, with blasphemous glowing inscriptions
+      for(let i=0;i<10;i++){ const a=(i/9-0.5)*2.2; const horn=new THREE.Mesh(new THREE.ConeGeometry(0.3,2.4,7),new THREE.MeshStandardMaterial({color:0x1a1418,emissive:0xb8121a,emissiveIntensity:0.4,metalness:0.5,roughness:0.5}));
+        horn.position.set(Math.sin(a)*7.5,18,8); beast.add(horn); }
+      // blasphemous inscriptions drifting over the beast (corrupted glowing glyphs)
+      const blasphemies=[]; ['ΜΥΣΤΗΡΙΟΝ','—','✶','⊗','†','Ϟ'].forEach((s,i)=>{ const lab=label3D(s,{fs:40,color:'#c97a7a',glow:'#b8121a',size:1.4,add:true,opacity:0.0});
+        lab.position.set(rand(-8,8),rand(12,22),-40+rand(-4,4)); beast.add(lab); blasphemies.push(lab); });
+      // BEAST FROM THE EARTH — lamb-horns, dragon speech, deceptive light
+      const beast2=new THREE.Group(); beast2.position.set(-22,0,-30); beast2.visible=false; g.add(beast2);
+      const b2=new THREE.Mesh(new THREE.IcosahedronGeometry(3.5,1),new THREE.MeshStandardMaterial({color:0x12100c,roughness:0.8,emissive:0x6a5a1a,emissiveIntensity:0.3})); b2.position.y=5; beast2.add(b2);
+      [-1,1].forEach(s=>{const lh=new THREE.Mesh(new THREE.ConeGeometry(0.4,1.6,8),new THREE.MeshStandardMaterial({color:0xe9dcc0,emissive:0xbfa860,emissiveIntensity:0.4}));lh.position.set(s*1.4,8,0);beast2.add(lh);});
+      const deceit=glow(0xffe6a8,10,0.0); deceit.position.set(0,6,2); beast2.add(deceit);
+      // THE IMAGE — an idol that the second beast raises
+      const idol=new THREE.Mesh(new THREE.CylinderGeometry(2,2.6,16,6),new THREE.MeshStandardMaterial({color:0xb8923f,metalness:1,roughness:0.3,emissive:0x6b5418,emissiveIntensity:0.5}));
+      idol.position.set(-22,8,-30); idol.scale.y=0; g.add(idol);
+      // THE MARK — concentric rings of control (commerce / allegiance / worship), not a barcode
+      const markGrp=new THREE.Group(); markGrp.position.set(0,3,-2); g.add(markGrp);
+      const markRings=[]; for(let i=0;i<3;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(2+i*1.4,0.08,8,48),new THREE.MeshBasicMaterial({color:0xb8121a,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+        r.rotation.x=Math.PI/2; markGrp.add(r); markRings.push(r); }
+      const markGlyph=label3D('worship · commerce · allegiance',{fs:30,color:'#c97a7a',glow:'#b8121a',size:0.7,add:true,opacity:0.0}); markGlyph.position.set(0,5,-2); g.add(markGlyph);
+
+      return {
+        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        env:{bg:0x07060a,fog:{c:0x0a070c,d:0.01},exposure:0.98,bloom:{s:1.15,r:0.7,t:0.74}},
+        audio:{drone:[-20,-13,-8],noise:0.45,filter:380,dread:true,texture:'beasts'},
+        update(t,dt){
+          const arr=sea.geometry.attributes.position.array;
+          for(let i=0;i<arr.length;i+=3){ arr[i+2]=seaBase[i+2]+Math.sin(seaBase[i]*0.15+t*1.4)*0.9+Math.cos(seaBase[i+1]*0.12+t)*0.6; } sea.geometry.attributes.position.needsUpdate=true;
+          if(Math.random()<0.01){bolt.intensity=rand(4,10);bolt.position.set(rand(-60,60),60,-100);} bolt.intensity*=0.9;
+          // beast rises from the sea (0-8s)
+          const rise=clamp((sceneClock-1)/6,0,1); beast.position.y=lerp(-20,0,easeIO(rise));
+          sHeads.forEach((h,i)=>h.rotation.y=Math.sin(t*0.8+i)*0.12);
+          blasphemies.forEach((b,i)=>{b.material.opacity=rise*(0.5+0.4*Math.sin(t*2+i));b.position.y+=dt*0.1;if(b.position.y>24)b.position.y=12;});
+          // second beast (16s+)
+          const e2=clamp((sceneClock-15)/5,0,1); beast2.visible=e2>0.01; beast2.position.y=lerp(-10,0,easeIO(e2)); deceit.material.opacity=e2*(0.4+0.3*Math.sin(t*4));
+          idol.scale.y=easeIO(clamp((sceneClock-19)/4,0,1));
+          // the mark spreads (24s+)
+          const mk=clamp((sceneClock-23)/5,0,1);
+          markRings.forEach((r,i)=>{r.material.opacity=mk*(0.4+0.3*Math.sin(t*2+i));r.scale.setScalar(1+mk*0.3*Math.sin(t+i));}); markGrp.rotation.z+=dt*0.3*mk;
+          markGlyph.material.opacity=mk*0.6;
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 8 · BABYLON */
+  { key:'babylon', title:'Babylon the Great', range:'Revelation 17–18',
+    symbols:[
+      {t:'The City of Luxury',d:'Gold towers, purple and scarlet, jewels, merchant ships — breathtaking at first sight.'},
+      {t:'The Woman on the Beast',d:'Arrayed in scarlet and gold, a golden cup in her hand, “Mystery” on her brow — imperial seduction.'},
+      {t:'Rot Behind Gold',d:'Cracks in the marble, chains beneath the silk, blood in the reflections. The beauty is hollow.'},
+      {t:'The Fall',d:'“Fallen, fallen is Babylon.” A millstone cast into the sea; her smoke rises forever.'}],
+    captions:[
+      {at:0,t:'Behold the great city — gold and scarlet, drunk on her own splendor.',ref:'Revelation 17:4'},
+      {at:8,t:'A woman seated on the beast, a golden cup in her hand, “Mystery” upon her brow.',ref:'Revelation 17:3–5'},
+      {at:16,t:'But beneath the gold: chains, and blood, and the rot of every hidden thing.',ref:'Revelation 18:5'},
+      {at:24,t:'“Fallen, fallen is Babylon the Great.” Her smoke rises forever.',ref:'Revelation 18:2,21'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({color:0x0a0808,roughness:0.3,metalness:0.6})); ground.rotation.x=-Math.PI/2; g.add(ground);
+      // harbor water reflecting the city (turns blood-red later)
+      const water=new THREE.Mesh(new THREE.PlaneGeometry(400,200,40,20),new THREE.MeshStandardMaterial({color:0x0c1018,roughness:0.1,metalness:0.9})); water.rotation.x=-Math.PI/2; water.position.set(0,0.02,60); g.add(water);
+      // colossal gold towers
+      const towers=[]; const goldMat=()=>new THREE.MeshStandardMaterial({color:0xc79a44,metalness:1,roughness:0.25,emissive:0x4a3a12,emissiveIntensity:0.5});
+      for(let i=0;i<28;i++){ const h=rand(14,52),w=rand(4,10); const t=new THREE.Mesh(new THREE.BoxGeometry(w,h,w),goldMat());
+        const a=rand(0,api.TAU),r=rand(14,80); t.position.set(Math.cos(a)*r,h/2,Math.sin(a)*r-50); t.userData={h,baseY:h/2}; g.add(t); towers.push(t);
+        // scarlet/purple banners
+        const ban=new THREE.Mesh(new THREE.PlaneGeometry(w*0.8,h*0.4),new THREE.MeshStandardMaterial({color:i%2?0x6a1530:0x4a1060,roughness:0.8,side:THREE.DoubleSide,emissive:i%2?0x3a0a18:0x250833,emissiveIntensity:0.3}));
+        ban.position.set(t.position.x,h*0.3,t.position.z+w*0.55); g.add(ban); t.userData.banner=ban; }
+      // city light & perfumed smoke
+      const cityLight=new THREE.PointLight(0xffd27a,3,200,2); cityLight.position.set(0,30,-40); g.add(cityLight);
+      const perfume=particleField(700,()=>[rand(-70,70),rand(2,40),rand(-90,30)],0xe7c8a0,1.2,{soft:true,opacity:0.3}); g.add(perfume.points);
+      // THE WOMAN on the scarlet beast
+      const woman=new THREE.Group(); woman.position.set(0,2,-22); g.add(woman);
+      const beast=new THREE.Mesh(new THREE.BoxGeometry(7,4,12),new THREE.MeshStandardMaterial({color:0x6a0a18,roughness:0.7,emissive:0xb8121a,emissiveIntensity:0.4})); beast.position.y=3; woman.add(beast);
+      const fig=figureOfLight(5,0xff8a4a,0x3a0a18); fig.position.set(0,5,0); fig.scale.setScalar(0.9); woman.add(fig);
+      const cup=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.3,0.8,12),new THREE.MeshStandardMaterial({color:0xe7c878,metalness:1,roughness:0.2,emissive:0x8a6a1a,emissiveIntensity:0.6})); cup.position.set(1.6,8,1); woman.add(cup);
+      const cupGlow=glow(0xff5a2e,1.6,0.6); cupGlow.position.copy(cup.position); cupGlow.position.y+=0.6; woman.add(cupGlow);
+      const mystery=label3D('MYSTERY',{fs:44,color:'#e9c8a0',glow:'#b8121a',size:1.2,add:true,opacity:0.8}); mystery.position.set(0,11,0); woman.add(mystery);
+      // hidden rot: blood motes + chains revealed later
+      const blood=particleField(500,()=>[rand(-70,70),rand(0,8),rand(-80,40)],0xb8121a,0.7,{soft:true,opacity:0.0}); g.add(blood.points);
+      // collapse debris
+      const debris=particleField(1000,()=>[rand(-60,60),rand(0,40),rand(-90,10)],0x4a3a12,0.9,{soft:true,opacity:0.0}); g.add(debris.points);
+      // the eternal smoke of her burning
+      const fallSmoke=particleField(900,()=>[rand(-40,40),rand(0,60),rand(-70,-10)],0x1a1410,2.0,{soft:true,opacity:0.0,add:false}); g.add(fallSmoke.points);
+      // the millstone cast into the sea
+      const mill=new THREE.Mesh(new THREE.CylinderGeometry(3,3,1,24),new THREE.MeshStandardMaterial({color:0x3a3530,roughness:0.9})); mill.position.set(0,40,60); mill.visible=false; g.add(mill);
+
+      return {
+        group:g, spawn:{pos:[0,0,10],yaw:Math.PI},
+        env:{bg:0x0a0808,fog:{c:0x0e0a08,d:0.006},exposure:1.08,bloom:{s:1.1,r:0.7,t:0.76}},
+        audio:{drone:[-14,-9,-5,-2],noise:0.25,filter:1200,lament:true,texture:'babylon'},
+        update(t,dt){
+          perfume.points.rotation.y+=dt*0.02; const pp=perfume.points.geometry.attributes.position; for(let i=0;i<pp.count;i++){let y=pp.getY(i)+dt*0.3;if(y>40)y-=40;pp.setY(i,y);} pp.needsUpdate=true;
+          woman.rotation.y=Math.sin(t*0.2)*0.1; cupGlow.scale.setScalar(1.4+0.3*Math.sin(t*3));
+          // the turn (16s+): rot revealed, reflections redden, light cools
+          const rot=clamp((sceneClock-15)/6,0,1);
+          blood.points.material.opacity=rot*0.6; water.material.color.lerp(new THREE.Color(0x2a0608),0.01*rot+0.001);
+          cityLight.color.lerp(new THREE.Color(0xb8121a),0.01*rot); cityLight.intensity=lerp(3,1.2,rot);
+          // the fall (24s+): towers split & sink, debris & eternal smoke rise, millstone falls
+          const fall=clamp((sceneClock-24)/6,0,1); const e=easeIO(fall);
+          towers.forEach((tw,i)=>{ tw.position.y=lerp(tw.userData.baseY,tw.userData.baseY-tw.userData.h*0.45,e*(0.5+0.5*((i*7)%10)/10));
+            tw.rotation.z=e*0.12*Math.sin(i); tw.material.emissiveIntensity=lerp(0.5,0.05,e); if(tw.userData.banner)tw.userData.banner.material.opacity=lerp(1,0,e); });
+          debris.points.material.opacity=fall*0.5; const dp=debris.points.geometry.attributes.position; for(let i=0;i<dp.count;i++){dp.setY(i,dp.getY(i)-dt*2*fall);} dp.needsUpdate=true;
+          fallSmoke.points.material.opacity=fall*0.7; const fp=fallSmoke.points.geometry.attributes.position; for(let i=0;i<fp.count;i++){let y=fp.getY(i)+dt*(0.8+(i%5)*0.2);if(y>60)y-=60;fp.setY(i,y);} fp.needsUpdate=true;
+          if(fall>0.3){ mill.visible=true; mill.position.y=lerp(40,-2,easeIO(clamp((sceneClock-26)/3,0,1))); mill.rotation.x+=dt*2; }
+          renderer.toneMappingExposure=lerp(1.08,0.86,fall);
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 9 · THE RIDER */
+  { key:'rider', title:'The Rider on the White Horse', range:'Revelation 19',
+    symbols:[
+      {t:'Faithful and True',d:'Eyes like a flame of fire, on His head many crowns, a name written that no one knows but Himself.'},
+      {t:'The Robe Dipped in Blood',d:'His own — and the word of God His name. He treads the winepress of judgment.'},
+      {t:'The Sword of His Mouth',d:'A sharp sword to strike the nations; He rules with a rod of iron. Judgment by His word, not by armies of iron.'},
+      {t:'King of Kings, Lord of Lords',d:'Written on His robe and His thigh. The armies of heaven follow Him on white horses.'}],
+    captions:[
+      {at:0,t:'Heaven opened — and a white horse, its Rider called Faithful and True.',ref:'Revelation 19:11'},
+      {at:8,t:'His eyes were a flame of fire, and on His head were many crowns.',ref:'Revelation 19:12'},
+      {at:16,t:'The armies of heaven followed Him, in fine linen, white and clean.',ref:'Revelation 19:14'},
+      {at:24,t:'On His robe a name written: King of Kings, and Lord of Lords.',ref:'Revelation 19:16'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      const floor=new THREE.Mesh(new THREE.CircleGeometry(300,64),new THREE.MeshStandardMaterial({color:0x0a0c14,roughness:0.2,metalness:0.7})); floor.rotation.x=-Math.PI/2; g.add(floor);
+      // the heavens opening: a great rift of white-gold light
+      const rift=new THREE.Mesh(new THREE.PlaneGeometry(120,80),new THREE.MeshBasicMaterial({color:0xfff3cf,transparent:true,opacity:0,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+      rift.position.set(0,40,-120); g.add(rift);
+      const riftGlow=glow(0xfff6e0,120,0.0); riftGlow.position.set(0,38,-120); g.add(riftGlow);
+      // THE RIDER on the white horse
+      const rider=new THREE.Group(); rider.position.set(0,0,-70); g.add(rider);
+      const horse=new THREE.Mesh(new THREE.BoxGeometry(5,6,12),new THREE.MeshStandardMaterial({color:0xf3ecd8,roughness:0.5,metalness:0.1,emissive:0xfff0d0,emissiveIntensity:0.4})); horse.position.y=6; rider.add(horse);
+      const neck=new THREE.Mesh(new THREE.BoxGeometry(2.4,6,2.4),horse.material); neck.position.set(0,9,6); neck.rotation.x=-0.5; rider.add(neck);
+      const figure=figureOfLight(5,0xfff0c0,0x2a0a0a); figure.position.set(0,7,-1); rider.add(figure);
+      // robe dipped in blood — a crimson hem glow
+      const robeBlood=glow(0xb8121a,4,0.6); robeBlood.position.set(0,5,-1); rider.add(robeBlood);
+      // many crowns
+      const crowns=new THREE.Group(); crowns.position.set(0,12.4,-1); rider.add(crowns);
+      for(let i=0;i<7;i++){const cr=new THREE.Mesh(new THREE.TorusGeometry(0.5-i*0.04,0.05,8,16),new THREE.MeshStandardMaterial({color:0xe7c878,metalness:1,roughness:0.2,emissive:0xffd27a,emissiveIntensity:0.7}));cr.rotation.x=Math.PI/2;cr.position.y=i*0.18;crowns.add(cr);}
+      // eyes of flame
+      [-1,1].forEach(s=>{const eye=glow(0xff7a2e,0.8,0.95);eye.position.set(s*0.4,11.6,-0.6);rider.add(eye);});
+      // the sword of His mouth — a blade of light
+      const sword=new THREE.Mesh(new THREE.ConeGeometry(0.16,5,4),new THREE.MeshBasicMaterial({color:0xfff6da,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+      sword.rotation.x=-Math.PI/2; sword.position.set(0,11,-4); rider.add(sword);
+      // ARMIES OF HEAVEN — rows of white riders following
+      const army=new THREE.Group(); g.add(army);
+      const armyUnits=[]; for(let row=0;row<6;row++){ for(let i=0;i<9;i++){ if(row===0&&i===4)continue;
+        const u=new THREE.Group(); u.position.set((i-4)*6,0,-86-row*9);
+        const h=new THREE.Mesh(new THREE.BoxGeometry(2.6,3,6),new THREE.MeshStandardMaterial({color:0xe9dcc0,roughness:0.6,emissive:0xcdbf93,emissiveIntensity:0.3})); h.position.y=3.5; u.add(h);
+        const r=new THREE.Mesh(new THREE.BoxGeometry(1.4,3,1.4),new THREE.MeshStandardMaterial({color:0xf3ecd8,emissive:0xfff0d0,emissiveIntensity:0.4})); r.position.y=6; u.add(r);
+        army.add(u); armyUnits.push(u); } }
+      army.visible=false;
+      // King of Kings inscription
+      const title=label3D('KING OF KINGS · LORD OF LORDS',{fs:46,color:'#fff0c8',glow:'#d9b463',size:1.1,add:true,opacity:0.0}); title.position.set(0,16,-60); g.add(title);
+      const riderLight=new THREE.PointLight(0xffffff,0,120,2); riderLight.position.set(0,12,-60); g.add(riderLight);
+
+      return {
+        group:g, spawn:{pos:[0,0,8],yaw:Math.PI},
+        env:{bg:0x06070e,fog:{c:0x06070e,d:0.005},exposure:1.0,bloom:{s:1.35,r:0.7,t:0.68}},
+        audio:{drone:[-12,-5,0,7],noise:0.08,filter:2200,brass:true,silenceFirst:true,texture:'rider'},
+        update(t,dt){
+          // the heavens open (0-8s)
+          const open=clamp((sceneClock-1)/6,0,1); rift.material.opacity=open*0.7; riftGlow.material.opacity=open*0.5; riftGlow.scale.setScalar(80+open*60);
+          // the Rider advances out of the light (slow, inexorable — cosmic legitimacy, not a charge)
+          const adv=clamp((sceneClock-4)/16,0,1); rider.position.z=lerp(-70,-40,easeIO(adv));
+          riderLight.intensity=open*40; figure.userData.core.material.opacity=0.6+0.3*Math.sin(t*1.5);
+          crowns.rotation.y+=dt*0.3; robeBlood.scale.setScalar(3.5+0.6*Math.sin(t*2));
+          sword.material.opacity=clamp((sceneClock-10)/3,0,1)*0.7;
+          // armies appear (16s+)
+          const ar=clamp((sceneClock-15)/4,0,1); army.visible=ar>0.01;
+          armyUnits.forEach((u,i)=>{u.position.y=Math.sin(t*1.2+i*0.3)*0.2; u.position.z=(-86-((i/9)|0)*9)+lerp(-20,0,easeIO(ar));});
+          // the name (24s+)
+          title.material.opacity=clamp((sceneClock-23)/4,0,1)*0.9; title.position.y=16+Math.sin(t*0.6)*0.3;
+          renderer.toneMappingExposure=lerp(1.0,1.3,open*0.7);
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 10 · FINAL JUDGMENT */
+  { key:'judgment', title:'The Great White Throne', range:'Revelation 20',
+    symbols:[
+      {t:'Earth and Sky Flee',d:'From His face heaven and earth fled away, and no place was found for them.'},
+      {t:'The Books Opened',d:'The dead were judged by what was written — every deed brought into the light.'},
+      {t:'The Book of Life',d:'And another book was opened, which is the Book of Life. Names known to God.'},
+      {t:'Light Reveals All',d:'No horror, but truth: accountability, awe, finality. Light exposing reality itself.'}],
+    captions:[
+      {at:0,t:'A great white throne, and One seated on it — from whose face earth and sky fled away.',ref:'Revelation 20:11'},
+      {at:8,t:'And the dead, great and small, stood before the throne.',ref:'Revelation 20:12'},
+      {at:16,t:'The books were opened; and another book, which is the Book of Life.',ref:'Revelation 20:12'},
+      {at:24,t:'The sea gave up its dead, and each was judged by what they had done.',ref:'Revelation 20:13'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // a transparent floor of eternity over a luminous void
+      const floor=new THREE.Mesh(new THREE.CircleGeometry(160,64),new THREE.MeshStandardMaterial({color:0x05060a,roughness:0.05,metalness:0.95,transparent:true,opacity:0.6})); floor.rotation.x=-Math.PI/2; g.add(floor);
+      // THE GREAT WHITE THRONE — beyond dimension, almost pure light
+      const throne=new THREE.Group(); throne.position.set(0,0,-40); g.add(throne);
+      const tbase=new THREE.Mesh(new THREE.BoxGeometry(10,14,6),new THREE.MeshStandardMaterial({color:0xf3ecd8,roughness:0.3,emissive:0xffffff,emissiveIntensity:0.5})); tbase.position.y=10; throne.add(tbase);
+      const tCore=glow(0xffffff,46,0.95); tCore.position.set(0,12,0); throne.add(tCore);
+      const tHalo=glow(0xeef2ff,110,0.4); tHalo.position.set(0,12,0); throne.add(tHalo);
+      const throneLight=new THREE.PointLight(0xffffff,0,200,2); throneLight.position.set(0,14,0); throne.add(throneLight);
+      // earth & sky fleeing — distant world receding
+      const earth=new THREE.Mesh(new THREE.SphereGeometry(20,32,32),new THREE.MeshStandardMaterial({color:0x142a3a,roughness:0.9,emissive:0x0a1a2a,emissiveIntensity:0.3})); earth.position.set(60,30,-180); g.add(earth);
+      // the books — opened in light around the throne
+      const books=[]; for(let i=0;i<7;i++){const a=i/7*api.TAU; const b=new THREE.Mesh(new THREE.BoxGeometry(3,0.3,2),new THREE.MeshStandardMaterial({color:0xe9dcc0,emissive:0xcdbf93,emissiveIntensity:0.4}));
+        b.position.set(Math.cos(a)*9,7,Math.sin(a)*9-40); b.rotation.set(rand(-0.3,0.3),a,0); throne.add(b); books.push(b);}
+      const bookOfLife=new THREE.Mesh(new THREE.BoxGeometry(3.6,0.4,2.4),new THREE.MeshStandardMaterial({color:0xfff6e0,emissive:0xffe9b0,emissiveIntensity:0.8})); bookOfLife.position.set(0,16,-38); throne.add(bookOfLife);
+      const bolGlow=glow(0xffe9b0,4,0.0); bolGlow.position.copy(bookOfLife.position); throne.add(bolGlow);
+      // vast multitudes — points of standing souls
+      const souls=particleField(4000,()=>{const a=api.rand(0,api.TAU),r=api.rand(12,120);return[Math.cos(a)*r,0.2,Math.sin(a)*r-30];},0xcdd9ff,0.5,{soft:true,opacity:0.0,attenuate:true}); g.add(souls.points);
+      // the sea giving up its dead — points rising from a pool
+      const seaDead=particleField(800,()=>[rand(-60,60),-20,rand(20,90)],0x9fb4cf,0.6,{soft:true,opacity:0.0}); g.add(seaDead.points);
+
+      return {
+        group:g, spawn:{pos:[0,0,10],yaw:Math.PI},
+        env:{bg:0x03040a,fog:{c:0x03040a,d:0.004},exposure:0.92,bloom:{s:1.4,r:0.8,t:0.62}},
+        audio:{drone:[-24,-12],noise:0.04,filter:2600,silence:true,texture:'judgment'},
+        update(t,dt){
+          tCore.scale.setScalar(42+3*Math.sin(t*0.8)); throneLight.intensity=clamp(sceneClock/4,0,1)*60;
+          // earth & sky flee (0-8s)
+          const flee=clamp((sceneClock-1)/7,0,1); earth.position.lerp(new THREE.Vector3(220,80,-400),0.01*flee); earth.material.opacity=1-flee*0.5;
+          // multitudes appear (8s+)
+          const mult=clamp((sceneClock-8)/5,0,1); souls.points.material.opacity=mult*0.6;
+          // books open / book of life (16s+)
+          const op=clamp((sceneClock-15)/4,0,1); books.forEach((b,i)=>b.material.emissiveIntensity=0.4+op*0.5*Math.abs(Math.sin(t+i)));
+          bolGlow.material.opacity=op*0.8; bookOfLife.position.y=16+Math.sin(t*0.5)*0.3;
+          // sea gives up its dead (24s+)
+          const sea=clamp((sceneClock-23)/5,0,1); seaDead.points.material.opacity=sea*0.6;
+          const sp=seaDead.points.geometry.attributes.position; for(let i=0;i<sp.count;i++){let y=sp.getY(i)+dt*2;if(y>2)y=-20;sp.setY(i,y);} sp.needsUpdate=true;
+          // the all-revealing light slowly brightens everything
+          renderer.toneMappingExposure=lerp(0.92,1.16,clamp(sceneClock/20,0,1));
+        }
+      };
+    }
+  },
+
+  /* ---------------------------------------------------------------- 11 · NEW JERUSALEM */
+  { key:'newjerusalem', title:'New Heaven, New Earth, New Jerusalem', range:'Revelation 21–22',
+    symbols:[
+      {t:'The City as a Bride',d:'The holy city, New Jerusalem, coming down out of heaven, prepared as a bride for her husband.'},
+      {t:'Twelve Gates, Twelve Foundations',d:'Twelve pearl gates, twelve foundations of precious stones; the city is a perfect cube of glory.'},
+      {t:'The River and the Tree of Life',d:'A river of the water of life, and the tree of life, whose leaves are for the healing of the nations.'},
+      {t:'No Temple, No Sun',d:'For the Lord God is its temple and its light. No night, no death, no mourning, no pain.'}],
+    captions:[
+      {at:0,t:'And I saw a new heaven and a new earth; the first had passed away.',ref:'Revelation 21:1'},
+      {at:8,t:'The holy city, New Jerusalem, descending — prepared as a bride.',ref:'Revelation 21:2'},
+      {at:16,t:'Twelve gates of pearl, foundations of jewels, a street of transparent gold.',ref:'Revelation 21:19–21'},
+      {at:24,t:'No more death, nor mourning, nor pain — for the former things have passed away.',ref:'Revelation 21:4'}],
+    build(api){
+      const {THREE}=api; const g=new THREE.Group();
+      // new earth — a renewed luminous ground
+      const ground=new THREE.Mesh(new THREE.CircleGeometry(400,72),new THREE.MeshStandardMaterial({color:0x101c22,roughness:0.3,metalness:0.4,emissive:0x0a2428,emissiveIntensity:0.3})); ground.rotation.x=-Math.PI/2; g.add(ground);
+      // street of transparent gold leading to the city
+      const street=new THREE.Mesh(new THREE.PlaneGeometry(10,200),new THREE.MeshStandardMaterial({color:0xc79a44,metalness:1,roughness:0.1,emissive:0x6b5418,emissiveIntensity:0.5,transparent:true,opacity:0.85})); street.rotation.x=-Math.PI/2; street.position.set(0,0.02,-40); g.add(street);
+      // THE NEW JERUSALEM — a radiant cube-city, descending
+      const city=new THREE.Group(); city.position.set(0,140,-70); g.add(city);
+      const cube=new THREE.Mesh(new THREE.BoxGeometry(40,40,40),new THREE.MeshStandardMaterial({color:0x6f9cff,roughness:0.1,metalness:0.3,transparent:true,opacity:0.22,emissive:0x3a6acc,emissiveIntensity:0.5}));
+      cube.position.y=20; city.add(cube);
+      // jasper walls (edges of the cube glowing)
+      const edges=new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry),new THREE.LineBasicMaterial({color:0x9ec0ff,transparent:true,opacity:0.8})); edges.position.y=20; city.add(edges);
+      // inner towers of light
+      for(let i=0;i<24;i++){ const h=rand(8,34); const tw=new THREE.Mesh(new THREE.BoxGeometry(rand(2,4),h,rand(2,4)),new THREE.MeshStandardMaterial({color:0xeef4ff,emissive:0xbcd4ff,emissiveIntensity:0.6,roughness:0.3}));
+        tw.position.set(rand(-16,16),h/2,rand(-16,16)); city.add(tw); }
+      const cityGlow=glow(0xeef4ff,90,0.7); cityGlow.position.y=20; city.add(cityGlow);
+      // twelve gates of pearl
+      for(let i=0;i<12;i++){const a=i/12*api.TAU; const gate=glow(0xfff6f0,3,0.9); gate.position.set(Math.cos(a)*20,rand(4,30),Math.sin(a)*20); city.add(gate);}
+      // twelve foundations — precious stones ringing the base
+      const gemColors=[0x3fd6a0,0x6f9cff,0xb98bff,0xffd27a,0xff7a9c,0x8ef0ff,0xeaff8e,0xffa24a,0xb0ffd0,0xd0b0ff,0xffe070,0xff6a6a];
+      for(let i=0;i<12;i++){const a=i/12*api.TAU; const gem=new THREE.Mesh(new THREE.OctahedronGeometry(1.6,0),new THREE.MeshStandardMaterial({color:gemColors[i],emissive:gemColors[i],emissiveIntensity:0.7,roughness:0.1,metalness:0.4,transparent:true,opacity:0.9}));
+        gem.position.set(Math.cos(a)*21,1.5,Math.sin(a)*21); city.add(gem);}
+      // river of the water of life — flows from beneath the throne/city
+      const river=new THREE.Mesh(new THREE.PlaneGeometry(6,160,1,40),new THREE.MeshStandardMaterial({color:0x6fe0ff,roughness:0.05,metalness:0.6,transparent:true,opacity:0.7,emissive:0x2a8aaa,emissiveIntensity:0.5})); river.rotation.x=-Math.PI/2; river.position.set(0,0.05,40); g.add(river); const riverBase=river.geometry.attributes.position.array.slice();
+      // tree of life beside the river
+      const tree=new THREE.Group(); tree.position.set(8,0,20); g.add(tree);
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.9,6,10),new THREE.MeshStandardMaterial({color:0x4a3a20,roughness:0.9})); trunk.position.y=3; tree.add(trunk);
+      const canopy=new THREE.Mesh(new THREE.IcosahedronGeometry(4,1),new THREE.MeshStandardMaterial({color:0x2a6a3a,emissive:0x1a4a2a,emissiveIntensity:0.4,roughness:0.8})); canopy.position.y=7; tree.add(canopy);
+      // leaves for the healing of the nations — drifting motes of soft light
+      const leaves=particleField(300,()=>[8+rand(-5,5),rand(5,10),20+rand(-5,5)],0xbcffcf,0.5,{soft:true,opacity:0.6}); g.add(leaves.points);
+      // glory motes filling everything
+      const glory=particleField(1400,()=>[rand(-120,120),rand(0,80),rand(-140,60)],0xeaf2ff,0.5,{soft:true,opacity:0.4}); g.add(glory.points);
+
+      return {
+        group:g, spawn:{pos:[0,0,30],yaw:Math.PI},
+        env:{bg:0x081018,fog:{c:0x0a1620,d:0.004},exposure:1.1,bloom:{s:1.25,r:0.8,t:0.66}},
+        audio:{drone:[-12,-5,0,4,7],noise:0.05,filter:2400,water:true,peace:true,texture:'newjerusalem'},
+        update(t,dt){
+          // the city descends gently like a bride and settles (0-12s)
+          const desc=clamp(sceneClock/12,0,1); city.position.y=lerp(140,0,easeIO(desc));
+          city.rotation.y+=dt*0.02; cityGlow.scale.setScalar(80+8*Math.sin(t*0.6));
+          edges.material.opacity=0.6+0.3*Math.sin(t*0.8);
+          // river flows
+          const arr=river.geometry.attributes.position.array; for(let i=0;i<arr.length;i+=3){ arr[i+2]=riverBase[i+2]+Math.sin(arr[i+1]*0.2+t*2)*0.2; } river.geometry.attributes.position.needsUpdate=true;
+          // leaves & glory drift softly
+          leaves.points.rotation.y+=dt*0.05; const lp=leaves.points.geometry.attributes.position; for(let i=0;i<lp.count;i++){let y=lp.getY(i)+Math.sin(t+i)*0.01;lp.setY(i,y);} lp.needsUpdate=true;
+          glory.points.rotation.y+=dt*0.01; const gp=glory.points.geometry.attributes.position; for(let i=0;i<gp.count;i++){let y=gp.getY(i)+dt*0.15;if(y>80)y-=80;gp.setY(i,y);} gp.needsUpdate=true;
+          canopy.rotation.y+=dt*0.1;
+        }
+      };
+    }
+  }
+  ];
+
+  /* ============================================================================================
+     SCENE MANAGER — fades through black, disposes the old scene, builds the next, re-seats player.
+     ============================================================================================ */
+  let current=null, currentRec=null, currentIndex=-1, sceneClock=0;
+  let comfortGetter=()=>comfort; // comfort read inside particleField via closure (declared below)
+
+  const veil=document.getElementById('veil');
+  function buildScene(i){
+    i=(i+SCENES.length)%SCENES.length;
+    const def=SCENES[i];
+    const rec=def.build(api);
+    rec.def=def; rec.index=i;
+    scene.add(rec.group);
+    // environment
+    const env=rec.env||{};
+    scene.background=new THREE.Color(env.bg!=null?env.bg:0x05060b);
+    if(env.fog){ scene.fog=new THREE.FogExp2(env.fog.c,comfort?env.fog.d*0.7:env.fog.d); }
+    renderer.toneMappingExposure=env.exposure!=null?env.exposure:1.1;
+    if(env.bloom){ bloom.strength=env.bloom.s; bloom.radius=env.bloom.r; bloom.threshold=env.bloom.t; }
+    // seat the player
+    const sp=rec.spawn||{pos:[0,0,8],yaw:Math.PI};
+    player.position.set(sp.pos[0],sp.pos[1],sp.pos[2]); yaw=sp.yaw!=null?sp.yaw:Math.PI; pitch=0;
+    sceneClock=0; userMoved=false;
+    setAudioProfile(rec.audio||{});
+    return rec;
+  }
+
+  function goTo(i,instant){
+    i=(i+SCENES.length)%SCENES.length;
+    if(i===currentIndex && current){ return; }
+    const doSwap=()=>{
+      if(current){ scene.remove(current.group); disposeNode(current.group); }
+      current=buildScene(i); currentRec=current; currentIndex=i;
+      updateChrome();
+      startCaptionTimeline();
+    };
+    if(instant){ doSwap(); return; }
+    veil.classList.add('on');
+    setTimeout(()=>{ doSwap(); setTimeout(()=>veil.classList.remove('on'),120); }, comfort?700:1000);
+  }
+
+  /* ===================== chrome: top bar, timeline, symbols, captions ===================== */
+  const topNum=document.querySelector('#topbar .num'), topTitle=document.querySelector('#topbar .vtitle'), topRange=document.querySelector('#topbar .vrange');
+  const tlList=document.getElementById('tl-list'), timelineEl=document.getElementById('timeline');
+  const symEl=document.getElementById('symbols'), symBody=document.getElementById('sym-body');
+  const capWrap=document.getElementById('captionwrap'), capText=document.getElementById('caption'), capRef=document.getElementById('captionref');
+
+  SCENES.forEach((s,i)=>{ const d=document.createElement('div'); d.className='tl-item'; d.dataset.i=i;
+    d.innerHTML=`<span class="rn">${(i+1).toString().padStart(2,'·')}</span><span class="tt">${s.title}<span class="rr">${s.range}</span></span>`;
+    d.onclick=()=>{ goTo(i); toggleTimeline(false); }; tlList.appendChild(d); });
+
+  function updateChrome(){
+    const s=SCENES[currentIndex];
+    topNum.textContent=`Vision ${currentIndex+1} of ${SCENES.length}`;
+    topTitle.textContent=s.title; topRange.textContent=s.range;
+    [...tlList.children].forEach((c,i)=>c.classList.toggle('active',i===currentIndex));
+    // symbol overlay content
+    symBody.innerHTML=`<div class="rn">Vision ${currentIndex+1} · ${s.range}</div><h2>${s.title}</h2>
+      <div class="rr">Symbols of this vision</div><div class="divider"></div>`+
+      s.symbols.map(x=>`<div class="sym"><div class="label">${x.t}</div><div class="val">${x.d}</div></div>`).join('');
+  }
+
+  /* ----- caption timeline (poetic scripture paraphrase, toggleable) ----- */
+  let captionsOn=true, capBeat=-1;
+  function startCaptionTimeline(){ capBeat=-1; }
+  function updateCaptions(){
+    if(!captionsOn || !currentRec){ capWrap.style.opacity='0'; return; }
+    const beats=SCENES[currentIndex].captions; let bi=0;
+    for(let i=0;i<beats.length;i++){ if(sceneClock>=beats[i].at) bi=i; }
+    if(bi!==capBeat){ capBeat=bi; const b=beats[bi];
+      capWrap.style.opacity='0';
+      setTimeout(()=>{ if(!captionsOn)return; capText.textContent=b.t; capRef.textContent=b.ref; capWrap.style.opacity='1'; },480);
+    }
+  }
+
+  /* ===================== navigation (desktop / touch / VR) ===================== */
+  const keys={}; let yaw=Math.PI,pitch=0,locked=false,started=false,userMoved=false;
+  let comfort=false; comfortGetter=()=>comfort;
+
+  addEventListener('keydown',e=>{
+    keys[e.code]=true;
+    if(!started)return;
+    if(e.code==='KeyC') toggleCaptions();
+    if(e.code==='KeyI') toggleSymbols();
+    if(e.code==='KeyT') toggleTimeline();
+    if(e.code==='KeyP') toggleComfort();
+    if(e.code==='ArrowRight'||e.code==='BracketRight'||e.code==='PageDown') goTo(currentIndex+1);
+    if(e.code==='ArrowLeft'||e.code==='BracketLeft'||e.code==='PageUp') goTo(currentIndex-1);
+    if(e.code==='Escape') closePanels();
+  });
+  addEventListener('keyup',e=>keys[e.code]=false);
+  // arrow keys move between visions only when not used for walking? We let A/D + arrows both strafe;
+  // visions are advanced with the on-screen ‹ › buttons and [ ] / PageUp-Down. Keep arrows for looking/walking.
+
+  canvas.addEventListener('click',()=>{ if(started && !isTouch) canvas.requestPointerLock(); });
+  document.addEventListener('pointerlockchange',()=>locked=(document.pointerLockElement===canvas));
+  document.addEventListener('mousemove',e=>{ if(!locked)return; yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.4,1.4); });
+
+  let touchMove={x:0,y:0},lookId=null,lastLook={x:0,y:0};
+  if(isTouch){
+    document.body.classList.add('touch');
+    const joy=document.getElementById('joy'),stick=joy.querySelector('.stick'); let jid=null,cx=0,cy=0;
+    joy.addEventListener('pointerdown',e=>{jid=e.pointerId;const r=joy.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;joy.setPointerCapture(jid);});
+    joy.addEventListener('pointermove',e=>{if(e.pointerId!==jid)return;let dx=e.clientX-cx,dy=e.clientY-cy;const m=Math.hypot(dx,dy),lim=50;if(m>lim){dx*=lim/m;dy*=lim/m;}stick.style.transform=`translate(${dx}px,${dy}px)`;touchMove.x=dx/lim;touchMove.y=dy/lim;userMoved=true;});
+    const endJoy=e=>{if(e.pointerId!==jid)return;jid=null;touchMove={x:0,y:0};stick.style.transform='translate(0,0)';};
+    joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
+    canvas.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*0.45)return;lookId=e.pointerId;lastLook={x:e.clientX,y:e.clientY};});
+    canvas.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-lastLook.x)*0.005;pitch=clamp(pitch-(e.clientY-lastLook.y)*0.005,-1.4,1.4);lastLook={x:e.clientX,y:e.clientY};});
+    canvas.addEventListener('pointerup',e=>{if(e.pointerId===lookId)lookId=null;});
+  }
+
+  /* ===================== UI buttons ===================== */
+  const hud=document.getElementById('hud'), toastEl=document.getElementById('toast');
+  let toastTimer=null;
+  function showToast(html,ms){ toastEl.innerHTML=html; toastEl.style.opacity='1'; clearTimeout(toastTimer); if(ms!==0)toastTimer=setTimeout(()=>toastEl.style.opacity='0',ms||4200); }
+
+  function toggleTimeline(force){ const open=force!=null?force:!timelineEl.classList.contains('open'); timelineEl.classList.toggle('open',open); if(open)symEl.classList.remove('open'); }
+  function toggleSymbols(force){ const open=force!=null?force:!symEl.classList.contains('open'); symEl.classList.toggle('open',open); if(open)timelineEl.classList.remove('open'); }
+  function closePanels(){ timelineEl.classList.remove('open'); symEl.classList.remove('open'); }
+  function toggleCaptions(){ captionsOn=!captionsOn; document.getElementById('btn-captions').classList.toggle('off',!captionsOn); if(!captionsOn)capWrap.style.opacity='0'; else { capBeat=-1; } }
+  function toggleComfort(){ comfort=!comfort; const b=document.getElementById('btn-comfort'); b.classList.toggle('warm',comfort); b.textContent='◐ Motion: '+(comfort?'Calm':'Full');
+    showToast(comfort?'Comfort mode — gentle motion, reduced particles':'Full cinematic motion',2600); }
+
+  document.getElementById('btn-timeline').onclick=()=>toggleTimeline();
+  document.getElementById('btn-symbols').onclick=()=>toggleSymbols();
+  document.getElementById('btn-captions').onclick=toggleCaptions;
+  document.getElementById('btn-comfort').onclick=toggleComfort;
+  document.getElementById('btn-audio').onclick=toggleAudio;
+  document.getElementById('btn-patmos').onclick=()=>{ goTo(0); closePanels(); };
+  document.getElementById('sym-close').onclick=()=>toggleSymbols(false);
+  document.getElementById('nav-prev').onclick=()=>goTo(currentIndex-1);
+  document.getElementById('nav-next').onclick=()=>goTo(currentIndex+1);
+
+  /* ===================== AUDIO (procedural per-scene soundscapes) ===================== */
+  // A small Web Audio engine: a sustained drone chord + filtered noise bed, re-tuned per scene.
+  // Optional signature events (impacts, brass, choir swell) are scheduled lightly on scene entry.
+  let audio={ctx:null,on:true,started:false,nodes:[]};
+  const A1=55, hz=s=>A1*Math.pow(2,s/12);
+  function makeNoiseBuffer(ctx){ const len=ctx.sampleRate*2, b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1; return b; }
+  function startAudio(){
+    if(audio.started){ if(audio.ctx&&audio.ctx.state==='suspended')audio.ctx.resume(); return; }
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; const ctx=new AC(); audio.ctx=ctx; audio.started=true;
+      const master=ctx.createGain(); master.gain.value=audio.on?0.85:0.0001; master.connect(ctx.destination); audio.master=master;
+      // reverb
+      const conv=ctx.createConvolver(); const ir=ctx.createBuffer(2,ctx.sampleRate*4,ctx.sampleRate);
+      for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2);}
+      conv.buffer=ir; const wet=ctx.createGain(); wet.gain.value=0.4; conv.connect(wet).connect(master); audio.conv=conv;
+      // drone chord — up to 5 detuned oscillators
+      audio.drone=[]; const droneGain=ctx.createGain(); droneGain.gain.value=0.0001; droneGain.connect(master); droneGain.connect(conv); audio.droneGain=droneGain;
+      for(let i=0;i<5;i++){ const o=ctx.createOscillator(); o.type='sawtooth'; o.detune.value=(i-2)*5; const g=ctx.createGain(); g.gain.value=0.06;
+        const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=600; f.Q.value=0.6; o.connect(g).connect(f).connect(droneGain); o.start(); audio.drone.push({o,g,f}); }
+      // noise bed (wind / sea / smoke)
+      const ns=ctx.createBufferSource(); ns.buffer=makeNoiseBuffer(ctx); ns.loop=true; const nf=ctx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=500; nf.Q.value=0.7;
+      const ng=ctx.createGain(); ng.gain.value=0.0001; ns.connect(nf).connect(ng).connect(master); ng.connect(conv); ns.start(); audio.noise={ns,nf,ng};
+      if(currentRec) setAudioProfile(currentRec.audio||{});
+    }catch(e){ console.warn('audio failed',e); }
+  }
+  function setAudioProfile(p){
+    if(!audio.ctx)return; const ctx=audio.ctx, tt=ctx.currentTime;
+    const chord=p.drone||[-12,-8,-3];
+    audio.drone.forEach((v,i)=>{ const semi=chord[i%chord.length]+(i>=chord.length?12:0); v.o.frequency.setTargetAtTime(hz(semi),tt,3);
+      v.f.frequency.setTargetAtTime(p.filter||800,tt,3); });
+    audio.droneGain.gain.setTargetAtTime(audio.on?0.16:0.0001,tt,3);
+    audio.noise.ng.gain.setTargetAtTime(audio.on?(p.noise||0.2)*0.5:0.0001,tt,3);
+    audio.noise.nf.frequency.setTargetAtTime(p.sea?260:(p.wind?700:p.water?1200:500),tt,3);
+    audio.noise.nf.type=p.sea||p.water?'lowpass':'bandpass';
+    // a soft signature swell on entry
+    if(p.choir||p.brass||p.peace){ swell(chord, p.brass?'brass':'choir'); }
+  }
+  function swell(chord,kind){ const ctx=audio.ctx; if(!ctx)return; const t=ctx.currentTime;
+    chord.slice(0,4).forEach((semi,k)=>{ const o=ctx.createOscillator(); o.type=kind==='brass'?'sawtooth':'sine'; o.frequency.value=hz(semi+12);
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.05,t+1.5+k*0.2); g.gain.exponentialRampToValueAtTime(0.0001,t+6);
+      o.connect(g).connect(audio.master); o.connect(audio.conv); o.start(t); o.stop(t+6.2); }); }
+  function toggleAudio(){ audio.on=!audio.on; const b=document.getElementById('btn-audio'); b.classList.toggle('off',!audio.on); b.textContent='♪ Audio: '+(audio.on?'On':'Off');
+    if(audio.ctx){ const t=audio.ctx.currentTime; audio.master.gain.setTargetAtTime(audio.on?0.85:0.0001,t,0.5); } }
+
+  /* ===================== VR ===================== */
+  if(VRButton && navigator.xr){ try{ const vb=VRButton.createButton(renderer); vb.style.zIndex='40'; vb.style.bottom='16px'; document.body.appendChild(vb);}catch(e){} }
+
+  /* ===================== resize ===================== */
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight); bloom.setSize(innerWidth,innerHeight); });
+
+  /* ===================== main loop ===================== */
+  const clock=new THREE.Clock();
+  const fwd=new THREE.Vector3(),right=new THREE.Vector3(),move=new THREE.Vector3();
+  // expose sceneClock to scene update() closures via the outer `sceneClock` variable
+  window.sceneClock=0;
+
+  function animate(){
+    const dt=Math.min(clock.getDelta(),0.05); const t=clock.elapsedTime;
+    const presenting=renderer.xr.isPresenting;
+    sceneClock+=dt; window.sceneClock=sceneClock;
+
+    if(!presenting){ player.rotation.y=yaw; camera.rotation.set(pitch,0,0); camera.position.set(0,EYE,0); }
+    else { camera.position.set(0,0,0); player.rotation.y=yaw; }
+
+    if(started){
+      let fb=0,lr=0;
+      if(keys['KeyW']) fb+=1; if(keys['KeyS']) fb-=1;
+      if(keys['KeyA']) lr-=1; if(keys['KeyD']) lr+=1;
+      if(keys['ArrowUp']) fb+=1; if(keys['ArrowDown']) fb-=1;
+      if(isTouch){ fb-=touchMove.y; lr+=touchMove.x; }
+      const speed=(keys['ShiftLeft']||keys['ShiftRight'])?20:9;
+      if(fb||lr){ userMoved=true;
+        fwd.set(0,0,-1).applyAxisAngle(YAXIS,yaw); right.set(1,0,0).applyAxisAngle(YAXIS,yaw);
+        move.set(0,0,0).addScaledVector(fwd,fb).addScaledVector(right,lr).normalize().multiplyScalar(speed*dt); player.position.add(move); }
+      // VR thumbstick locomotion
+      if(presenting){ const s=renderer.xr.getSession(); if(s)for(const src of s.inputSources){ if(src.gamepad&&src.gamepad.axes.length>=4){
+        const ax=src.gamepad.axes,lx=ax[2]||0,ly=ax[3]||0; if(Math.abs(lx)>0.15||Math.abs(ly)>0.15){ userMoved=true;
+          fwd.set(0,0,-1).applyAxisAngle(YAXIS,yaw); right.set(1,0,0).applyAxisAngle(YAXIS,yaw);
+          move.set(0,0,0).addScaledVector(fwd,-ly).addScaledVector(right,lx).multiplyScalar(7*dt); player.position.add(move); } } } }
+    }
+    // soft bounds so the viewer never drifts into the void
+    const R=140; const pr=Math.hypot(player.position.x,player.position.z+40);
+    if(pr>R){ const k=R/pr; player.position.x*=k; player.position.z=(player.position.z+40)*k-40; }
+    player.position.y=0;
+
+    // drive the current scene
+    if(currentRec && currentRec.update){ try{ currentRec.update(t,dt); }catch(e){ /* keep the loop alive */ } }
+    updateCaptions();
+
+    presenting?renderer.render(scene,camera):composer.render();
+  }
+  renderer.setAnimationLoop(animate);
+
+  /* ===================== boot sequence ===================== */
+  const introEl=document.getElementById('intro'), enterBtn=document.getElementById('enter'),
+        skipLink=document.getElementById('skiplink'), loadNote=document.getElementById('loadnote');
+  enterBtn.disabled=false; loadNote.textContent='the vision is ready';
+
+  function begin(startIndex){
+    started=true; startAudio();
+    introEl.style.opacity='0'; setTimeout(()=>introEl.style.display='none',1300);
+    hud.classList.add('on');
+    goTo(startIndex,true);
+    showToast(isTouch?'Drag to look · left stick to walk · use <span class="key">‹ ›</span> for visions'
+                     :'<span class="key">Move</span> WASD · <span class="key">Look</span> mouse · <span class="key">‹ ›</span> change vision · <span class="key">T</span> all visions',6000);
+  }
+  enterBtn.onclick=()=>begin(0);          // guided journey from Patmos
+  skipLink.onclick=()=>begin(1);          // jump straight to the throne room
+
+  // expose a tiny console helper for authoring/testing: __go(index)
+  window.__go=(i)=>{ goTo(i); return 'vision '+(i+1)+' — '+SCENES[((i%SCENES.length)+SCENES.length)%SCENES.length].title; };
+}
+
+init();
+</script>
+</body>
+</html>
