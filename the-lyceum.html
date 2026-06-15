@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0e12" />
+<title>The Lyceum — Hall of Natural Philosophy · The Greene Museum</title>
+<meta name="description" content="A walkable hall honoring Pythagoras, Newton, and Tesla — their lives, works, and a reproducible experiment each, plus the Pythagorean Music of the Spheres." />
+<style>
+  :root{--ivory:#eef0e6;--gold:#e7cf8f;--line:rgba(159,180,255,0.35);--serif:"Iowan Old Style",Palatino,Georgia,serif;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a;color:var(--ivory);font-family:var(--serif);}
+  canvas{display:block;}
+  #note{position:fixed;left:50%;bottom:42px;transform:translateX(-50%);padding:9px 18px;border:1px solid var(--line);
+    border-radius:999px;background:rgba(8,12,18,0.72);backdrop-filter:blur(6px);font-size:14px;letter-spacing:.02em;
+    opacity:0;transition:opacity .35s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;}
+  #note.show{opacity:1;}
+  #reticle{position:fixed;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid rgba(238,240,230,0.6);
+    border-radius:50%;transition:transform .15s,border-color .15s;}
+  #reticle.hot{transform:scale(1.7);border-color:var(--gold);}
+  #hud{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);width:min(560px,92vw);text-align:center;
+    opacity:0;transition:opacity .25s;pointer-events:none;}
+  #hud.show{opacity:1;}
+  #hud .th{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#9fb4ff;opacity:.85;}
+  #hud .ti{font-size:22px;color:var(--gold);margin:2px 0;}
+  #hud .o{font-size:12px;color:#cdd2c4;opacity:.8;}
+  #hud .d{font-size:13px;color:#dfe2d6;line-height:1.5;margin-top:6px;}
+  #intro{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(ellipse at 50% 35%,#10151c 0%,#070a0e 60%,#04060a 100%);padding:28px;transition:opacity .7s;}
+  #intro.gone{opacity:0;pointer-events:none;}
+  #intro .kick{letter-spacing:.34em;text-transform:uppercase;color:#9fb4ff;font-size:.74rem;opacity:.8;margin-bottom:14px;}
+  #intro h1{font-weight:400;font-size:clamp(2rem,6vw,3.4rem);margin:0 0 6px;color:var(--gold);}
+  #intro p{color:#cdd2c4;max-width:540px;line-height:1.6;margin:10px 0 26px;}
+  #enter{font-family:var(--serif);font-size:1.05rem;color:#07120f;background:var(--gold);border:0;border-radius:999px;
+    padding:12px 34px;cursor:pointer;letter-spacing:.04em;transition:transform .15s,box-shadow .2s;}
+  #enter:hover{transform:translateY(-2px);box-shadow:0 0 26px rgba(231,207,143,.4);}
+  #intro .hint{margin-top:22px;font-size:.78rem;color:#9fb4ff;opacity:.6;letter-spacing:.04em;}
+  #fallback{display:none;position:fixed;inset:0;z-index:20;align-items:center;justify-content:center;padding:32px;text-align:center;
+    background:#070a0e;color:#dfe2d6;font-size:15px;line-height:1.6;}
+</style>
+</head>
+<body>
+  <div id="note"></div>
+  <div id="reticle"></div>
+  <div id="hud"><div class="th"></div><div class="ti"></div><div class="o"></div><div class="d"></div></div>
+  <div id="intro">
+    <div class="kick">The Greene Museum · Natural Philosophy</div>
+    <h1>The Lyceum</h1>
+    <p>Pythagoras, Newton, and Tesla — their lives, their works, and one experiment each you can reproduce. At the far end, the Pythagorean Music of the Spheres.</p>
+    <button id="enter">Enter the Hall</button>
+    <div class="hint">Move: WASD / arrows · Look: mouse (click to capture) · Interact: <b>E</b> or click</div>
+  </div>
+  <div id="fallback">Your browser could not start WebGL. The Lyceum needs a WebGL-capable browser.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+/* The Lyceum — Hall of Natural Philosophy. Self-contained hosted hall for the
+   Greene Halls. Ported from the museum's buildLyceum(); no personal data.
+   Honest-content rule kept: legend labeled as legend; the reproducible
+   experiment is the point. */
+let renderer, scene, camera, player, clock, raycaster;
+let yaw=0, pitch=0, locked=false, focused=null;
+const keys={}, interactables=[], pickMeshes=[];
+const COL={ gold:0xE8C679, amber:0xE0A24A, blue:0x9FB4FF };
+let actx=null, masterGain=null, audioOn=false;
+
+function rgb(c){ return '#'+('000000'+c.toString(16)).slice(-6); }
+function mat(color,rough,metal,emissive,eInt){ const m=new THREE.MeshStandardMaterial({color:color,roughness:rough==null?0.85:rough,metalness:metal==null?0:metal}); if(emissive!=null){ m.emissive=new THREE.Color(emissive); m.emissiveIntensity=eInt==null?1:eInt; } return m; }
+function makeTexture(draw){ const cv=document.createElement('canvas'); cv.width=512; cv.height=660; const x=cv.getContext('2d'); draw(x,cv.width,cv.height); const t=new THREE.CanvasTexture(cv); if('encoding' in t) t.encoding=THREE.sRGBEncoding; t.anisotropy=4; return t; }
+function wrap(ctx,text,x,y,max,lh){ const words=text.split(' '); let line='',yy=y; for(const w of words){ const test=line+w+' '; if(ctx.measureText(test).width>max && line){ ctx.fillText(line,x,yy); line=w+' '; yy+=lh; } else line=test; } ctx.fillText(line,x,yy); return yy; }
+function wrapCenter(ctx,text,cx,cy,max,lh){ const words=text.split(' '); let line='',lines=[]; for(const w of words){ const t=line+w+' '; if(ctx.measureText(t).width>max && line){ lines.push(line.trim()); line=w+' '; } else line=t; } lines.push(line.trim()); const tot=(lines.length-1)*lh; lines.forEach((ln,i)=>ctx.fillText(ln,cx,cy-tot/2+i*lh)); }
+function makeLabel(text,color){ const cv=document.createElement('canvas'); cv.width=1024; cv.height=256; const x=cv.getContext('2d'); x.clearRect(0,0,1024,256); x.textAlign='center'; x.textBaseline='middle'; x.shadowColor='rgba(0,0,0,0.65)'; x.shadowBlur=14; x.fillStyle=rgb(color||COL.amber); x.font='700 84px sans-serif'; wrapCenter(x,text,512,128,960,92); const t=new THREE.CanvasTexture(cv); if('encoding' in t) t.encoding=THREE.sRGBEncoding; t.anisotropy=4; const m=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}); return new THREE.Mesh(new THREE.PlaneGeometry(3.0,0.75),m); }
+let _disc; function softDisc(){ if(_disc) return _disc; const cv=document.createElement('canvas'); cv.width=cv.height=128; const x=cv.getContext('2d'); const g=x.createRadialGradient(64,64,2,64,64,64); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.4,'rgba(255,255,255,0.5)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,128,128); _disc=new THREE.CanvasTexture(cv); return _disc; }
+function glowSprite(color,scale,opacity){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:softDisc(),color:color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:opacity==null?0.6:opacity})); s.scale.setScalar(scale); return s; }
+function plaqueTemple(obj,secret){ return makeTexture((x,W,H)=>{ const grd=x.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#d8c29a'); grd.addColorStop(1,'#b89a6e'); x.fillStyle=grd; x.fillRect(0,0,W,H); x.strokeStyle=rgb(obj.c||COL.amber); x.lineWidth=6; x.strokeRect(12,12,W-24,H-24); x.fillStyle='#6b4f2a'; x.font='600 22px monospace'; x.fillText((obj.th||'').toUpperCase(),34,58); x.fillStyle='#2a1d10'; x.font='700 42px sans-serif'; let yy=wrap(x,obj.g,32,110,W-60,46); x.fillStyle='#7a5a2e'; x.font='400 23px monospace'; x.fillText(obj.o,34,yy+38); x.fillStyle='#3a2c18'; x.font='400 23px sans-serif'; yy=wrap(x,obj.d,34,yy+82,W-68,32); if(secret){ x.fillStyle=rgb(COL.amber); x.font='600 20px monospace'; x.fillText('◈ THE EXPERIMENT',34,yy+50); x.fillStyle='#2a1d10'; x.font='400 22px sans-serif'; wrap(x,obj.sec,34,yy+84,W-68,30); } else { x.fillStyle='#6b4f2a'; x.font='400 20px monospace'; x.fillText('look + press E / click →',34,H-40); } }); }
+function framedPanel(tex,w,h){ const g=new THREE.Group(); const frame=new THREE.Mesh(new THREE.BoxGeometry(w+0.18,h+0.18,0.08),mat(0x0d0f0a,0.6,0.3)); const panel=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex})); panel.position.z=0.05; g.add(frame); g.add(panel); return g; }
+
+function note(s){ const n=document.getElementById('note'); n.textContent=s; n.classList.add('show'); clearTimeout(note._t); note._t=setTimeout(()=>n.classList.remove('show'),2600); }
+function tone(freqs,type,gain){ if(!audioOn||!actx) return; const t=actx.currentTime; freqs.forEach((f,i)=>{ const o=actx.createOscillator(); o.type=type||'sine'; o.frequency.value=f; const gg=actx.createGain(); gg.gain.value=0; o.connect(gg); gg.connect(masterGain); const st=t+i*0.5; gg.gain.linearRampToValueAtTime(gain||0.12,st+0.03); gg.gain.exponentialRampToValueAtTime(0.0004,st+0.62); o.start(st); o.stop(st+0.72); }); }
+function chime(){ tone([528],'sine',0.1); }
+
+function init(){
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
+  renderer.shadowMap.enabled=true; document.body.appendChild(renderer.domElement);
+  scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a0e12); scene.fog=new THREE.FogExp2(0x0c1014,0.016);
+  camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,200);
+  player=new THREE.Object3D(); player.position.set(0,1.62,-12); player.add(camera); scene.add(player);
+  clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
+  buildHall();
+  addEventListener('resize',onResize);
+  addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='KeyE'||e.code==='Enter') interact(); });
+  addEventListener('keyup',e=>{ keys[e.code]=false; });
+  const cv=renderer.domElement;
+  cv.addEventListener('click',()=>{ if(!locked) cv.requestPointerLock(); else interact(); });
+  document.addEventListener('pointerlockchange',()=>{ locked=(document.pointerLockElement===cv); });
+  document.addEventListener('mousemove',e=>{ if(!locked) return; yaw-=e.movementX*0.0022; pitch-=e.movementY*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch)); });
+  renderer.setAnimationLoop(loop);
+}
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+
+function buildHall(){
+  const hx=9, hz=16, H=6;
+  const floorMat=mat(0x20242a,0.5,0.2), wallMat=mat(0x2b3038,0.9,0.05), ceilMat=mat(0x171a1f,0.95,0.0), trimMat=mat(0x9a7b3e,0.4,0.8,0x3a2c12,0.2);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(hx*2,hz*2),floorMat); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+  const ceil=new THREE.Mesh(new THREE.PlaneGeometry(hx*2,hz*2),ceilMat); ceil.rotation.x=Math.PI/2; ceil.position.y=H; scene.add(ceil);
+  const wW=new THREE.Mesh(new THREE.PlaneGeometry(hz*2,H),wallMat); wW.position.set(-hx,H/2,0); wW.rotation.y=Math.PI/2; scene.add(wW);
+  const wE=wW.clone(); wE.position.set(hx,H/2,0); wE.rotation.y=-Math.PI/2; scene.add(wE);
+  const wN=new THREE.Mesh(new THREE.PlaneGeometry(hx*2,H),wallMat); wN.position.set(0,H/2,hz); wN.rotation.y=Math.PI; scene.add(wN);
+  const wS=wN.clone(); wS.position.set(0,H/2,-hz); wS.rotation.y=0; scene.add(wS);
+  scene.add(new THREE.HemisphereLight(0xbfd0e0,0x14171c,0.6)); scene.add(new THREE.AmbientLight(0x223040,0.3));
+  const cl=new THREE.PointLight(0xbfe0ff,0.8,40,2); cl.position.set(0,H-0.6,0); scene.add(cl);
+  for(let z=-hz+3; z<hz; z+=5){ const s=new THREE.Mesh(new THREE.PlaneGeometry(hx*1.4,0.25),new THREE.MeshBasicMaterial({color:0xdfeaff})); s.rotation.x=Math.PI/2; s.position.set(0,H-0.05,z); scene.add(s); }
+  const title=makeLabel('THE LYCEUM · NATURAL PHILOSOPHY',0xbfe0ff); title.position.set(0,4.7,-hz+0.3); scene.add(title);
+  const foot=makeLabel('part of The Greene Paleogenomic Museum',0x9fb4ff); foot.scale.setScalar(0.5); foot.position.set(0,0.7,-hz+0.3); scene.add(foot);
+
+  function devPythagoras(dev,col){
+    { const st=new THREE.Mesh(new THREE.BoxGeometry(0.2,1.0,0.2),mat(0x3a2a18,0.8,0)); st.position.set(0,0.5,0); dev.add(st); }
+    const board=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.12,2.0),mat(0x5a3d22,0.7,0.05)); board.position.set(0,1.04,0); dev.add(board);
+    const strings=[]; for(let i=0;i<3;i++){ const st=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,1.9,8),mat(0xcfd0c0,0.3,0.8,col,0.2)); st.rotation.x=Math.PI/2; st.position.set((i-1)*0.08,1.12,0); dev.add(st); strings.push(st); }
+    return { run:()=>{ tone([220,440,330,293.33],'sine',0.13); strings.forEach((st,i)=>{ const m=st.material,e=m.emissiveIntensity; m.emissiveIntensity=1.3; setTimeout(()=>{m.emissiveIntensity=e;},300+i*130); }); note('Monochord — octave 2:1 · fifth 3:2 · fourth 4:3'); } };
+  }
+  function devNewton(dev,col){
+    { const st=new THREE.Mesh(new THREE.BoxGeometry(0.2,1.1,0.2),mat(0x222831,0.8,0.1)); st.position.set(0,0.55,0); dev.add(st); }
+    const prism=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.5,3),new THREE.MeshStandardMaterial({color:0xbfe8ff,transparent:true,opacity:0.45,roughness:0.04,metalness:0.0})); prism.position.set(0,1.25,0); prism.rotation.x=Math.PI/2; dev.add(prism);
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(1.3,0.045,0.045),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false})); beam.position.set(-0.8,1.25,0); dev.add(beam);
+    const cols=[0xff2200,0xff8800,0xffee00,0x33cc33,0x2299ff,0x2233ff,0x9900ff]; const fan=new THREE.Group(); fan.position.set(0,1.25,0); fan.visible=false; dev.add(fan);
+    cols.forEach((c,i)=>{ const geo=new THREE.BoxGeometry(1.6,0.03,0.03); geo.translate(0.8,0,0); const r=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.75,blending:THREE.AdditiveBlending,depthWrite:false})); r.rotation.z=(i-3)*0.07; fan.add(r); });
+    return { idle:prism, run:()=>{ fan.visible=true; beam.material.opacity=0.85; chime(); note('Prism — white light splits into the spectrum (colour is in the light, not the glass)'); setTimeout(()=>{ fan.visible=false; beam.material.opacity=0.5; },4200); } };
+  }
+  function devTesla(dev,col){
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,0.3,24),mat(0x1a1d22,0.6,0.4)); base.position.y=0.15; dev.add(base);
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,1.0,16),mat(0x6a4a22,0.5,0.6)); stem.position.y=0.8; dev.add(stem);
+    for(let i=0;i<7;i++){ const ring=new THREE.Mesh(new THREE.TorusGeometry(0.17,0.018,8,20),mat(0xb87333,0.35,0.85)); ring.position.y=0.45+i*0.09; ring.rotation.x=Math.PI/2; dev.add(ring); }
+    const toroid=new THREE.Mesh(new THREE.TorusGeometry(0.26,0.09,12,28),mat(0xcdd2d8,0.25,0.95,col,0.2)); toroid.position.y=1.36; toroid.rotation.x=Math.PI/2; dev.add(toroid);
+    const fieldRing=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.012,6,40),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending,depthWrite:false})); fieldRing.position.y=0.18; fieldRing.rotation.x=Math.PI/2; dev.add(fieldRing);
+    const arcs=new THREE.Group(); arcs.position.y=1.36; arcs.visible=false; dev.add(arcs);
+    for(let i=0;i<5;i++){ const a=i/5*Math.PI*2, geo=new THREE.CylinderGeometry(0.006,0.002,0.7,5); geo.translate(0,0.35,0); const arc=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xcfe6ff,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false})); arc.position.set(Math.cos(a)*0.24,0,Math.sin(a)*0.24); arc.rotation.set((Math.random()-0.5)*0.8,a,(Math.random()-0.5)*0.8); arcs.add(arc); }
+    const glow=new THREE.PointLight(col,0,8,2); glow.position.y=1.4; dev.add(glow);
+    return { idle:fieldRing, run:()=>{ arcs.visible=true; glow.intensity=3.2; toroid.material.emissiveIntensity=1.2; tone([58,61,90],'sawtooth',0.07); note('AC energized — a rotating magnetic field and high-voltage, high-frequency discharge'); setTimeout(()=>{ arcs.visible=false; glow.intensity=0; toroid.material.emissiveIntensity=0.2; },1300); } };
+  }
+
+  const STATIONS=[
+    { side:-1, z:-6, color:0xE8C679, th:'Harmonics · Geometry', g:'Pythagoras of Samos', short:'The Monochord', o:'c. 570 – c. 495 BCE',
+      d:'Greek philosopher who founded a school at Croton. His circle is credited with the theorem a²+b²=c² and the discovery that musical consonances follow simple whole-number ratios — octave 2:1, fifth 3:2, fourth 4:3 — binding number, sound, and cosmos.',
+      sec:'The monochord: stop a vibrating string at half its length and it sounds an octave higher; at two-thirds, a fifth; at three-quarters, a fourth. (The blacksmith-hammer tale is later legend; the string ratios are real and reproducible.) Press E to hear them.', make:devPythagoras },
+    { side:1, z:0, color:0x6FA0A6, th:'Light · Motion · Gravity', g:'Isaac Newton', short:'The Prism', o:'1643 – 1727',
+      d:'English physicist and mathematician. In the Principia (1687) he set out three laws of motion and universal gravitation; in Opticks (1704) he showed white light is a mixture of colours. He also co-invented the calculus and built the first reflecting telescope.',
+      sec:'The experimentum crucis: a glass prism spreads sunlight into a spectrum, and a second prism recombines it to white. Colour is a property of the light itself, not of the glass. Press E to split the beam.', make:devNewton },
+    { side:-1, z:6, color:0x9FB4FF, th:'Electricity · Fields · Resonance', g:'Nikola Tesla', short:'The Tesla Coil', o:'1856 – 1943',
+      d:'Serbian-American electrical engineer. He devised the alternating-current (AC) induction motor and the polyphase system that powers the modern grid, plus the resonant "Tesla coil." He held roughly 300 patents and contributed to early radio and wireless.',
+      sec:'The rotating magnetic field: two AC currents a quarter-cycle apart make a field that rotates, spinning a rotor with no contact. The coil is a resonant transformer producing high-voltage, high-frequency discharges. Press E to energize it.', make:devTesla }
+  ];
+  STATIONS.forEach(s=>{
+    const side=s.side, bx=side*6.4, wallx=side*(hx-0.12), rot=side<0?Math.PI/2:-Math.PI/2;
+    const grp=new THREE.Group(); grp.position.set(bx,0,s.z); grp.rotation.y=rot; scene.add(grp);
+    const ped=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.62,1.1,24),mat(0x14181d,0.7,0.1)); ped.position.y=0.55; ped.castShadow=true; grp.add(ped);
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.1,0.9),trimMat); cap.position.y=1.16; grp.add(cap);
+    const bust=new THREE.Mesh(new THREE.IcosahedronGeometry(0.34,1),mat(0xcfd6df,0.5,0.2,s.color,0.18)); bust.position.y=1.72; bust.castShadow=true; grp.add(bust);
+    { const hl=new THREE.PointLight(s.color,1.4,7,2); hl.position.set(0,1.95,0.4); grp.add(hl); }
+    const lab=makeLabel(s.g,s.color); lab.position.set(0,2.5,0); grp.add(lab);
+    const yr=makeLabel(s.o,0xd9cdae); yr.scale.setScalar(0.5); yr.position.set(0,1.04,0.55); grp.add(yr);
+    const fp=framedPanel(plaqueTemple(s,false),1.7,2.2); fp.position.set(wallx,2.0,s.z); fp.rotation.y=rot; scene.add(fp);
+    fp.userData={ type:'plaque', texSec:plaqueTemple(s,true), panel:fp.children[1], revealed:false, data:s }; interactables.push(fp);
+    const dev=new THREE.Group(); dev.position.set(side*3.4,0,s.z); dev.rotation.y=rot; scene.add(dev);
+    const handle=s.make(dev,s.color);
+    dev.userData={ type:'sci', idle:handle.idle||null, run:handle.run, data:{ th:'Experiment · press E', g:s.short, o:s.o, d:s.sec } };
+    interactables.push(dev);
+  });
+
+  // The Music of the Spheres (Pythagorean aether)
+  (function(){
+    const oz=12.2, oy=2.6;
+    const plinth=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.85,1.7,8),mat(0x14181d,0.7,0.15)); plinth.position.set(0,0.85,oz); plinth.castShadow=true; scene.add(plinth);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,0.1,8),trimMat); cap.position.set(0,1.72,oz); scene.add(cap);
+    const aether=new THREE.Mesh(new THREE.SphereGeometry(1.5,24,18),new THREE.MeshBasicMaterial({color:0x5577aa,transparent:true,opacity:0.06,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})); aether.position.set(0,oy,oz); scene.add(aether);
+    const halo=glowSprite(0x99bbff,3.4,0.22); halo.position.set(0,oy,oz); scene.add(halo);
+    const monad=new THREE.Mesh(new THREE.SphereGeometry(0.22,24,18),mat(0x111111,0.2,0.3,0xffe9b0,1.4)); monad.position.set(0,oy,oz); scene.add(monad);
+    const ml=new THREE.PointLight(0xffe9b0,1.6,8,2); ml.position.set(0,oy,oz); scene.add(ml);
+    const orrery=new THREE.Group(); orrery.position.set(0,oy,oz); orrery.rotation.x=-Math.PI/2+0.22; scene.add(orrery);
+    const cols=[0xcfd6df,0xE8C679,0x6FA0A6,0xE0563C,0x9FB4FF,0xB79BD0], orbs=[];
+    cols.forEach((c,i)=>{ const r=0.45+i*0.17, a=i*1.1; const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.004,6,48),new THREE.MeshBasicMaterial({color:0x6688bb,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending,depthWrite:false})); orrery.add(ring); const orb=new THREE.Mesh(new THREE.SphereGeometry(0.05+0.012*i,16,12),mat(0x101010,0.3,0.3,c,0.9)); orb.position.set(Math.cos(a)*r,Math.sin(a)*r,0); orrery.add(orb); orbs.push(orb); });
+    const hit=new THREE.Mesh(new THREE.SphereGeometry(0.95,12,8),new THREE.MeshBasicMaterial({transparent:true,opacity:0})); orrery.add(hit);
+    const ap={ th:'Cosmos · Harmonia', g:'The Music of the Spheres', short:'Music of the Spheres', o:'Pythagorean musica universalis', c:0x9FB4FF,
+      d:'The Pythagoreans held the heavens are ordered by number: each planetary sphere moves through the aether at a speed set by simple ratios, sounding a tone — a cosmic harmony (harmonia). Number, music, and cosmos: one order.',
+      sec:'Honest note — a sound-bearing aether and an audible "music of the spheres" are philosophy and metaphor, not measured physics; space carries no acoustic medium. The true kernel endures: orbital and vibrational systems really do lock to whole-number resonances. Press E to sound the harmonic series.' };
+    const fp=framedPanel(plaqueTemple(ap,false),1.9,2.0); fp.position.set(0,2.5,oz+1.65); fp.rotation.y=Math.PI; scene.add(fp);
+    fp.userData={ type:'plaque', texSec:plaqueTemple(ap,true), panel:fp.children[1], revealed:false, data:ap }; interactables.push(fp);
+    orrery.userData={ type:'sci', idle:orrery, run:()=>{ const base=130.81; tone([base,base*2,base*3,base*4,base*5,base*6],'sine',0.07); monad.material.emissiveIntensity=2.6; ml.intensity=3.0; orbs.forEach(o=>o.material.emissiveIntensity=1.9); setTimeout(()=>{ monad.material.emissiveIntensity=1.4; ml.intensity=1.6; orbs.forEach(o=>o.material.emissiveIntensity=0.9); },1500); note('The Music of the Spheres — the cosmos sounded in whole-number harmony (1:2:3:4:5:6)'); },
+      data:{ th:'Experiment · press E', g:'Music of the Spheres', o:'Harmonic series 1:2:3:4:5:6', d:'Sound the planetary spheres as the Pythagorean cosmic chord.' } };
+    interactables.push(orrery);
+  })();
+}
+
+function interact(){
+  if(!focused) return; const u=focused.userData;
+  if(u.type==='plaque'){ if(!u.revealed){ u.revealed=true; u.panel.material.map=u.texSec; u.panel.material.needsUpdate=true; chime(); } return; }
+  if(u.type==='sci'){ if(u.run) u.run(); return; }
+}
+function updateFocus(){
+  if(pickMeshes.length===0){ interactables.forEach(g=>g.traverse(c=>{ if(c.isMesh){ c.userData._root=g; pickMeshes.push(c); } })); }
+  const o=new THREE.Vector3(), d=new THREE.Vector3(); camera.getWorldPosition(o); camera.getWorldDirection(d);
+  raycaster.set(o,d); raycaster.far=7;
+  const hits=raycaster.intersectObjects(pickMeshes,false);
+  const root=hits.length ? (hits[0].object.userData._root||null) : null;
+  if(root!==focused){ focused=root; const ret=document.getElementById('reticle'), hud=document.getElementById('hud');
+    if(!root){ ret.classList.remove('hot'); hud.classList.remove('show'); }
+    else { ret.classList.add('hot'); hud.classList.add('show'); const dt=root.userData.data;
+      hud.querySelector('.th').textContent=dt.th||''; hud.querySelector('.ti').textContent=dt.g||''; hud.querySelector('.o').textContent=dt.o||''; hud.querySelector('.d').textContent=dt.d||''; } }
+}
+function loop(){
+  const dt=Math.min(clock.getDelta(),0.05);
+  player.rotation.y=yaw; camera.rotation.x=pitch;
+  const sp=3.4*dt; const fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0); const str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+  if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
+  player.position.x=Math.max(-8.4,Math.min(8.4,player.position.x)); player.position.z=Math.max(-15.2,Math.min(15.2,player.position.z));
+  interactables.forEach(g=>{ if(g.userData.type==='sci'&&g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; });
+  updateFocus();
+  renderer.render(scene,camera);
+}
+
+function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=0.5; masterGain.connect(actx.destination); audioOn=true; }catch(e){} }
+document.getElementById('enter').addEventListener('click',()=>{ document.getElementById('intro').classList.add('gone'); startAudio(); renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); note('Move with WASD · look with the mouse · press E at a station'); });
+
+try{ init(); }catch(e){ document.getElementById('fallback').style.display='flex'; document.getElementById('fallback').textContent='WebGL error: '+(e&&e.message||e); }
+</script>
+</body>
+</html>
