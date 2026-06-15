@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05070A" />
+<title>The Human Psi Operations Room — ARES-TIFERET NODE 01 · The Greene Museum</title>
+<meta name="description" content="A hyper-real WebXR training environment for attention, resonance, intuition, remote-viewing practice, pattern recognition, dreamwork, and grounded human potential. A simulation — not a claim of certainty." />
+<style>
+  :root{
+    --obsidian:#05070A; --deep-indigo:#07111F; --signal-teal:#00F0D0; --burnt-orange:#FF7A1A;
+    --classified-red:#E63946; --gold:#D6B15C; --pearl:#F4F1E8;
+    --glass:rgba(255,255,255,0.06); --glass-2:rgba(255,255,255,0.10); --glass-border:rgba(255,255,255,0.18);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --tech:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+    --ink:#cfe3df;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;width:100%;overflow:hidden;background:var(--obsidian);color:var(--pearl);font-family:var(--serif);}
+  canvas{display:block;}
+  button{font-family:var(--tech);cursor:pointer;}
+  ::selection{background:rgba(0,240,208,.3);}
+
+  /* ---------- reticle + HUD ---------- */
+  #reticle{position:fixed;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border:1.5px solid rgba(0,240,208,.55);
+    border-radius:50%;pointer-events:none;z-index:5;transition:transform .15s,border-color .15s,opacity .2s;}
+  #reticle.hot{transform:scale(1.9);border-color:var(--gold);}
+  #reticle.hidden{opacity:0;}
+  #note{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);padding:8px 18px;border:1px solid var(--glass-border);
+    border-radius:999px;background:rgba(5,9,14,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    font-family:var(--tech);font-size:12px;letter-spacing:.06em;color:var(--signal-teal);opacity:0;transition:opacity .3s;
+    pointer-events:none;z-index:5;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;}
+  #note.show{opacity:1;}
+
+  /* ---------- top status strip ---------- */
+  #topbar{position:fixed;top:0;left:0;right:0;height:42px;z-index:6;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;font-family:var(--tech);font-size:11px;letter-spacing:.12em;color:#7fb8b0;
+    background:linear-gradient(to bottom,rgba(5,9,14,.82),rgba(5,9,14,0));pointer-events:none;text-transform:uppercase;}
+  #topbar .node{color:var(--gold);}
+  #topbar .cls{color:var(--classified-red);display:flex;align-items:center;gap:7px;}
+  #topbar .cls .dot{width:7px;height:7px;border-radius:50%;background:var(--classified-red);box-shadow:0 0 10px var(--classified-red);
+    animation:blink 2.4s infinite;}
+  @keyframes blink{0%,90%,100%{opacity:1;}45%{opacity:.25;}}
+
+  /* ---------- bottom control dock ---------- */
+  #dock{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;gap:8px;justify-content:center;align-items:center;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));flex-wrap:wrap;
+    background:linear-gradient(to top,rgba(5,9,14,.82),rgba(5,9,14,0));pointer-events:none;}
+  #dock .pill{pointer-events:auto;font-family:var(--tech);font-size:11px;letter-spacing:.08em;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:8px 14px;backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);transition:.18s;text-transform:uppercase;}
+  #dock .pill:hover{border-color:var(--signal-teal);color:var(--pearl);box-shadow:0 0 18px rgba(0,240,208,.18);}
+  #dock .pill.red:hover{border-color:var(--classified-red);box-shadow:0 0 18px rgba(230,57,70,.25);}
+  #dock .pill.gold:hover{border-color:var(--gold);box-shadow:0 0 18px rgba(214,177,92,.22);}
+
+  /* ---------- mobile look/move ---------- */
+  #joystick{position:fixed;left:24px;bottom:96px;width:120px;height:120px;border-radius:50%;z-index:6;display:none;
+    background:rgba(255,255,255,.04);border:1px solid var(--glass-border);touch-action:none;}
+  #joystick .nub{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;
+    background:rgba(0,240,208,.18);border:1px solid var(--signal-teal);}
+  body.touch #joystick{display:block;}
+
+  /* ---------- intro / initialization ---------- */
+  #intro{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:30px;background:#000;transition:opacity 1s;}
+  #intro.gone{opacity:0;pointer-events:none;}
+  #intro .vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,#0a1420 0%,#04060a 55%,#000 100%);}
+  #intro .inner{position:relative;max-width:660px;}
+  #intro .kick{font-family:var(--tech);letter-spacing:.42em;text-transform:uppercase;color:var(--signal-teal);font-size:.7rem;opacity:.85;}
+  #intro h1{font-weight:400;font-size:clamp(2rem,6.4vw,3.6rem);margin:16px 0 4px;color:var(--pearl);letter-spacing:.04em;
+    text-shadow:0 0 50px rgba(0,240,208,.28);}
+  #intro .node2{font-family:var(--tech);font-size:.78rem;letter-spacing:.34em;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  #intro .req{font-family:var(--tech);font-size:.72rem;letter-spacing:.2em;color:var(--classified-red);text-transform:uppercase;
+    opacity:0;animation:fadein 1s ease 1.1s forwards;}
+  #intro .brief{color:#bcd2cd;line-height:1.7;font-size:.96rem;margin:24px auto 0;max-width:560px;opacity:0;
+    animation:fadein 1.2s ease 1.6s forwards;}
+  #intro .brief b{color:var(--pearl);}
+  #intro .actions{margin-top:30px;opacity:0;animation:fadein 1s ease 2.4s forwards;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+  .btn-major{font-family:var(--tech);font-size:.92rem;letter-spacing:.14em;text-transform:uppercase;color:#04120f;
+    background:linear-gradient(135deg,var(--signal-teal),#39d8c4);border:0;border-radius:999px;padding:14px 40px;transition:.18s;
+    box-shadow:0 0 0 1px rgba(0,240,208,.4);}
+  .btn-major:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(0,240,208,.35);}
+  .btn-ghost{font-family:var(--tech);font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:14px 26px;transition:.18s;}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--pearl);}
+  #intro .hint{margin-top:24px;font-family:var(--tech);font-size:.7rem;letter-spacing:.16em;color:#5f7c77;opacity:0;
+    animation:fadein 1s ease 2.8s forwards;}
+  @keyframes fadein{to{opacity:1;}}
+
+  /* loading bar */
+  #loadwrap{position:fixed;inset:0;z-index:31;display:flex;align-items:center;justify-content:center;background:#000;transition:opacity .6s;}
+  #loadwrap.gone{opacity:0;pointer-events:none;}
+  #loadwrap .l{font-family:var(--tech);letter-spacing:.3em;text-transform:uppercase;color:var(--signal-teal);font-size:.72rem;text-align:center;}
+  #loadwrap .barT{width:240px;height:2px;background:rgba(255,255,255,.12);margin:16px auto 0;overflow:hidden;border-radius:2px;}
+  #loadwrap .barF{height:100%;width:0;background:var(--signal-teal);box-shadow:0 0 12px var(--signal-teal);transition:width .3s;}
+
+  /* ---------- generic glass overlay ---------- */
+  .overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:24px;
+    background:rgba(2,5,9,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .overlay.show{display:flex;animation:ovin .35s ease;}
+  @keyframes ovin{from{opacity:0;}to{opacity:1;}}
+  .panel{position:relative;width:min(960px,96vw);max-height:90vh;overflow:auto;border:1px solid var(--glass-border);
+    border-radius:16px;background:linear-gradient(160deg,rgba(10,18,28,.92),rgba(5,9,14,.96));
+    box-shadow:0 30px 90px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);padding:26px 26px 30px;}
+  .panel::-webkit-scrollbar{width:9px;}
+  .panel::-webkit-scrollbar-thumb{background:rgba(0,240,208,.2);border-radius:9px;}
+  .panel .x{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:50%;background:var(--glass);
+    border:1px solid var(--glass-border);color:var(--pearl);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .panel .x:hover{border-color:var(--classified-red);color:var(--classified-red);}
+  .panel .kick{font-family:var(--tech);font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;color:var(--signal-teal);}
+  .panel h2{font-weight:400;font-size:clamp(1.5rem,3.6vw,2rem);margin:6px 0 4px;color:var(--pearl);letter-spacing:.02em;}
+  .panel .lede{color:#aec6c1;line-height:1.6;font-size:.92rem;max-width:62ch;}
+  .panel.teal{border-color:rgba(0,240,208,.28);}
+  .panel.gold{border-color:rgba(214,177,92,.32);}
+  .panel.indigo{border-color:rgba(120,150,255,.3);}
+  .panel.warm{border-color:rgba(255,122,26,.3);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px;}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr;}}
+  .card{background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:16px;}
+  .card h3{font-weight:400;font-size:1.05rem;color:var(--gold);letter-spacing:.02em;margin-bottom:8px;}
+  .card p,.card li{color:#b8cec9;font-size:.86rem;line-height:1.55;}
+  .card ul{margin-left:18px;}
+
+  label.fld{display:block;font-family:var(--tech);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:#80a8a1;margin:12px 0 5px;}
+  input[type=text],textarea,select{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--glass-border);border-radius:8px;
+    color:var(--pearl);font-family:var(--serif);font-size:.92rem;padding:10px 12px;}
+  textarea{resize:vertical;min-height:74px;line-height:1.5;}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--signal-teal);box-shadow:0 0 0 2px rgba(0,240,208,.15);}
+  input[type=range]{width:100%;accent-color:var(--signal-teal);}
+
+  .btn{font-family:var(--tech);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:9px 16px;transition:.16s;}
+  .btn:hover{border-color:var(--signal-teal);color:var(--pearl);}
+  .btn.primary{color:#04120f;background:var(--signal-teal);border-color:var(--signal-teal);}
+  .btn.primary:hover{box-shadow:0 0 18px rgba(0,240,208,.4);}
+  .btn.gold{color:#1a1405;background:var(--gold);border-color:var(--gold);}
+  .btn.red{color:#fff;background:transparent;border-color:var(--classified-red);}
+  .btn.red:hover{background:var(--classified-red);}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 6px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;}
+  .tab{font-family:var(--tech);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#7fa39d;background:transparent;
+    border:1px solid transparent;border-radius:999px;padding:7px 13px;transition:.15s;}
+  .tab:hover{color:var(--pearl);}
+  .tab.active{color:#04120f;background:var(--signal-teal);}
+  .tabpane{display:none;margin-top:16px;}
+  .tabpane.active{display:block;animation:ovin .3s ease;}
+
+  .chip{display:inline-block;font-family:var(--tech);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;border:1px solid var(--glass-border);color:#9fc0ba;margin:3px 4px 3px 0;cursor:pointer;transition:.14s;}
+  .chip:hover{border-color:var(--signal-teal);color:var(--pearl);}
+  .chip.on{background:rgba(0,240,208,.18);border-color:var(--signal-teal);color:var(--pearl);}
+
+  .meter{display:flex;align-items:center;gap:10px;margin:7px 0;}
+  .meter .ml{font-family:var(--tech);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#86aaa4;width:150px;flex:none;}
+  .meter .mb{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:7px;overflow:hidden;}
+  .meter .mf{height:100%;background:linear-gradient(90deg,var(--burnt-orange),var(--signal-teal));border-radius:7px;transition:width .6s;}
+  .meter .mv{font-family:var(--tech);font-size:.7rem;color:var(--gold);width:38px;text-align:right;flex:none;}
+
+  .logitem{border:1px solid var(--glass-border);border-radius:10px;padding:11px 13px;margin-top:10px;background:rgba(0,0,0,.25);}
+  .logitem .meta{font-family:var(--tech);font-size:.64rem;letter-spacing:.1em;color:#7fa39d;text-transform:uppercase;}
+  .logitem .body{color:#cfe0db;font-size:.9rem;margin-top:4px;line-height:1.5;}
+  .small{font-family:var(--tech);font-size:.68rem;color:#7c948f;letter-spacing:.06em;line-height:1.6;}
+  .safety{margin-top:18px;padding:12px 14px;border-left:2px solid var(--classified-red);background:rgba(230,57,70,.07);
+    font-size:.8rem;color:#e7b9bd;line-height:1.55;border-radius:0 8px 8px 0;}
+
+  /* breath ring */
+  #breathCanvas,#cymCanvas,#radarCanvas{width:100%;border-radius:12px;background:#02060a;border:1px solid var(--glass-border);display:block;}
+
+  /* above-black aesthetic accents */
+  .ab-mark{position:absolute;bottom:14px;right:18px;font-family:var(--tech);font-size:.6rem;letter-spacing:.26em;color:#3c5c56;text-transform:uppercase;}
+  .ab-mark b{color:var(--burnt-orange);}
+  .glitch{animation:glitch 2.6s infinite steps(1);}
+  @keyframes glitch{0%,97%,100%{text-shadow:none;}97.5%{text-shadow:1px 0 var(--signal-teal),-1px 0 var(--classified-red);}98.5%{text-shadow:-1px 0 var(--signal-teal),1px 0 var(--burnt-orange);}}
+
+  /* error fallback */
+  #err{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;padding:32px;text-align:center;background:#04060a;}
+  #err .box{max-width:520px;}
+  #err h2{font-weight:400;color:var(--gold);font-size:1.5rem;margin-bottom:12px;}
+  #err p{color:#b8cec9;line-height:1.6;font-size:.95rem;}
+
+  .legend{font-family:var(--tech);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#5f7c77;margin-top:6px;}
+  .ok{color:var(--signal-teal);} .warn{color:var(--burnt-orange);}
+</style>
+</head>
+<body>
+
+<!-- ============ RETICLE + HUD ============ -->
+<div id="reticle" class="hidden"></div>
+<div id="note"></div>
+
+<div id="topbar">
+  <div><span class="node">ARES-TIFERET NODE 01</span> · Human Psi Operations Room</div>
+  <div class="cls"><span class="dot"></span> Classified Training Simulation</div>
+</div>
+
+<div id="dock">
+  <button class="pill gold" data-act="readiness">◎ Readiness</button>
+  <button class="pill" data-act="menu">⌖ Command Table</button>
+  <button class="pill" data-act="center">⟲ Return to Center</button>
+  <button class="pill" data-act="audio">♪ Audio: On</button>
+  <button class="pill red" data-act="panic">⏻ Ground &amp; Stop Audio</button>
+</div>
+
+<div id="joystick"><div class="nub"></div></div>
+
+<!-- ============ LOADING ============ -->
+<div id="loadwrap">
+  <div class="l">Calibrating resonance lattice…
+    <div class="barT"><div class="barF" id="barF"></div></div>
+  </div>
+</div>
+
+<!-- ============ INTRO ============ -->
+<div id="intro">
+  <div class="vignette"></div>
+  <div class="inner">
+    <div class="kick">The Greene Museum · Human Potential Wing</div>
+    <h1 class="glitch">HUMAN PSI OPERATIONS ROOM</h1>
+    <div class="node2">ARES-TIFERET NODE 01</div>
+    <div class="req">Operator Initialization Required</div>
+    <p class="brief">This environment is a <b>training simulation</b> for attention, resonance, breath, symbolic
+      perception, intuition, journaling, and disciplined pattern recognition. It does <b>not</b> claim certainty,
+      supernatural proof, medical treatment, or intelligence validation. Proceed with curiosity, humility, and grounding.</p>
+    <div class="actions">
+      <button class="btn-major" id="initBtn">Initialize Operator</button>
+      <button class="btn-ghost" id="xrBtn" style="display:none">Enter in VR</button>
+    </div>
+    <div class="hint">Move&nbsp; WASD / arrows &nbsp;·&nbsp; Look&nbsp; click + mouse &nbsp;·&nbsp; Interact&nbsp; E or click &nbsp;·&nbsp; Mobile&nbsp; drag to look, joystick to move</div>
+  </div>
+</div>
+
+<!-- ============ ERROR ============ -->
+<div id="err"><div class="box">
+  <h2>The Node Could Not Be Rendered</h2>
+  <p id="errmsg">This facility builds a real-time 3D chamber and needs WebGL plus a one-time download of the rendering
+    engine from a CDN. If you are offline or your browser blocks WebGL, the immersive room cannot start. The training
+    consoles themselves are reachable from the dock above once the room loads.</p>
+</div></div>
+
+<!-- ============ OVERLAYS (built/populated by JS) ============ -->
+<div class="overlay" id="ov-readiness"><div class="panel gold"><button class="x" data-close>×</button>
+  <div class="kick">Operator Readiness Index</div><h2>Calibration Dashboard</h2>
+  <p class="lede">Symbolic self-tracked metrics — measures of practice and discipline, not proof of ability. Build them slowly, validate over time.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card"><h3>Index</h3><canvas id="radarCanvas" width="420" height="320"></canvas></div>
+    <div class="card"><h3>Channels</h3><div id="readMeters"></div></div>
+  </div>
+  <div class="btnrow"><button class="btn" data-close>Close</button><button class="btn red" id="resetProfile">Reset Operator Profile</button></div>
+  <div class="small" style="margin-top:10px">Stored locally in your browser only (localStorage). Nothing is uploaded.</div>
+</div></div>
+
+<div class="overlay" id="ov-menu"><div class="panel teal"><button class="x" data-close>×</button>
+  <div class="kick">Central Psi Operations · Command Table</div><h2>Select Training Protocol</h2>
+  <p class="lede">The levitating command table routes you through the seven chambers of the node. Each module returns you here, and a Grounding chamber is always one tap away.</p>
+  <div class="grid2" id="menuGrid" style="margin-top:20px"></div>
+</div></div>
+
+<div class="overlay" id="ov-gateway"><div class="panel teal"><button class="x" data-close>×</button>
+  <div class="kick">Zone 02 · Gateway Resonance Chamber</div><h2>Gateway Resonance Session</h2>
+  <p class="lede">Relaxed focus, breath regulation, and a low-volume binaural-style entrainment <i>simulation</i>. These are
+    experiential training states, not guaranteed altered states. Keep volume comfortable.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card">
+      <h3>Breath Coherence</h3>
+      <canvas id="breathCanvas" width="420" height="300"></canvas>
+      <div class="small" id="breathPhase" style="text-align:center;margin-top:8px">Inhale · Hold · Exhale · Rest</div>
+      <div class="btnrow"><button class="btn primary" id="breathStart">Begin Breath Pacing</button>
+        <button class="btn" id="breathStop">Stop</button></div>
+    </div>
+    <div class="card">
+      <h3>Binaural Resonance Simulator</h3>
+      <label class="fld">Preset</label>
+      <select id="gwPreset">
+        <option value="ground">Grounding · 4 Hz offset · soft drone</option>
+        <option value="focus" selected>Focus · 8 Hz offset · steady tone</option>
+        <option value="creative">Creative · 6 Hz offset · warm harmonic</option>
+        <option value="alert">Alert-Calm · 10 Hz offset</option>
+        <option value="deep">Deep Reflection · 2 Hz offset · very low</option>
+      </select>
+      <label class="fld">Carrier tone <span id="carrierVal" class="ok">120 Hz</span></label>
+      <input type="range" id="gwCarrier" min="80" max="300" value="120" step="2">
+      <label class="fld">Binaural offset <span id="offsetVal" class="ok">8.0 Hz</span></label>
+      <input type="range" id="gwOffset" min="1" max="12" value="8" step="0.5">
+      <label class="fld">Volume <span id="gwVolVal" class="ok">22%</span></label>
+      <input type="range" id="gwVol" min="0" max="60" value="22" step="1">
+      <div class="btnrow"><button class="btn primary" id="gwPlay">Play Tones</button>
+        <button class="btn" id="gwStopTone">Stop Tones</button></div>
+      <div class="legend">Best with headphones. The offset between ears is the "binaural" element.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>Focus Ladder</h3>
+    <p class="small">Experiential training states — visualized, not claimed. Mark where this session settled.</p>
+    <div id="focusLadder" style="margin-top:8px"></div>
+  </div>
+  <div class="safety">Use comfortable volume. Do not use while driving or operating machinery. Stop immediately if you feel
+    dizzy, anxious, or unwell. End any session at any time with <b>Ground &amp; Stop Audio</b>.</div>
+  <div class="btnrow"><button class="btn gold" id="gwComplete">Log Session &amp; Return</button>
+    <button class="btn red" data-panic>End Session / Ground Now</button></div>
+</div></div>
+
+<div class="overlay" id="ov-rv"><div class="panel"><button class="x" data-close>×</button>
+  <div class="kick">Zone 03 · Remote Viewing Lab — Blind Protocol</div><h2>Blind Target Practice</h2>
+  <p class="lede">Perception, ideograms, and disciplined journaling. A target is selected and sealed. Describe — do not name.
+    Reveal only after you lock your impressions.</p>
+  <div id="rvBlind" class="small" style="margin-top:10px">— No active session —</div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="card">
+      <h3>1 · Impressions</h3>
+      <div class="small">Describe sensations, not guesses at identity. Tag any analytic overlay as noise.</div>
+      <div id="rvCats" style="margin-top:8px"></div>
+      <label class="fld">Free-form sketch notes (ideograms, shapes, words)</label>
+      <textarea id="rvNotes" placeholder="First, fast impressions…"></textarea>
+      <label class="fld">Confidence <span id="rvConfVal" class="ok">50%</span></label>
+      <input type="range" id="rvConf" min="0" max="100" value="50">
+      <label class="fld"><input type="checkbox" id="rvAOL" style="width:auto"> Flag this as Analytic Overlay (AOL / noise)</label>
+    </div>
+    <div class="card">
+      <h3>2 · Reveal &amp; Score</h3>
+      <div id="rvReveal" class="small">Lock your impressions to unseal the target.</div>
+      <div id="rvScoreCats" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Protocol</h3>
+    <p class="small">1 · Describe, do not name. &nbsp; 2 · Record first impressions. &nbsp; 3 · Separate signal from analysis.
+      &nbsp; 4 · Avoid forcing. &nbsp; 5 · Reveal only after logging. &nbsp; 6 · Track accuracy over time.</p></div>
+  <div class="btnrow">
+    <button class="btn primary" id="rvNew">New Blind Target</button>
+    <button class="btn gold" id="rvLock">Lock Impressions</button>
+    <button class="btn" id="rvRevealBtn">Reveal Target</button>
+    <button class="btn" id="rvSave">Save &amp; Score</button>
+    <button class="btn" id="rvExport">Export Session (.txt)</button>
+  </div>
+  <div id="rvHistory" style="margin-top:14px"></div>
+</div></div>
+
+<div class="overlay" id="ov-ab"><div class="panel warm"><button class="x" data-close>×</button>
+  <div class="kick">Zone 04 · Above Black Console</div><h2 class="glitch">ABOVE&nbsp;BLACK&nbsp;//&nbsp;CONSOLE</h2>
+  <p class="lede">The classified layer above ordinary compartmentalization. Train sensing across layers, log synchronicities,
+    build missions, and review your operator file.</p>
+  <div class="tabs" id="abTabs">
+    <button class="tab active" data-tab="signal">Signal Stack</button>
+    <button class="tab" data-tab="pattern">Pattern Engine</button>
+    <button class="tab" data-tab="zener">Zener Calibration</button>
+    <button class="tab" data-tab="sync">Synchronicity Log</button>
+    <button class="tab" data-tab="mission">Mission Builder</button>
+    <button class="tab" data-tab="operator">Operator File</button>
+  </div>
+  <div class="tabpane active" id="tab-signal"></div>
+  <div class="tabpane" id="tab-pattern"></div>
+  <div class="tabpane" id="tab-zener"></div>
+  <div class="tabpane" id="tab-sync"></div>
+  <div class="tabpane" id="tab-mission"></div>
+  <div class="tabpane" id="tab-operator"></div>
+  <div class="ab-mark">ABOVE BLACK · <b>ATXGREENE</b> · NODE-01</div>
+</div></div>
+
+<div class="overlay" id="ov-cym"><div class="panel teal"><button class="x" data-close>×</button>
+  <div class="kick">Zone 05 · Resonance &amp; Cymatics Hall</div><h2>Where Sound Shapes Matter</h2>
+  <p class="lede">A cathedral of tuning forks. Drive a frequency and watch the cymatic plate organize. Match a target tone by
+    ear (or hum into the mic, with permission) and watch the field stabilize. Symbolic / meditative audio — not medical treatment.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card"><h3>Cymatic Plate</h3><canvas id="cymCanvas" width="420" height="360"></canvas></div>
+    <div class="card">
+      <h3>Resonance Engine</h3>
+      <label class="fld">Frequency <span id="cymFreqVal" class="ok">220 Hz</span></label>
+      <input type="range" id="cymFreq" min="40" max="600" value="220" step="1">
+      <label class="fld">Preset ambience</label>
+      <div id="cymPresets"></div>
+      <label class="fld">Volume <span id="cymVolVal" class="ok">20%</span></label>
+      <input type="range" id="cymVol" min="0" max="60" value="20">
+      <div class="btnrow"><button class="btn primary" id="cymPlay">Drive Tone</button>
+        <button class="btn" id="cymStop">Stop</button></div>
+      <h3 style="margin-top:16px">Tone-Match Trainer</h3>
+      <div class="small" id="cymTarget">Press "New Target" then tune toward it by ear.</div>
+      <div class="btnrow"><button class="btn" id="cymNewTarget">New Target</button>
+        <button class="btn" id="cymMic">Use Microphone</button></div>
+      <div class="meter" style="margin-top:8px"><div class="ml">Match stability</div>
+        <div class="mb"><div class="mf" id="cymMatch" style="width:0%"></div></div><div class="mv" id="cymMatchV">0%</div></div>
+    </div>
+  </div>
+  <div class="legend">Presets (40/10/7.83/6/4/2 Hz families) are symbolic meditative ambiences, not medical or neurological treatment.</div>
+</div></div>
+
+<div class="overlay" id="ov-dream"><div class="panel indigo"><button class="x" data-close>×</button>
+  <div class="kick">Zone 06 · Dream Incubation Chamber</div><h2>Dreamwork &amp; Symbolic Memory</h2>
+  <p class="lede">Set an intention before sleep, then record recall and motifs in the morning. Pattern over time — never treat a
+    single dream as instruction or certainty.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card">
+      <h3>Pre-Sleep Intention</h3>
+      <label class="fld">Mode</label>
+      <select id="dreamMode">
+        <option value="open">Open Incubation</option>
+        <option value="atlas">Atlas Mode — burdens, purpose, responsibility</option>
+        <option value="phoenix">Phoenix Mode — rebirth &amp; transformation</option>
+        <option value="hermetic">Hermetic Library Mode — symbolic research</option>
+      </select>
+      <label class="fld">Dream question / intention</label>
+      <textarea id="dreamQ" placeholder="Tonight I will notice…"></textarea>
+      <div class="btnrow"><button class="btn primary" id="dreamSet">Set Intention</button></div>
+      <h3 style="margin-top:14px">Symbol Deck</h3>
+      <div id="dreamDeck"></div>
+    </div>
+    <div class="card">
+      <h3>Morning Recall</h3>
+      <label class="fld">Dream recall</label>
+      <textarea id="dreamRecall" placeholder="On waking I remembered…"></textarea>
+      <label class="fld">Archetype / motif tags</label>
+      <div id="dreamTags"></div>
+      <label class="fld"><input type="checkbox" id="dreamLucid" style="width:auto"> Lucidity / awareness within the dream</label>
+      <div class="btnrow"><button class="btn gold" id="dreamSave">Log Dream</button>
+        <button class="btn" id="dreamExport">Export Journal</button></div>
+    </div>
+  </div>
+  <div id="dreamHistory" style="margin-top:14px"></div>
+</div></div>
+
+<div class="overlay" id="ov-ground"><div class="panel"><button class="x" data-close>×</button>
+  <div class="kick">Zone 07 · Grounding, Ethics &amp; Return Temple</div><h2>Return to Ordinary Awareness</h2>
+  <p class="lede">Every session ends here. Re-anchor your body and senses, reaffirm discernment, and leave the node with your
+    feet on Earth.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card">
+      <h3>Grounding Breath</h3>
+      <canvas id="groundCanvas" width="420" height="220" style="width:100%;border-radius:12px;background:#0a0805;border:1px solid var(--glass-border)"></canvas>
+      <div class="btnrow"><button class="btn primary" id="groundBreath">Begin 4 Slow Breaths</button></div>
+    </div>
+    <div class="card">
+      <h3>Sensory Reset · Name 5 Things You See</h3>
+      <div id="sensesList"></div>
+      <div class="small" style="margin-top:8px">Then 4 you can touch, 3 you hear, 2 you smell, 1 you taste. Sip water.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Discernment &amp; Ethics</h3>
+    <ul>
+      <li>Track patterns over time — never decide from a single session.</li>
+      <li>Do not make major life decisions from one impression or dream.</li>
+      <li>Random events are not automatically messages. Reality-test gently.</li>
+      <li>Respect consent, privacy, and psychological safety — your own and others'.</li>
+      <li>Use this as training, reflection, and creativity — not proof of certainty.</li>
+    </ul>
+    <label class="fld" style="margin-top:10px"><input type="checkbox" id="ethicsOath" style="width:auto"> I affirm the Operator's discernment oath for this session.</label>
+  </div>
+  <div class="btnrow"><button class="btn gold" id="groundComplete">Complete Grounding &amp; Return</button></div>
+</div></div>
+
+<!-- ============ ENGINE ============ -->
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+/* =====================================================================
+   THE HUMAN PSI OPERATIONS ROOM · ARES-TIFERET NODE 01
+   A self-contained WebXR training simulation for the Greene Museum.
+   Sections:
+     (A) Helpers + persistent Operator profile (localStorage)
+     (B) Web Audio engine — drone, binaural sim, breath chime, tones
+     (C) Three.js facility — command room + 7 radial zones, navigation, XR
+     (D) Overlay / module system + the seven training consoles
+     (E) Readiness index + grounding
+   Honest-content rule: everything is framed as practice & simulation,
+   never as supernatural proof, medical treatment, or certainty.
+   ===================================================================== */
+
+let THREE, VRButton;
+try{
+  THREE = await import('three');
+  ({ VRButton } = await import('three/addons/webxr/VRButton.js'));
+}catch(e){
+  document.getElementById('err').style.display='flex';
+  document.getElementById('loadwrap').classList.add('gone');
+  console.error('Engine load failed', e);
+  throw e;
+}
+
+/* ----------------------------------------------------------------------
+   (A) HELPERS + OPERATOR PROFILE
+   ---------------------------------------------------------------------- */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now=()=>new Date().toLocaleString();
+
+const KEY='psi.node01.v1';
+const defaultProfile=()=>({
+  sessions:0, lastModule:'—', streak:0, lastDay:'',
+  metrics:{ signal:8, focus:10, discipline:6, pattern:8, confidence:12, grounding:20,
+            remote:5, resonance:10, dream:4, ethics:30 },
+  rv:[], sync:[], dreams:[], zener:{trials:0,hits:0}, pattern:{best:0,plays:0},
+  resonancePref:{carrier:120,offset:8}
+});
+let profile;
+function load(){ try{ profile=JSON.parse(localStorage.getItem(KEY))||defaultProfile(); }catch(e){ profile=defaultProfile(); }
+  // merge any new default keys
+  const d=defaultProfile(); for(const k in d){ if(!(k in profile)) profile[k]=d[k]; }
+  for(const k in d.metrics){ if(!(k in profile.metrics)) profile.metrics[k]=d.metrics[k]; } }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(profile)); }catch(e){} }
+function bump(metric,amount){ profile.metrics[metric]=clamp((profile.metrics[metric]||0)+amount,0,100); }
+function markSession(mod){
+  profile.sessions++; profile.lastModule=mod;
+  const day=new Date().toDateString();
+  if(profile.lastDay!==day){ profile.streak=(profile.lastDay && (Date.now()-Date.parse(profile.lastDay))<1000*60*60*48)?profile.streak+1:1; profile.lastDay=day; }
+  bump('grounding',1); save(); renderReadiness();
+}
+load();
+
+function note(msg){ const n=$('#note'); n.textContent=msg; n.classList.add('show'); clearTimeout(note._t); note._t=setTimeout(()=>n.classList.remove('show'),2400); }
+
+/* ----------------------------------------------------------------------
+   (B) WEB AUDIO ENGINE
+   ---------------------------------------------------------------------- */
+const Audio=(()=>{
+  let ctx=null, master=null, droneGain=null, ambienceOn=true;
+  let binL=null,binR=null,binGain=null,merger=null,panL=null,panR=null;
+  let toneOsc=null,toneGain=null;
+  let started=false;
+  function ensure(){
+    if(ctx) return;
+    const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+    master=ctx.createGain(); master.gain.value=0.0; master.connect(ctx.destination);
+    // soft facility drone — two low detuned sines + filtered noise, very quiet
+    droneGain=ctx.createGain(); droneGain.gain.value=0.16; droneGain.connect(master);
+    [48,72.1].forEach((f,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=ctx.createGain(); g.gain.value=i?0.10:0.16; o.connect(g).connect(droneGain); o.start(); });
+    const len=ctx.sampleRate*3, buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*0.5;
+    const n=ctx.createBufferSource(); n.buffer=buf; n.loop=true;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=360; bp.Q.value=0.7;
+    const ng=ctx.createGain(); ng.gain.value=0.05; n.connect(bp).connect(ng).connect(droneGain); n.start();
+    const lfo=ctx.createOscillator(); lfo.frequency.value=0.06; const lg=ctx.createGain(); lg.gain.value=0.05;
+    lfo.connect(lg).connect(droneGain.gain); lfo.start();
+  }
+  function start(){ ensure(); if(ctx.state==='suspended') ctx.resume(); started=true;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.linearRampToValueAtTime(ambienceOn?0.5:0.0, ctx.currentTime+1.4); }
+  function setAmbience(on){ ambienceOn=on; if(!ctx) return;
+    master.gain.linearRampToValueAtTime(on?0.5:0.0, ctx.currentTime+0.4); }
+  function chime(freq=528,dur=0.5,vol=0.12){ if(!ctx) return; const t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g).connect(master); o.start(t); o.stop(t+dur+0.05); }
+  // ---- binaural simulator ----
+  function binauralStart(carrier,offset,vol){
+    ensure(); if(ctx.state==='suspended') ctx.resume(); binauralStop();
+    binGain=ctx.createGain(); binGain.gain.value=0; binGain.connect(master);
+    merger=ctx.createChannelMerger(2);
+    binL=ctx.createOscillator(); binL.type='sine'; binL.frequency.value=carrier;
+    binR=ctx.createOscillator(); binR.type='sine'; binR.frequency.value=carrier+offset;
+    binL.connect(merger,0,0); binR.connect(merger,0,1);
+    merger.connect(binGain);
+    binL.start(); binR.start();
+    binGain.gain.linearRampToValueAtTime(vol, ctx.currentTime+0.8);
+    if(master.gain.value<0.3) master.gain.linearRampToValueAtTime(0.5,ctx.currentTime+0.6);
+  }
+  function binauralSet(carrier,offset,vol){ if(!binL) return;
+    binL.frequency.setTargetAtTime(carrier,ctx.currentTime,0.05);
+    binR.frequency.setTargetAtTime(carrier+offset,ctx.currentTime,0.05);
+    binGain.gain.setTargetAtTime(vol,ctx.currentTime,0.05); }
+  function binauralStop(){ if(binGain){ try{binGain.gain.linearRampToValueAtTime(0,ctx.currentTime+0.3);}catch(e){} }
+    [binL,binR].forEach(o=>{ if(o){ try{o.stop(ctx.currentTime+0.35);}catch(e){} } }); binL=binR=null; }
+  // ---- single tone (cymatics) ----
+  function toneStart(freq,vol){ ensure(); if(ctx.state==='suspended') ctx.resume();
+    if(!toneOsc){ toneOsc=ctx.createOscillator(); toneOsc.type='sine'; toneGain=ctx.createGain(); toneGain.gain.value=0;
+      toneOsc.connect(toneGain).connect(master); toneOsc.start(); if(master.gain.value<0.3) master.gain.linearRampToValueAtTime(0.5,ctx.currentTime+0.6); }
+    toneOsc.frequency.setTargetAtTime(freq,ctx.currentTime,0.03);
+    toneGain.gain.linearRampToValueAtTime(vol,ctx.currentTime+0.2); }
+  function toneSet(freq,vol){ if(!toneOsc) return; toneOsc.frequency.setTargetAtTime(freq,ctx.currentTime,0.03);
+    toneGain.gain.setTargetAtTime(vol,ctx.currentTime,0.05); }
+  function toneStop(){ if(toneGain) toneGain.gain.linearRampToValueAtTime(0,ctx.currentTime+0.25); }
+  function panic(){ if(!ctx) return; const t=ctx.currentTime;
+    try{binauralStop();}catch(e){} try{toneStop();}catch(e){}
+    master.gain.cancelScheduledValues(t); master.gain.linearRampToValueAtTime(0,t+0.4); started=false; }
+  function getCtx(){ return ctx; }
+  return { start,setAmbience,chime,binauralStart,binauralSet,binauralStop,toneStart,toneSet,toneStop,panic,getCtx,
+           get started(){return started;} };
+})();
+
+let audioEnabled=true;
+
+/* ----------------------------------------------------------------------
+   (C) THREE.JS FACILITY
+   ---------------------------------------------------------------------- */
+let renderer,scene,camera,clock;
+const zones=[]; // {name, pos, color, key, label}
+const interactives=[]; // raycastable meshes -> {action}
+let raycaster,reticleHot=null;
+const keys={};
+const move={f:0,s:0}; // joystick
+let yaw=0,pitch=0,pointerLocked=false;
+const PLAYER_H=1.65, RADIUS=11;
+let velocity=new THREE.Vector3();
+
+function initThree(){
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+  renderer.xr.enabled=true;
+  document.body.appendChild(renderer.domElement);
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x05070A);
+  scene.fog=new THREE.FogExp2(0x05080d,0.030);
+
+  camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.05,400);
+  camera.position.set(0,PLAYER_H,0);
+
+  clock=new THREE.Clock();
+  raycaster=new THREE.Raycaster();
+
+  buildRoom();
+  buildZones();
+  buildCentralTable();
+  buildStarfield();
+  setupXR();
+
+  addEventListener('resize',onResize);
+  renderer.setAnimationLoop(tick);
+}
+
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+
+function buildRoom(){
+  // lighting: low pulsing ambient + teal/orange accents
+  scene.add(new THREE.HemisphereLight(0x223344,0x05070a,0.5));
+  const key=new THREE.PointLight(0x00f0d0,1.2,60,2); key.position.set(0,6,0); scene.add(key);
+  const warm=new THREE.PointLight(0xff7a1a,0.5,40,2); warm.position.set(0,2,-14); scene.add(warm);
+  scene.userData.pulse=key;
+
+  // obsidian floor with concentric calibration rings
+  const floorMat=new THREE.MeshStandardMaterial({color:0x05070a,metalness:0.85,roughness:0.35});
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(34,96),floorMat);
+  floor.rotation.x=-Math.PI/2; scene.add(floor);
+  for(let i=1;i<=6;i++){
+    const r=new THREE.Mesh(new THREE.RingGeometry(i*3-0.04,i*3,96),
+      new THREE.MeshBasicMaterial({color:i%2?0x0a6b60:0x6b4a1a,side:THREE.DoubleSide,transparent:true,opacity:0.35}));
+    r.rotation.x=-Math.PI/2; r.position.y=0.011; scene.add(r);
+  }
+  // outer wall — dark cylinder, faint vertical fiber conduits
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(34,34,16,80,1,true),
+    new THREE.MeshStandardMaterial({color:0x070b12,metalness:0.6,roughness:0.6,side:THREE.BackSide}));
+  wall.position.y=8; scene.add(wall);
+  for(let i=0;i<48;i++){
+    const a=i/48*Math.PI*2, col=i%6===0?0x00f0d0:(i%6===3?0xff7a1a:0x123);
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(0.06,12,0.06),
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:i%3===0?0.5:0.16}));
+    bar.position.set(Math.cos(a)*33.4,6,Math.sin(a)*33.4); scene.add(bar);
+  }
+  // domed ceiling
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(34,48,24,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshStandardMaterial({color:0x04060b,metalness:0.4,roughness:0.9,side:THREE.BackSide}));
+  scene.add(dome);
+
+  // volumetric-looking fog planes
+  for(let i=0;i<5;i++){
+    const p=new THREE.Mesh(new THREE.PlaneGeometry(70,16),
+      new THREE.MeshBasicMaterial({color:0x0a1a22,transparent:true,opacity:0.05,depthWrite:false}));
+    p.position.set(0,1+i*0.6,0); p.rotation.x=-Math.PI/2; p.rotation.z=i; scene.add(p);
+  }
+}
+
+// holographic-ish text label as a sprite
+function makeLabel(text,sub,color='#00F0D0'){
+  const c=document.createElement('canvas'); c.width=512; c.height=160; const x=c.getContext('2d');
+  x.fillStyle='rgba(5,9,14,0.0)'; x.fillRect(0,0,512,160);
+  x.textAlign='center'; x.fillStyle=color; x.font='600 30px ui-monospace,monospace';
+  x.shadowColor=color; x.shadowBlur=18; x.fillText(text.toUpperCase(),256,66);
+  x.shadowBlur=0; x.fillStyle='rgba(214,177,92,0.9)'; x.font='400 19px Georgia,serif';
+  if(sub) x.fillText(sub,256,108);
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.scale.set(4.6,1.44,1); return sp;
+}
+
+function buildZones(){
+  const data=[
+    ['gateway','Gateway Resonance','Zone 02 · Breath & Binaural', 0x00f0d0],
+    ['rv','Remote Viewing Lab','Zone 03 · Blind Protocol', 0xbfe6ff],
+    ['ab','Above Black Console','Zone 04 · Classified Layer', 0xff7a1a],
+    ['cym','Resonance & Cymatics','Zone 05 · Sound & Matter', 0xd6b15c],
+    ['dream','Dream Incubation','Zone 06 · Symbolic Memory', 0x9fb4ff],
+    ['ground','Grounding & Return','Zone 07 · Ethics Temple', 0xf4f1e8],
+  ];
+  const ringR=20;
+  data.forEach((d,i)=>{
+    const a=-Math.PI/2 + i/data.length*Math.PI*2;
+    const pos=new THREE.Vector3(Math.cos(a)*ringR,0,Math.sin(a)*ringR);
+    const grp=new THREE.Group(); grp.position.copy(pos); grp.lookAt(0,0,0); scene.add(grp);
+    // pylon
+    const col=new THREE.Color(d[3]);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.7,0.3,32),
+      new THREE.MeshStandardMaterial({color:0x0a0e14,metalness:0.9,roughness:0.3}));
+    base.position.y=0.15; grp.add(base);
+    const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,3.2,24),
+      new THREE.MeshStandardMaterial({color:0x10151d,metalness:0.8,roughness:0.4,emissive:col,emissiveIntensity:0.12}));
+    pillar.position.y=1.8; grp.add(pillar);
+    // glowing portal disc (the interactive)
+    const disc=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.10,16,48),
+      new THREE.MeshBasicMaterial({color:d[3]}));
+    disc.position.y=3.5; grp.add(disc);
+    const core=new THREE.Mesh(new THREE.CircleGeometry(0.9,40),
+      new THREE.MeshBasicMaterial({color:d[3],transparent:true,opacity:0.18,side:THREE.DoubleSide}));
+    core.position.y=3.5; grp.add(core);
+    disc.userData={action:()=>openZone(d[0]), label:d[1], glowBase:0xffffff};
+    interactives.push(disc); core.userData=disc.userData; interactives.push(core);
+    // floating label
+    const lab=makeLabel(d[1],d[2],'#'+col.getHexString()); lab.position.set(0,4.9,0); grp.add(lab);
+    // beam to center
+    const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,ringR,6),
+      new THREE.MeshBasicMaterial({color:d[3],transparent:true,opacity:0.10}));
+    beam.position.set(0,0.05,ringR/2); beam.rotation.x=Math.PI/2; grp.add(beam);
+    zones.push({key:d[0],pos,grp,disc,color:d[3]});
+  });
+}
+
+let tableRings=[],tableCore;
+function buildCentralTable(){
+  const g=new THREE.Group(); scene.add(g);
+  // levitating black-glass command table
+  const top=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.4,0.12,64),
+    new THREE.MeshStandardMaterial({color:0x04060a,metalness:1,roughness:0.08}));
+  top.position.y=0.95; g.add(top);
+  const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(0.5,1.2,0.85,32),
+    new THREE.MeshStandardMaterial({color:0x0a0e14,metalness:0.9,roughness:0.3}));
+  pedestal.position.y=0.45; g.add(pedestal);
+  // concentric rings of light
+  for(let i=0;i<4;i++){
+    const r=new THREE.Mesh(new THREE.TorusGeometry(0.7+i*0.45,0.012,12,80),
+      new THREE.MeshBasicMaterial({color:i%2?0xff7a1a:0x00f0d0,transparent:true,opacity:0.8}));
+    r.position.y=1.03+0.001*i; r.rotation.x=-Math.PI/2; g.add(r); tableRings.push(r);
+  }
+  // rotating holographic earth
+  const earth=new THREE.Mesh(new THREE.SphereGeometry(0.85,40,30),
+    new THREE.MeshBasicMaterial({color:0x0bd6c0,wireframe:true,transparent:true,opacity:0.5}));
+  earth.position.y=2.3; g.add(earth); tableCore=earth;
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(0.92,30,22),
+    new THREE.MeshBasicMaterial({color:0x00f0d0,transparent:true,opacity:0.06})); halo.position.y=2.3; g.add(halo);
+  // make whole table interactive -> opens command menu
+  const hit=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.4,0.3,32),
+    new THREE.MeshBasicMaterial({visible:false})); hit.position.y=1; g.add(hit);
+  hit.userData={action:()=>openOverlay('menu'), label:'Command Table — Select Protocol'};
+  interactives.push(hit);
+  const lab=makeLabel('Command Table','Tap to select a protocol','#00F0D0'); lab.position.set(0,3.5,0); g.add(lab);
+}
+
+let starField,starMat;
+function buildStarfield(){
+  const N=1400, pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const r=rand(20,33), th=rand(0,Math.PI*2), ph=rand(0,Math.PI/2);
+    pos[i*3]=Math.cos(th)*Math.sin(ph)*r; pos[i*3+1]=Math.cos(ph)*r+2; pos[i*3+2]=Math.sin(th)*Math.sin(ph)*r;
+  }
+  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  starMat=new THREE.PointsMaterial({color:0xbfe6ff,size:0.10,transparent:true,opacity:0.7});
+  starField=new THREE.Points(geo,starMat); scene.add(starField);
+}
+
+function setupXR(){
+  if('xr' in navigator){
+    navigator.xr.isSessionSupported('immersive-vr').then(ok=>{
+      if(ok){ const b=$('#xrBtn'); b.style.display='inline-block';
+        b.addEventListener('click',()=>{ const v=VRButton.createButton(renderer); v.click&&v.click(); document.body.appendChild(v); v.style.display='none'; v.click(); startExperience(); }); }
+    }).catch(()=>{});
+  }
+}
+
+/* ---- navigation ---- */
+function updateMovement(dt){
+  if(renderer.xr.isPresenting) return; // XR handles head/locomotion
+  const speed=5.2;
+  const fwd=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)+move.f;
+  const str=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+move.s;
+  const dir=new THREE.Vector3();
+  const sin=Math.sin(yaw),cos=Math.cos(yaw);
+  dir.x=(fwd*sin + str*cos);
+  dir.z=(fwd*-cos + str*sin);
+  if(dir.lengthSq()>0) dir.normalize();
+  velocity.lerp(dir.multiplyScalar(speed),clamp(dt*6,0,1));
+  camera.position.addScaledVector(velocity,dt);
+  // keep within facility
+  const d=Math.hypot(camera.position.x,camera.position.z);
+  if(d>32){ camera.position.x*=32/d; camera.position.z*=32/d; }
+  camera.position.y=PLAYER_H;
+  camera.rotation.set(pitch,yaw,0,'YXZ');
+}
+
+function tick(){
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  updateMovement(dt);
+  // animate
+  if(tableCore){ tableCore.rotation.y+=dt*0.3; tableCore.rotation.x=Math.sin(t*0.2)*0.1; }
+  tableRings.forEach((r,i)=>{ r.rotation.z+=dt*(i%2?0.4:-0.4); r.material.opacity=0.5+Math.sin(t*1.5+i)*0.3; });
+  zones.forEach((z,i)=>{ z.disc.rotation.z+=dt*0.6; z.disc.material.opacity=0.7; z.grp.children.forEach(()=>{}); });
+  if(scene.userData.pulse) scene.userData.pulse.intensity=1.0+Math.sin(t*0.8)*0.25;
+  if(starMat) starMat.opacity=0.45+Math.sin(t*0.5)*0.25;
+  raycast();
+  renderer.render(scene,camera);
+}
+
+function raycast(){
+  if(overlayOpen||renderer.xr.isPresenting){ $('#reticle').classList.remove('hot'); return; }
+  raycaster.setFromCamera({x:0,y:0},camera);
+  const hits=raycaster.intersectObjects(interactives,false);
+  const ret=$('#reticle');
+  if(hits.length && hits[0].distance<14){
+    reticleHot=hits[0].object; ret.classList.add('hot');
+    if(reticleHot.userData.label) note(reticleHot.userData.label);
+  }else{ reticleHot=null; ret.classList.remove('hot'); }
+}
+
+/* ----------------------------------------------------------------------
+   (D) OVERLAY / MODULE SYSTEM
+   ---------------------------------------------------------------------- */
+let overlayOpen=false;
+function openOverlay(id){
+  closeOverlay();
+  const ov=$('#ov-'+id); if(!ov) return;
+  ov.classList.add('show'); overlayOpen=true; $('#reticle').classList.add('hidden');
+  if(document.pointerLockElement) document.exitPointerLock();
+  Audio.chime(620,0.4,0.08);
+}
+function closeOverlay(){ $$('.overlay.show').forEach(o=>o.classList.remove('show')); overlayOpen=false;
+  if(started) $('#reticle').classList.remove('hidden'); }
+function openZone(key){ openOverlay(key); markVisit(key); }
+function markVisit(key){ profile.lastModule=key; save(); }
+
+// menu grid
+function buildMenu(){
+  const items=[
+    ['gateway','Begin Gateway Resonance Session','Breath pacing, binaural simulation, focus ladder.'],
+    ['rv','Enter Remote Viewing Lab','Blind target practice with disciplined scoring.'],
+    ['ab','Open Above Black Console','Signal stack, pattern engine, synchronicity, missions.'],
+    ['ab','Train Pattern Recognition','Find motifs across symbols, numbers, and tones.'],
+    ['gateway','Run Intuition Calibration','Zener-style feedback inside the console.'],
+    ['dream','Enter Dream Incubation Chamber','Set an intention, log recall, track motifs.'],
+    ['cym','Resonance & Cymatics Hall','Drive a tone and watch matter organize.'],
+    ['ground','Ground & Return','Re-anchor your senses and ethics.'],
+  ];
+  $('#menuGrid').innerHTML=items.map(it=>`<div class="card" data-go="${it[0]}" style="cursor:pointer">
+    <h3>${esc(it[1])}</h3><p>${esc(it[2])}</p></div>`).join('');
+  $$('#menuGrid [data-go]').forEach(c=>c.addEventListener('click',()=>openZone(c.dataset.go)));
+}
+
+/* ===== Zone 2: GATEWAY RESONANCE ===== */
+const GW_PRESETS={ ground:{off:4,car:90,vol:0.18}, focus:{off:8,car:120,vol:0.22},
+  creative:{off:6,car:150,vol:0.20}, alert:{off:10,car:180,vol:0.20}, deep:{off:2,car:80,vol:0.14} };
+const FOCUS_LADDER=[
+  ['Focus 0','Baseline Awareness'],['Focus 3','Coherence Initiation'],['Focus 10','Body Asleep / Mind Awake (sim)'],
+  ['Focus 12','Expanded Awareness (sim)'],['Focus 15','Deep Time Reflection'],['Focus 21','Threshold Visualization']];
+let gwSelectedFocus=0, breathTimer=null, breathT=0, gwToneOn=false;
+function initGateway(){
+  const ladder=$('#focusLadder'); ladder.innerHTML='';
+  FOCUS_LADDER.forEach((f,i)=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=f[0]+' · '+f[1];
+    c.onclick=()=>{ gwSelectedFocus=i; $$('#focusLadder .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; ladder.appendChild(c); });
+  const upd=()=>{ const p=GW_PRESETS[$('#gwPreset').value];
+    $('#gwCarrier').value=p.car; $('#gwOffset').value=p.off; $('#gwVol').value=Math.round(p.vol*100);
+    syncGwLabels(); if(gwToneOn) Audio.binauralSet(+$('#gwCarrier').value,+$('#gwOffset').value,+$('#gwVol').value/100); };
+  $('#gwPreset').onchange=upd;
+  ['gwCarrier','gwOffset','gwVol'].forEach(id=>$('#'+id).oninput=()=>{ syncGwLabels();
+    if(gwToneOn) Audio.binauralSet(+$('#gwCarrier').value,+$('#gwOffset').value,+$('#gwVol').value/100); });
+  $('#gwCarrier').value=profile.resonancePref.carrier; $('#gwOffset').value=profile.resonancePref.offset; syncGwLabels();
+  $('#gwPlay').onclick=()=>{ ensureAudio(); gwToneOn=true; Audio.binauralStart(+$('#gwCarrier').value,+$('#gwOffset').value,+$('#gwVol').value/100);
+    note('Binaural tones playing — keep volume comfortable'); };
+  $('#gwStopTone').onclick=()=>{ gwToneOn=false; Audio.binauralStop(); };
+  $('#breathStart').onclick=startBreath; $('#breathStop').onclick=stopBreath;
+  $('#gwComplete').onclick=()=>{ profile.resonancePref={carrier:+$('#gwCarrier').value,offset:+$('#gwOffset').value};
+    bump('focus',3); bump('resonance',3); bump('discipline',1); markSession('Gateway Resonance');
+    gwToneOn=false; Audio.binauralStop(); stopBreath(); note('Session logged · Focus +3 · Resonance +3'); closeOverlay(); };
+}
+function syncGwLabels(){ $('#carrierVal').textContent=$('#gwCarrier').value+' Hz';
+  $('#offsetVal').textContent=(+$('#gwOffset').value).toFixed(1)+' Hz'; $('#gwVolVal').textContent=$('#gwVol').value+'%'; }
+function startBreath(){ const cv=$('#breathCanvas'),x=cv.getContext('2d'); breathT=0; stopBreath._stop=false;
+  const phases=[['Inhale',4],['Hold',4],['Exhale',6],['Rest',2]]; let total=phases.reduce((a,p)=>a+p[1],0);
+  clearInterval(breathTimer);
+  breathTimer=setInterval(()=>{
+    if(stopBreath._stop) return; breathT+=0.05; const cyc=breathT%total; let acc=0,phase='',pr=0;
+    for(const p of phases){ if(cyc<acc+p[1]){ phase=p[0]; pr=(cyc-acc)/p[1]; break; } acc+=p[1]; }
+    let scale; if(phase==='Inhale') scale=lerp(0.4,1,pr); else if(phase==='Hold') scale=1; else if(phase==='Exhale') scale=lerp(1,0.4,pr); else scale=0.4;
+    x.clearRect(0,0,cv.width,cv.height); const cx=cv.width/2,cy=cv.height/2;
+    const grd=x.createRadialGradient(cx,cy,10,cx,cy,120*scale);
+    grd.addColorStop(0,'rgba(0,240,208,0.5)'); grd.addColorStop(1,'rgba(0,240,208,0)');
+    x.fillStyle=grd; x.beginPath(); x.arc(cx,cy,120*scale,0,7); x.fill();
+    x.strokeStyle='rgba(214,177,92,0.8)'; x.lineWidth=2; x.beginPath(); x.arc(cx,cy,90*scale,0,7); x.stroke();
+    $('#breathPhase').textContent=phase.toUpperCase()+' — '+Math.ceil((1-pr)*phases.find(p=>p[0]===phase)[1])+'s';
+    if(Math.abs(cyc%total)<0.05) Audio.chime(phase==='Inhale'?528:phase==='Exhale'?396:432,0.4,0.05);
+  },50); note('Follow the ring — inhale 4 · hold 4 · exhale 6 · rest 2'); }
+function stopBreath(){ stopBreath._stop=true; clearInterval(breathTimer); }
+
+/* ===== Zone 3: REMOTE VIEWING LAB ===== */
+const RV_TARGETS=['Mountain','Ocean platform','Desert ruin','Cathedral','Laboratory','Forest river','Satellite facility',
+  'Ancient city','Storm over water','Underground chamber','Volcano','Ice field','Observatory','Shipwreck','Library',
+  'Monolith','Cave temple','Radio tower'];
+const RV_DESCR={ // a few descriptor hints per target for self-scoring
+  'Mountain':['natural','massive scale','cold','rugged texture','still','grey/white'],
+  'Ocean platform':['artificial','metal','water','horizontal','cold','isolated'],
+  'Desert ruin':['ancient','dry/hot','stone','still','tan/ochre','open'],
+  'Cathedral':['artificial','vertical','stone','echoing sound','reverent emotion','tall'],
+  'Laboratory':['artificial','clean','bright','enclosed','clinical','metal/glass'],
+  'Forest river':['natural','green','moving water','sound of flow','humid','organic'],
+  'Satellite facility':['artificial','metal','remote','curved dishes','technical','cool'],
+  'Ancient city':['artificial+aged','stone','sprawling','layered','warm','populated past'],
+  'Storm over water':['natural','dark','energetic','motion','loud','grey/teal'],
+  'Underground chamber':['enclosed','dark','cool','stone','still','echo'],
+  'Volcano':['natural','hot','red/black','energetic','dangerous','rising'],
+  'Ice field':['natural','white/blue','cold','flat','silent','vast'],
+  'Observatory':['artificial','dome','dark inside','precise','night','quiet'],
+  'Shipwreck':['artificial decaying','metal/wood','underwater or shore','still','heavy','rust'],
+  'Library':['artificial','enclosed','quiet','warm wood','dense','vertical shelves'],
+  'Monolith':['artificial/anomalous','smooth','vertical','isolated','imposing','dark'],
+  'Cave temple':['natural+carved','enclosed','sacred','cool','ancient','echo'],
+  'Radio tower':['artificial','tall','thin metal','humming','isolated','vertical'] };
+const RV_CATS=['Shape','Texture','Temperature','Motion','Emotion','Structure','Natural / Artificial','Color','Sound','Scale','Energetic feel'];
+let rvSession=null;
+function initRV(){
+  $('#rvCats').innerHTML=RV_CATS.map(c=>`<label class="fld" style="margin:8px 0 3px">${esc(c)}</label><input type="text" data-cat="${esc(c)}" placeholder="describe…">`).join('');
+  $('#rvConf').oninput=()=>$('#rvConfVal').textContent=$('#rvConf').value+'%';
+  $('#rvNew').onclick=rvNew; $('#rvLock').onclick=rvLock; $('#rvRevealBtn').onclick=rvReveal;
+  $('#rvSave').onclick=rvSave; $('#rvExport').onclick=rvExport;
+  renderRVHistory();
+}
+function rvNew(){
+  const t=pick(RV_TARGETS); const id=(Math.random().toString(36).slice(2,6)+Math.random().toString(36).slice(2,4)).toUpperCase();
+  rvSession={target:t,id,locked:false,revealed:false,started:now()};
+  $('#rvBlind').innerHTML=`<span class="warn">● Blind Protocol Active</span> — Target ID <b>${id}</b> sealed. Describe impressions, then lock.`;
+  $('#rvReveal').textContent='Lock your impressions to unseal the target.';
+  $('#rvScoreCats').innerHTML=''; $('#rvNotes').value=''; $('#rvConf').value=50; $('#rvConfVal').textContent='50%'; $('#rvAOL').checked=false;
+  $$('#rvCats input').forEach(i=>i.value=''); note('New blind target sealed · ID '+id);
+}
+function rvLock(){ if(!rvSession){ note('Start a new blind target first'); return; } if(rvSession.revealed){ note('Already revealed'); return; }
+  rvSession.locked=true; rvSession.impressions={}; $$('#rvCats input').forEach(i=>{ if(i.value.trim()) rvSession.impressions[i.dataset.cat]=i.value.trim(); });
+  rvSession.notes=$('#rvNotes').value.trim(); rvSession.conf=+$('#rvConf').value; rvSession.aol=$('#rvAOL').checked;
+  $('#rvReveal').innerHTML='<span class="ok">Impressions locked.</span> You may now reveal the target.'; note('Impressions locked — reveal when ready'); }
+function rvReveal(){ if(!rvSession){ note('No active session'); return; } if(!rvSession.locked){ note('Lock your impressions first'); return; }
+  rvSession.revealed=true; const t=rvSession.target;
+  $('#rvReveal').innerHTML=`<span class="ok">Target ${rvSession.id}:</span> <b>${esc(t)}</b><br><span class="small">Reference descriptors: ${RV_DESCR[t].join(' · ')}</span>`;
+  // self-scoring: mark which categories felt like a match
+  $('#rvScoreCats').innerHTML='<div class="small" style="margin-bottom:6px">Honestly mark each impression that matched the target:</div>'+
+    RV_CATS.filter(c=>rvSession.impressions&&rvSession.impressions[c]).map(c=>
+      `<label class="fld" style="margin:4px 0"><input type="checkbox" data-score="${esc(c)}" style="width:auto"> ${esc(c)}: <i>${esc(rvSession.impressions[c])}</i></label>`).join('')
+    || '<div class="small">No category impressions were recorded for scoring.</div>';
+  note('Target revealed — score honestly'); }
+function rvSave(){ if(!rvSession||!rvSession.revealed){ note('Reveal the target before scoring'); return; }
+  const total=Object.keys(rvSession.impressions||{}).length;
+  const hits=$$('#rvScoreCats input:checked').length; const acc=total?Math.round(hits/total*100):0;
+  const rec={id:rvSession.id,target:rvSession.target,acc,hits,total,conf:rvSession.conf,aol:rvSession.aol,
+    notes:rvSession.notes,impressions:rvSession.impressions,when:rvSession.started};
+  profile.rv.unshift(rec); profile.rv=profile.rv.slice(0,40);
+  bump('remote',Math.round(acc/20)); bump('signal',rvSession.aol?0:2); bump('discipline',2);
+  // confidence calibration: reward when confidence tracks accuracy
+  const calib=100-Math.abs(rvSession.conf-acc); bump('confidence',Math.round(calib/40));
+  markSession('Remote Viewing'); renderRVHistory();
+  note('Saved · self-scored accuracy '+acc+'%'); }
+function rvExport(){ if(!rvSession){ note('Nothing to export'); return; }
+  const t=rvSession; let s=`HUMAN PSI OPERATIONS ROOM — REMOTE VIEWING SESSION\nNode: ARES-TIFERET 01\nTarget ID: ${t.id}\nStarted: ${t.started}\n\n`;
+  s+='IMPRESSIONS (logged blind):\n'; for(const c of RV_CATS){ if(t.impressions&&t.impressions[c]) s+=`  ${c}: ${t.impressions[c]}\n`; }
+  s+=`\nNotes: ${t.notes||'—'}\nConfidence: ${t.conf}%\nAnalytic overlay flagged: ${t.aol?'yes':'no'}\n`;
+  if(t.revealed) s+=`\nREVEAL — Target: ${t.target}\nReference descriptors: ${RV_DESCR[t.target].join(', ')}\n`;
+  s+='\nReminder: self-scored practice, not validated intelligence. Track accuracy over many sessions.\n';
+  downloadText('remote-viewing-'+t.id+'.txt',s); }
+function renderRVHistory(){
+  const h=$('#rvHistory'); if(!profile.rv.length){ h.innerHTML='<div class="small">No sessions logged yet.</div>'; return; }
+  const avg=Math.round(profile.rv.reduce((a,r)=>a+r.acc,0)/profile.rv.length);
+  h.innerHTML=`<div class="small">Logged sessions: <b>${profile.rv.length}</b> · mean self-scored accuracy <b class="ok">${avg}%</b></div>`+
+    profile.rv.slice(0,6).map(r=>`<div class="logitem"><div class="meta">${esc(r.when)} · ID ${esc(r.id)} · ${r.aol?'AOL flagged':'clean'}</div>
+      <div class="body">Target <b>${esc(r.target)}</b> · accuracy ${r.acc}% (${r.hits}/${r.total}) · confidence ${r.conf}%</div></div>`).join('');
+}
+
+/* ===== Zone 4: ABOVE BLACK CONSOLE ===== */
+const SIGNAL_LAYERS=[['Physical senses','Raw sensory input — the baseline channel.'],
+  ['Pattern recognition','Spotting structure, repetition, and anomaly.'],
+  ['Emotional intuition','Felt-sense responses before analysis.'],
+  ['Somatic signals','Body cues — tension, warmth, settling.'],
+  ['Symbolic cognition','Meaning carried in image and metaphor.'],
+  ['Dream memory','Material surfacing from sleep and reverie.'],
+  ['Remote impression','Disciplined perception under blind protocol.'],
+  ['Resonance state','Coherence of breath, focus, and tone.']];
+function initAB(){
+  $$('#abTabs .tab').forEach(tb=>tb.onclick=()=>{ $$('#abTabs .tab').forEach(x=>x.classList.remove('active')); tb.classList.add('active');
+    $$('.tabpane').forEach(p=>p.classList.remove('active')); $('#tab-'+tb.dataset.tab).classList.add('active'); });
+  // Signal stack
+  $('#tab-signal').innerHTML='<div class="grid2">'+SIGNAL_LAYERS.map((l,i)=>
+    `<div class="card"><h3>${i+1}. ${esc(l[0])}</h3><p>${esc(l[1])}</p>
+     <div class="meter"><div class="ml">Channel tone</div><div class="mb"><div class="mf" style="width:${40+i*7}%"></div></div></div></div>`).join('')+'</div>';
+  initPattern(); initZener(); initSync(); initMission(); renderOperator();
+}
+// Pattern engine — sequence/odd-one-out
+let patState=null;
+function initPattern(){
+  $('#tab-pattern').innerHTML=`<div class="card"><h3>Pattern Engine</h3>
+    <p class="small">A motif is hidden in the field below. Identify the element that breaks the pattern. Train across symbols, numbers, tones, and arrangements.</p>
+    <div id="patField" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;font-family:var(--tech);font-size:1.4rem"></div>
+    <div class="small" id="patStatus">—</div>
+    <div class="btnrow"><button class="btn primary" id="patNew">New Field</button></div>
+    <div class="meter" style="margin-top:10px"><div class="ml">Best streak</div><div class="mb"><div class="mf" id="patBest" style="width:0%"></div></div><div class="mv" id="patBestV">0</div></div></div>`;
+  $('#patNew').onclick=patNew; patNew();
+}
+function patNew(){
+  const glyphs=['◆','▲','●','■','✦','✧','⬟','⬢','☉','☽','♁','⚷'];
+  const base=pick(glyphs); let odd=pick(glyphs); while(odd===base) odd=pick(glyphs);
+  const n=9, oddIdx=Math.floor(Math.random()*n); const cells=[];
+  for(let i=0;i<n;i++) cells.push(i===oddIdx?odd:base);
+  patState={oddIdx,streak:patState?patState.streak:0};
+  $('#patField').innerHTML=cells.map((g,i)=>`<button class="chip" style="font-size:1.5rem;padding:14px" data-i="${i}">${g}</button>`).join('');
+  $$('#patField .chip').forEach(c=>c.onclick=()=>patPick(+c.dataset.i));
+  $('#patStatus').textContent='Tap the element that breaks the pattern.';
+}
+function patPick(i){
+  if(i===patState.oddIdx){ patState.streak++; profile.pattern.plays++; profile.pattern.best=Math.max(profile.pattern.best,patState.streak);
+    bump('pattern',1); $('#patStatus').innerHTML='<span class="ok">Correct.</span> Streak '+patState.streak; Audio.chime(660,0.25,0.08); save();
+    setTimeout(patNew,500); }
+  else{ patState.streak=0; $('#patStatus').innerHTML='<span class="warn">Not the break.</span> Look again — streak reset.'; Audio.chime(180,0.3,0.08); }
+  $('#patBest').style.width=Math.min(profile.pattern.best*10,100)+'%'; $('#patBestV').textContent=profile.pattern.best;
+}
+// Zener calibration
+const ZENER=['○','+','〜','□','★'];
+function initZener(){
+  $('#tab-zener').innerHTML=`<div class="card"><h3>Zener Symbol Calibration</h3>
+    <p class="small">Five-symbol intuition feedback. Chance is 1 in 5 (20%). Over many trials, watch whether your hit-rate is meaningfully above chance — and stay honest about small samples.</p>
+    <div style="display:flex;gap:10px;margin:14px 0;font-size:1.8rem">${ZENER.map((z,i)=>`<button class="chip" style="font-size:1.8rem;padding:12px 16px" data-z="${i}">${z}</button>`).join('')}</div>
+    <div class="small" id="zenStatus">Pick the symbol you sense is hidden.</div>
+    <div class="meter" style="margin-top:10px"><div class="ml">Hit rate</div><div class="mb"><div class="mf" id="zenBar" style="width:0%"></div></div><div class="mv" id="zenRate">0%</div></div>
+    <div class="small" id="zenCount" style="margin-top:6px"></div>
+    <div class="btnrow"><button class="btn" id="zenReset">Reset Counter</button></div></div>`;
+  $$('#tab-zener [data-z]').forEach(b=>b.onclick=()=>zenGuess(+b.dataset.z));
+  $('#zenReset').onclick=()=>{ profile.zener={trials:0,hits:0}; save(); renderZen(); };
+  renderZen();
+}
+function zenGuess(g){ const hidden=Math.floor(Math.random()*5); profile.zener.trials++;
+  if(g===hidden){ profile.zener.hits++; $('#zenStatus').innerHTML=`<span class="ok">Hit!</span> Hidden was ${ZENER[hidden]}`; Audio.chime(680,0.25,0.08); }
+  else{ $('#zenStatus').innerHTML=`<span class="warn">Miss.</span> Hidden was ${ZENER[hidden]}`; Audio.chime(220,0.25,0.06); }
+  bump('confidence',0.2); save(); renderZen(); }
+function renderZen(){ const t=profile.zener.trials,h=profile.zener.hits,r=t?Math.round(h/t*100):0;
+  $('#zenBar').style.width=r+'%'; $('#zenRate').textContent=r+'%';
+  $('#zenCount').innerHTML=`${h} hits / ${t} trials · chance ≈ 20% ${t<25?'<span class="warn">(sample too small to mean anything)</span>':(r>28?'<span class="ok">(above chance — keep testing)</span>':'(near chance)')}`; }
+// Synchronicity log
+function initSync(){
+  $('#tab-sync').innerHTML=`<div class="card"><h3>Synchronicity Log</h3>
+    <p class="small">Record meaningful coincidences and revisit them later for honest validation. A logged pattern over time is worth more than any single "sign."</p>
+    <label class="fld">Event</label><input type="text" id="syncEvent" placeholder="What happened?">
+    <div class="grid2"><div><label class="fld">Symbol / motif</label><input type="text" id="syncSymbol" placeholder="e.g. owl, 11:11"></div>
+    <div><label class="fld">Emotional charge</label><input type="text" id="syncCharge" placeholder="e.g. uneasy, awe"></div></div>
+    <label class="fld">Possible meaning (held lightly)</label><textarea id="syncMeaning" placeholder="A hypothesis, not a conclusion…"></textarea>
+    <label class="fld">Confidence <span id="syncConfV" class="ok">30%</span></label><input type="range" id="syncConf" min="0" max="100" value="30">
+    <div class="btnrow"><button class="btn primary" id="syncAdd">Log Synchronicity</button></div></div>
+    <div id="syncList" style="margin-top:14px"></div>`;
+  $('#syncConf').oninput=()=>$('#syncConfV').textContent=$('#syncConf').value+'%';
+  $('#syncAdd').onclick=()=>{ const e=$('#syncEvent').value.trim(); if(!e){ note('Describe the event first'); return; }
+    profile.sync.unshift({event:e,symbol:$('#syncSymbol').value.trim(),charge:$('#syncCharge').value.trim(),
+      meaning:$('#syncMeaning').value.trim(),conf:+$('#syncConf').value,validated:false,when:now()});
+    profile.sync=profile.sync.slice(0,60); bump('pattern',1); save();
+    $('#syncEvent').value=$('#syncSymbol').value=$('#syncCharge').value=$('#syncMeaning').value=''; renderSync(); note('Synchronicity logged'); };
+  renderSync();
+}
+function renderSync(){ const l=$('#syncList'); if(!profile.sync.length){ l.innerHTML='<div class="small">No entries yet.</div>'; return; }
+  l.innerHTML=profile.sync.slice(0,8).map((s,i)=>`<div class="logitem"><div class="meta">${esc(s.when)} · ${esc(s.symbol||'—')} · charge: ${esc(s.charge||'—')} · ${s.conf}%</div>
+    <div class="body">${esc(s.event)}${s.meaning?'<br><i>'+esc(s.meaning)+'</i>':''}</div>
+    <div class="btnrow" style="margin-top:8px"><button class="btn ${s.validated?'gold':''}" data-val="${i}">${s.validated?'✓ Validated':'Mark validated later'}</button></div></div>`).join('');
+  $$('#syncList [data-val]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.val; profile.sync[i].validated=!profile.sync[i].validated; save(); renderSync(); });
+}
+// Mission builder
+function initMission(){
+  $('#tab-mission').innerHTML=`<div class="card"><h3>Mission Builder</h3>
+    <p class="small">Compose a training mission from the node's modules. Missions are personal practice plans — nothing more.</p>
+    <label class="fld">Mission name</label><input type="text" id="misName" placeholder="e.g. Dawn Coherence Run">
+    <label class="fld">Components</label>
+    <div id="misComps">${['Remote viewing target','Resonance session','Dream question','Pattern scan','Reflection prompt','Grounding exercise']
+      .map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('')}</div>
+    <label class="fld">Reflection prompt</label><textarea id="misPrompt" placeholder="What will you pay attention to?"></textarea>
+    <div class="btnrow"><button class="btn primary" id="misSave">Save Mission</button><button class="btn" id="misExport">Export</button></div></div>
+    <div id="misList" style="margin-top:14px"></div>`;
+  $$('#misComps .chip').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+  profile.missions=profile.missions||[];
+  $('#misSave').onclick=()=>{ const n=$('#misName').value.trim(); if(!n){ note('Name your mission'); return; }
+    const comps=$$('#misComps .chip.on').map(c=>c.dataset.c);
+    profile.missions.unshift({name:n,comps,prompt:$('#misPrompt').value.trim(),when:now()}); profile.missions=profile.missions.slice(0,30);
+    save(); $('#misName').value=$('#misPrompt').value=''; $$('#misComps .chip').forEach(c=>c.classList.remove('on')); renderMissions(); note('Mission saved'); };
+  $('#misExport').onclick=()=>{ if(!profile.missions.length){ note('No missions yet'); return; }
+    downloadText('psi-missions.txt',profile.missions.map(m=>`${m.name} (${m.when})\n  Components: ${m.comps.join(', ')||'—'}\n  Prompt: ${m.prompt||'—'}`).join('\n\n')); };
+  renderMissions();
+}
+function renderMissions(){ const l=$('#misList'); profile.missions=profile.missions||[];
+  if(!profile.missions.length){ l.innerHTML='<div class="small">No missions yet.</div>'; return; }
+  l.innerHTML=profile.missions.slice(0,6).map(m=>`<div class="logitem"><div class="meta">${esc(m.when)}</div>
+    <div class="body"><b>${esc(m.name)}</b> — ${esc(m.comps.join(' · ')||'no components')}${m.prompt?'<br><i>'+esc(m.prompt)+'</i>':''}</div></div>`).join('');
+}
+// Operator file
+function renderOperator(){
+  const m=profile.metrics, zr=profile.zener.trials?Math.round(profile.zener.hits/profile.zener.trials*100):0;
+  const rvAvg=profile.rv.length?Math.round(profile.rv.reduce((a,r)=>a+r.acc,0)/profile.rv.length):0;
+  const best=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+  $('#tab-operator').innerHTML=`<div class="grid2">
+    <div class="card"><h3>Operator File</h3>
+      <p class="small">Sessions completed: <b>${profile.sessions}</b><br>Training streak: <b>${profile.streak}</b> day(s)<br>
+      Last module: <b>${esc(profile.lastModule)}</b><br>Strongest channel: <b class="ok">${esc(best[0])}</b><br>
+      Remote-viewing mean accuracy: <b>${rvAvg}%</b><br>Zener hit-rate: <b>${zr}%</b> (${profile.zener.trials} trials)<br>
+      Pattern best streak: <b>${profile.pattern.best}</b><br>Synchronicities logged: <b>${profile.sync.length}</b><br>
+      Dreams logged: <b>${profile.dreams.length}</b></p></div>
+    <div class="card"><h3>Notes</h3>
+      <textarea id="opNotes" placeholder="Operator notes…">${esc(profile.notes||'')}</textarea>
+      <div class="btnrow"><button class="btn primary" id="opSave">Save Notes</button><button class="btn" id="opExport">Export Full Profile</button></div>
+      <div class="small" style="margin-top:8px">All data is local to this browser only.</div></div></div>`;
+  $('#opSave').onclick=()=>{ profile.notes=$('#opNotes').value; save(); note('Notes saved'); };
+  $('#opExport').onclick=()=>downloadText('operator-file.json',JSON.stringify(profile,null,2));
+}
+
+/* ===== Zone 5: CYMATICS ===== */
+const CYM_PRESETS=[['40 Hz','focus / gamma',40],['10 Hz','calm alertness',10],['7.83 Hz','Schumann ambience',7.83],
+  ['6 Hz','theta creativity',6],['4 Hz','deep relaxation',4],['2 Hz','slow delta',2]];
+let cymOn=false,cymAnim=null,cymTarget=0,cymStream=null,cymAnalyser=null;
+function initCym(){
+  $('#cymPresets').innerHTML=CYM_PRESETS.map((p,i)=>`<span class="chip" data-f="${p[2]}">${p[0]} · ${p[1]}</span>`).join('');
+  $$('#cymPresets .chip').forEach(c=>c.onclick=()=>{ $('#cymFreq').value=c.dataset.f; cymSync(); });
+  $('#cymFreq').oninput=cymSync; $('#cymVol').oninput=cymSync;
+  $('#cymPlay').onclick=()=>{ ensureAudio(); cymOn=true; Audio.toneStart(+$('#cymFreq').value,+$('#cymVol').value/100); note('Driving tone'); };
+  $('#cymStop').onclick=()=>{ cymOn=false; Audio.toneStop(); };
+  $('#cymNewTarget').onclick=()=>{ cymTarget=Math.round(rand(80,500)); $('#cymTarget').innerHTML=`Target tone hidden. Listen and tune toward it. <span class="small">(it sits between 80–500 Hz)</span>`;
+    ensureAudio(); Audio.toneStart(cymTarget,0.0001); setTimeout(()=>{ if(!cymOn) Audio.toneStop(); },50); playTargetPreview(); };
+  $('#cymMic').onclick=cymMic;
+  cymSync(); startCymCanvas();
+}
+function playTargetPreview(){ // brief audible preview of target
+  ensureAudio(); const c=Audio.getCtx(); if(!c) return; const o=c.createOscillator(),g=c.createGain();
+  o.type='sine'; o.frequency.value=cymTarget; g.gain.value=0; o.connect(g).connect(c.destination);
+  o.start(); g.gain.linearRampToValueAtTime(0.12,c.currentTime+0.05); g.gain.linearRampToValueAtTime(0,c.currentTime+1.2); o.stop(c.currentTime+1.3); }
+function cymSync(){ $('#cymFreqVal').textContent=$('#cymFreq').value+' Hz'; $('#cymVolVal').textContent=$('#cymVol').value+'%';
+  if(cymOn) Audio.toneSet(+$('#cymFreq').value,+$('#cymVol').value/100);
+  if(cymTarget){ const diff=Math.abs(+$('#cymFreq').value-cymTarget); const m=clamp(100-diff/4,0,100);
+    $('#cymMatch').style.width=m+'%'; $('#cymMatchV').textContent=Math.round(m)+'%';
+    if(m>96){ $('#cymTarget').innerHTML=`<span class="ok">Locked — target was ${cymTarget} Hz.</span>`; bump('resonance',2); cymTarget=0; save(); Audio.chime(cymTarget||440,0.4,0.1); } } }
+function startCymCanvas(){ const cv=$('#cymCanvas'),x=cv.getContext('2d'); cancelAnimationFrame(cymAnim);
+  const loop=()=>{ const f=+$('#cymFreq').value, t=performance.now()/1000;
+    x.fillStyle='#02060a'; x.fillRect(0,0,cv.width,cv.height); const cx=cv.width/2,cy=cv.height/2;
+    const mode=Math.max(2,Math.round(f/40)); // chladni-like nodal count grows with freq
+    x.strokeStyle='rgba(0,240,208,0.5)';
+    for(let ring=1;ring<=mode;ring++){ x.beginPath();
+      for(let a=0;a<=Math.PI*2+0.1;a+=0.08){ const r=ring*150/mode*(1+0.06*Math.sin(mode*a+t*2));
+        const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r*0.9; a===0?x.moveTo(px,py):x.lineTo(px,py); } x.stroke(); }
+    // sand-node dots
+    x.fillStyle='rgba(214,177,92,0.8)';
+    for(let i=0;i<mode*mode*4;i++){ const a=i/(mode*mode*4)*Math.PI*2*mode; const r=120*Math.abs(Math.sin(mode*a*0.5+t));
+      x.fillRect(cx+Math.cos(a)*r-1,cy+Math.sin(a)*r*0.9-1,2,2); }
+    let level=0; if(cymAnalyser){ const d=new Uint8Array(cymAnalyser.frequencyBinCount); cymAnalyser.getByteTimeDomainData(d);
+      for(const v of d) level+=Math.abs(v-128); level=level/d.length/40;
+      x.fillStyle='rgba(255,122,26,'+clamp(level,0,0.6)+')'; x.beginPath(); x.arc(cx,cy,60+level*200,0,7); x.fill(); }
+    cymAnim=requestAnimationFrame(loop); };
+  loop();
+}
+async function cymMic(){ try{ cymStream=await navigator.mediaDevices.getUserMedia({audio:true}); ensureAudio();
+    const c=Audio.getCtx(); const src=c.createMediaStreamSource(cymStream); cymAnalyser=c.createAnalyser(); cymAnalyser.fftSize=2048; src.connect(cymAnalyser);
+    note('Microphone active — hum toward the target'); $('#cymMic').textContent='Mic Active'; }
+  catch(e){ note('Microphone unavailable — using simulated resonance'); } }
+
+/* ===== Zone 6: DREAM ===== */
+const DREAM_SYMBOLS=['Door','Water','Tower','Serpent','Light','Phoenix','Library','Bridge','Mountain','Mirror','Key','Star','Tree','Mask','Path'];
+const DREAM_ARCH=['Shadow','Mentor','Threshold','Rebirth','Journey','Trickster','Self','Anima/Animus','Guardian','Home'];
+function initDream(){
+  $('#dreamDeck').innerHTML=DREAM_SYMBOLS.map(s=>`<span class="chip" data-s="${esc(s)}">${esc(s)}</span>`).join('');
+  $$('#dreamDeck .chip').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+  $('#dreamTags').innerHTML=DREAM_ARCH.map(s=>`<span class="chip" data-a="${esc(s)}">${esc(s)}</span>`).join('');
+  $$('#dreamTags .chip').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+  $('#dreamSet').onclick=()=>{ const q=$('#dreamQ').value.trim(); if(!q){ note('Set an intention first'); return; }
+    profile.dreamIntent={q,mode:$('#dreamMode').value,when:now()}; save(); note('Intention set — return on waking'); };
+  $('#dreamSave').onclick=()=>{ const r=$('#dreamRecall').value.trim(); if(!r){ note('Record your recall first'); return; }
+    profile.dreams.unshift({recall:r,mode:$('#dreamMode').value,
+      symbols:$$('#dreamDeck .chip.on').map(c=>c.dataset.s), archetypes:$$('#dreamTags .chip.on').map(c=>c.dataset.a),
+      lucid:$('#dreamLucid').checked, intent:(profile.dreamIntent&&profile.dreamIntent.q)||'', when:now()});
+    profile.dreams=profile.dreams.slice(0,60); bump('dream',3); bump('pattern',1); if($('#dreamLucid').checked) bump('dream',1);
+    markSession('Dream Incubation'); $('#dreamRecall').value=''; $('#dreamLucid').checked=false;
+    $$('#dreamDeck .chip,#dreamTags .chip').forEach(c=>c.classList.remove('on')); renderDreams(); note('Dream logged'); };
+  $('#dreamExport').onclick=()=>{ if(!profile.dreams.length){ note('No dreams logged'); return; }
+    downloadText('dream-journal.txt',profile.dreams.map(d=>`${d.when} [${d.mode}]${d.lucid?' (lucid)':''}\n  Intent: ${d.intent||'—'}\n  Symbols: ${d.symbols.join(', ')||'—'} · Archetypes: ${d.archetypes.join(', ')||'—'}\n  ${d.recall}`).join('\n\n')); };
+  renderDreams();
+}
+function renderDreams(){ const h=$('#dreamHistory'); if(!profile.dreams.length){ h.innerHTML='<div class="small">No dreams logged yet.</div>'; return; }
+  // recurring motif tracker
+  const counts={}; profile.dreams.forEach(d=>[...d.symbols,...d.archetypes].forEach(s=>counts[s]=(counts[s]||0)+1));
+  const recurring=Object.entries(counts).filter(c=>c[1]>1).sort((a,b)=>b[1]-a[1]);
+  h.innerHTML=(recurring.length?`<div class="small">Recurring motifs: ${recurring.map(r=>`<b>${esc(r[0])}</b>×${r[1]}`).join(' · ')}</div>`:'')+
+    profile.dreams.slice(0,6).map(d=>`<div class="logitem"><div class="meta">${esc(d.when)} · ${esc(d.mode)}${d.lucid?' · lucid':''}</div>
+      <div class="body">${esc(d.recall.slice(0,180))}${d.recall.length>180?'…':''}${d.symbols.length?'<br><span class="small">'+d.symbols.concat(d.archetypes).map(esc).join(' · ')+'</span>':''}</div></div>`).join('');
+}
+
+/* ===== Zone 7: GROUNDING ===== */
+function initGround(){
+  $('#sensesList').innerHTML=[1,2,3,4,5].map(i=>`<input type="text" placeholder="${i}. something you can see…" style="margin-top:6px">`).join('');
+  $('#groundBreath').onclick=groundBreath;
+  $('#groundComplete').onclick=()=>{ if(!$('#ethicsOath').checked){ note('Affirm the discernment oath to complete'); return; }
+    bump('grounding',6); bump('ethics',2); markSession('Grounding'); note('Grounded · welcome back to ordinary awareness'); closeOverlay();
+    Audio.chime(528,0.8,0.08); };
+}
+function groundBreath(){ const cv=$('#groundCanvas'),x=cv.getContext('2d'); let t=0,breaths=0;
+  const iv=setInterval(()=>{ t+=0.05; const cyc=t%6, scale=cyc<3?lerp(0.4,1,cyc/3):lerp(1,0.4,(cyc-3)/3);
+    x.fillStyle='#0a0805'; x.fillRect(0,0,cv.width,cv.height); const cx=cv.width/2,cy=cv.height/2;
+    const grd=x.createRadialGradient(cx,cy,5,cx,cy,90*scale); grd.addColorStop(0,'rgba(214,177,92,0.5)'); grd.addColorStop(1,'rgba(214,177,92,0)');
+    x.fillStyle=grd; x.beginPath(); x.arc(cx,cy,90*scale,0,7); x.fill();
+    x.fillStyle='#d6b15c'; x.font='13px ui-monospace'; x.textAlign='center'; x.fillText(cyc<3?'Breathe in…':'Breathe out…',cx,cy+4);
+    if(t>=6){ breaths++; t=0; if(breaths>=4){ clearInterval(iv); x.fillText('Grounded.',cx,cy+24); } }
+  },50); }
+
+/* ----------------------------------------------------------------------
+   (E) READINESS INDEX
+   ---------------------------------------------------------------------- */
+const READ_CHANNELS=[['signal','Signal Clarity'],['focus','Calm Focus'],['discipline','Description Discipline'],
+  ['pattern','Pattern Recognition'],['confidence','Confidence Calibration'],['remote','Remote Impression'],
+  ['resonance','Resonance Stability'],['dream','Dream Recall'],['grounding','Grounding Integrity'],['ethics','Ethical Alignment']];
+function renderReadiness(){
+  const m=profile.metrics;
+  $('#readMeters').innerHTML=READ_CHANNELS.map(c=>`<div class="meter"><div class="ml">${esc(c[1])}</div>
+    <div class="mb"><div class="mf" style="width:${m[c[0]]||0}%"></div></div><div class="mv">${Math.round(m[c[0]]||0)}</div></div>`).join('');
+  // radar
+  const cv=$('#radarCanvas'); if(!cv) return; const x=cv.getContext('2d'),W=cv.width,H=cv.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-40;
+  x.clearRect(0,0,W,H); const N=READ_CHANNELS.length;
+  for(let g=1;g<=4;g++){ x.strokeStyle='rgba(255,255,255,0.08)'; x.beginPath();
+    for(let i=0;i<=N;i++){ const a=-Math.PI/2+i/N*Math.PI*2,r=R*g/4; const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r; i===0?x.moveTo(px,py):x.lineTo(px,py);} x.stroke(); }
+  x.strokeStyle='rgba(0,240,208,0.9)'; x.fillStyle='rgba(0,240,208,0.16)'; x.beginPath();
+  READ_CHANNELS.forEach((c,i)=>{ const a=-Math.PI/2+i/N*Math.PI*2,r=R*(m[c[0]]||0)/100; const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r; i===0?x.moveTo(px,py):x.lineTo(px,py); });
+  x.closePath(); x.fill(); x.stroke();
+  x.fillStyle='#6f8c86'; x.font='9px ui-monospace'; x.textAlign='center';
+  READ_CHANNELS.forEach((c,i)=>{ const a=-Math.PI/2+i/N*Math.PI*2; x.fillText(c[1].split(' ')[0],cx+Math.cos(a)*(R+18),cy+Math.sin(a)*(R+18)+3); });
+  const overall=Math.round(READ_CHANNELS.reduce((a,c)=>a+(m[c[0]]||0),0)/N);
+  x.fillStyle='#d6b15c'; x.font='600 22px ui-monospace'; x.fillText(overall,cx,cy+6); x.fillStyle='#6f8c86'; x.font='8px ui-monospace'; x.fillText('INDEX',cx,cy+18);
+}
+
+/* ----------------------------------------------------------------------
+   UTIL: text download
+   ---------------------------------------------------------------------- */
+function downloadText(name,txt){ const b=new Blob([txt],{type:'text/plain'}); const u=URL.createObjectURL(b);
+  const a=document.createElement('a'); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); note('Exported '+name); }
+
+/* ----------------------------------------------------------------------
+   INPUT WIRING
+   ---------------------------------------------------------------------- */
+addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true;
+  if(e.key==='Escape') closeOverlay();
+  if((e.key==='e'||e.key==='E') && reticleHot && !overlayOpen && started){ reticleHot.userData.action&&reticleHot.userData.action(); } });
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+// pointer lock look
+const cv=()=>renderer&&renderer.domElement;
+addEventListener('click',e=>{
+  if(overlayOpen||!started) return;
+  if(e.target===renderer.domElement){
+    if(reticleHot){ reticleHot.userData.action&&reticleHot.userData.action(); return; }
+    if(!pointerLocked && !('ontouchstart' in window)) renderer.domElement.requestPointerLock();
+  }
+});
+document.addEventListener('pointerlockchange',()=>{ pointerLocked=!!document.pointerLockElement; });
+addEventListener('mousemove',e=>{ if(!pointerLocked||overlayOpen) return;
+  yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.2,1.2); });
+
+// touch look (drag on canvas)
+let touchLook=null;
+addEventListener('touchstart',e=>{ if(overlayOpen) return; const t=e.target;
+  if(t===renderer.domElement){ const tp=e.touches[0]; touchLook={x:tp.clientX,y:tp.clientY}; } },{passive:true});
+addEventListener('touchmove',e=>{ if(!touchLook||overlayOpen) return; const tp=e.touches[0];
+  yaw-=(tp.clientX-touchLook.x)*0.005; pitch=clamp(pitch-(tp.clientY-touchLook.y)*0.005,-1.2,1.2);
+  touchLook={x:tp.clientX,y:tp.clientY}; },{passive:true});
+addEventListener('touchend',e=>{ if(touchLook && reticleHot && !overlayOpen){ /* tap to interact */ }
+  touchLook=null; });
+// tap canvas to interact on touch
+rendererTapInteract();
+function rendererTapInteract(){ // attaches after renderer exists; called post-init
+  setTimeout(()=>{ if(!renderer) return; renderer.domElement.addEventListener('touchend',ev=>{
+    if(overlayOpen) return; if(reticleHot){ reticleHot.userData.action&&reticleHot.userData.action(); } }); },300); }
+
+// mobile joystick
+(function(){ const j=$('#joystick'),nub=j.querySelector('.nub'); let active=false,cxp=0,cyp=0;
+  const set=(dx,dy)=>{ const d=Math.hypot(dx,dy),max=46; if(d>max){ dx*=max/d; dy*=max/d; }
+    nub.style.transform=`translate(${dx}px,${dy}px)`; move.s=dx/max; move.f=-dy/max; };
+  const start=e=>{ active=true; const r=j.getBoundingClientRect(); cxp=r.left+r.width/2; cyp=r.top+r.height/2; e.preventDefault(); };
+  const mv=e=>{ if(!active) return; const t=e.touches?e.touches[0]:e; set(t.clientX-cxp,t.clientY-cyp); e.preventDefault(); };
+  const end=()=>{ active=false; move.f=move.s=0; nub.style.transform='translate(0,0)'; };
+  j.addEventListener('touchstart',start,{passive:false}); j.addEventListener('touchmove',mv,{passive:false}); j.addEventListener('touchend',end);
+})();
+
+// dock buttons
+$$('#dock .pill').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.act;
+  if(a==='readiness'){ renderReadiness(); openOverlay('readiness'); }
+  else if(a==='menu') openOverlay('menu');
+  else if(a==='center'){ camera.position.set(0,PLAYER_H,4); yaw=Math.PI; pitch=0; note('Returned to command center'); closeOverlay(); }
+  else if(a==='audio'){ audioEnabled=!audioEnabled; Audio.setAmbience(audioEnabled); b.textContent='♪ Audio: '+(audioEnabled?'On':'Off'); }
+  else if(a==='panic') panic();
+}));
+function panic(){ Audio.panic(); stopBreath(); gwToneOn=false; cymOn=false; closeOverlay();
+  audioEnabled=false; $('[data-act=audio]').textContent='♪ Audio: Off'; note('All audio stopped — grounding'); openOverlay('ground'); }
+$$('[data-panic]').forEach(b=>b.addEventListener('click',panic));
+$$('[data-close]').forEach(b=>b.addEventListener('click',closeOverlay));
+$$('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) closeOverlay(); }));
+$('#resetProfile').onclick=()=>{ if(confirm('Reset all operator data stored in this browser? This cannot be undone.')){ profile=defaultProfile(); save(); renderReadiness(); note('Operator profile reset'); } };
+
+function ensureAudio(){ if(!Audio.started) Audio.start(); if(!audioEnabled){ audioEnabled=true; $('[data-act=audio]').textContent='♪ Audio: On'; } }
+
+/* ----------------------------------------------------------------------
+   BOOT
+   ---------------------------------------------------------------------- */
+let started=false;
+function startExperience(){
+  if(started) return; started=true;
+  $('#intro').classList.add('gone'); $('#reticle').classList.remove('hidden');
+  if('ontouchstart' in window) document.body.classList.add('touch');
+  camera.position.set(0,PLAYER_H,4); yaw=Math.PI;
+  Audio.start();
+  // build module UIs
+  buildMenu(); initGateway(); initRV(); initAB(); initCym(); initDream(); initGround(); renderReadiness();
+  note('Welcome, Operator — walk to a portal or tap the Command Table');
+}
+
+// loading sequence then reveal intro
+function boot(){
+  try{ initThree(); }catch(e){ $('#err').style.display='flex'; $('#loadwrap').classList.add('gone'); console.error(e); return; }
+  let p=0; const bar=$('#barF'); const iv=setInterval(()=>{ p=Math.min(100,p+rand(8,22)); bar.style.width=p+'%';
+    if(p>=100){ clearInterval(iv); setTimeout(()=>$('#loadwrap').classList.add('gone'),400); } },180);
+}
+$('#initBtn').addEventListener('click',startExperience);
+boot();
+
+// gentle XR controller select -> interact (when presenting)
+renderer&&renderer.xr&&renderer.xr.addEventListener&&renderer.xr.addEventListener('sessionstart',()=>{
+  const c0=renderer.xr.getController(0);
+  c0&&c0.addEventListener&&c0.addEventListener('select',()=>{ if(reticleHot) reticleHot.userData.action&&reticleHot.userData.action(); });
+  scene.add(c0);
+});
+</script>
+</body>
+</html>
