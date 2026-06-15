@@ -49,12 +49,19 @@ theology, apocrypha/Enochic literature, Hermetica, occult history, symbolism, an
   import flow all work **without** any assets or server. The Three.js temple (r160 from the
   jsDelivr CDN) is a progressive-enhancement backdrop and **degrades gracefully** if WebGL or the
   CDN is unavailable.
-- **Your data stays local.** Books, notes, ratings, study paths, and projects persist in the
-  browser's `localStorage`. Nothing is uploaded.
+- **Read the full books in-app.** Upload a file when adding a book, or on any existing title via
+  **Edit metadata → drop a file**, and **📖 Read full text** opens the whole book inside the
+  library. Supported: **PDF** and **images** (native viewer), **TXT** and **Markdown** (typeset
+  reading view with A−/A+ sizing), **HTML** (sandboxed), **EPUB** (paged reader via epub.js) and
+  **DOCX** (via mammoth.js). EPUB/DOCX fetch a small reader engine from the CDN on first open and
+  fall back to a download link if you're offline. Readable books show a **📖 Readable** badge.
+- **Your data stays local.** Metadata, notes, ratings, study paths, and projects persist in the
+  browser's `localStorage`; uploaded **book files are stored in your browser's IndexedDB** (keyed
+  by book) so they survive reloads. Nothing leaves your machine — there is no server.
 - **Sample books are clearly labeled** and meant to be replaced with your own collection (use
-  **Add**, or **Edit metadata → upload a file**). The point this repo lives near:
+  **Add**, or **Edit metadata → upload a file**). The collection this repo lives near:
   `C:\Users\austi\iCloudDrive\Book Library`. The app cannot reach a local drive — import the files
-  through the in-app intake ritual.
+  through the in-app intake ritual (drag-and-drop or click to choose).
 - **The Archivist** is a disciplined, catalog-grounded helper. It works only from your metadata and
   cautious general scholarship; it never invents book contents and flags interpretation, tradition,
   and speculation as such.

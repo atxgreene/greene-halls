@@ -366,6 +366,28 @@
   .reader .placeholder{border:1px solid var(--line);border-radius:10px;padding:24px;background:rgba(0,0,0,.3);
     color:var(--muted);font-style:italic}
 
+  /* full-text reader (uploaded files) */
+  .reader-host{min-height:42vh}
+  .reader.doc{font-family:var(--serif);line-height:1.85;font-size:17px;color:#e7dcc0;max-width:720px;margin:0 auto}
+  .reader.doc h1,.reader.doc h2,.reader.doc h3,.reader.doc h4{color:var(--ivory);font-weight:400;margin:20px 0 8px;line-height:1.3}
+  .reader.doc p{margin:0 0 14px}
+  .reader.doc ul,.reader.doc ol{margin:0 0 14px 22px}
+  .reader.doc blockquote{border-left:2px solid var(--gold);padding-left:14px;margin:12px 0;font-style:italic;color:#cdbf99}
+  .reader.doc a{color:var(--teal)}
+  .reader.doc img{max-width:100%}
+  .reader.doc code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(0,0,0,.35);border-radius:6px;padding:1px 5px;font-size:.92em}
+  .reader.doc pre.code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(0,0,0,.35);border-radius:8px;display:block;padding:12px 14px;overflow:auto;white-space:pre-wrap;margin:0 0 14px}
+  pre.txt{font-family:var(--serif);white-space:pre-wrap;word-wrap:break-word;line-height:1.8;font-size:17px;color:#e7dcc0;max-width:720px;margin:0 auto}
+  .rframe{width:100%;height:78vh;border:0;border-radius:8px;background:#fff}
+  .img-read{text-align:center}.img-read img{max-width:100%;border-radius:8px}
+  .epub-area{background:#f5efe0;border-radius:8px;overflow:hidden}
+  .reader-tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .reader-tools .btn{padding:6px 10px;font-size:12px}
+  .badge.readable{position:absolute;top:8px;left:8px;z-index:2;background:rgba(32,240,208,.16);color:#bff3ea;border-color:rgba(32,240,208,.45)}
+  .drop.hasfile{border-color:var(--teal)}
+  .curfile{margin-top:10px;font-size:13px;color:var(--teal)}
+  .curfile .rm{margin-left:10px;color:#e7b0a0;cursor:pointer;text-decoration:underline}
+
   /* final screen */
   #final{position:fixed;inset:0;z-index:85;display:none;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;padding:6vh 24px;background:radial-gradient(ellipse at 50% 38%,#171109 0%,#080605 60%,#000 100%);
@@ -824,8 +846,81 @@ function save(){
   }catch(e){ console.warn('save failed', e); }
 }
 function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
+
+/* ---------------- full-book storage (IndexedDB) ----------------
+   Book *metadata* lives in localStorage (small). The actual uploaded
+   file bytes are kept here as Blobs, keyed by book id — too large for
+   localStorage, and persistent across reloads. */
+const FileDB = (()=>{
+  const ok = typeof indexedDB !== 'undefined';
+  let dbp=null;
+  function db(){
+    if(dbp) return dbp;
+    dbp = new Promise((res,rej)=>{
+      const r = indexedDB.open('greene-library', 1);
+      r.onupgradeneeded = ()=>{ const d=r.result; if(!d.objectStoreNames.contains('files')) d.createObjectStore('files'); };
+      r.onsuccess = ()=>res(r.result);
+      r.onerror = ()=>rej(r.error);
+    });
+    return dbp;
+  }
+  async function store(mode){ const d=await db(); return d.transaction('files',mode).objectStore('files'); }
+  const wrap = req => new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); });
+  return {
+    available: ok,
+    async put(id, rec){ if(!ok) throw new Error('IndexedDB unavailable'); const s=await store('readwrite'); return wrap(s.put(rec,id)); },
+    async get(id){ if(!ok) return null; try{ const s=await store('readonly'); return await wrap(s.get(id)); }catch(e){ return null; } },
+    async del(id){ if(!ok) return; try{ const s=await store('readwrite'); return await wrap(s.delete(id)); }catch(e){} },
+    async clear(){ if(!ok) return; try{ const s=await store('readwrite'); return await wrap(s.clear()); }catch(e){} },
+  };
+})();
+async function storeFile(id, chosen){
+  try{ await FileDB.put(id, {blob:chosen.file, mime:chosen.mime||chosen.file.type, name:chosen.name}); return true; }
+  catch(e){ console.warn('file store failed', e); toast('Could not store the file (storage may be full or unavailable). The metadata was still saved.'); return false; }
+}
+function fmtSize(n){ n=+n||0; if(n<1024) return n+' B'; if(n<1048576) return (n/1024).toFixed(0)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+
+/* lazy-load a CDN script once; rejects if offline / blocked */
+const _scriptCache={};
+function loadScript(src){
+  if(_scriptCache[src]) return _scriptCache[src];
+  _scriptCache[src] = new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=src; s.async=true;
+    s.onload=()=>res(); s.onerror=()=>{ delete _scriptCache[src]; rej(new Error('Could not load '+src)); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+
+/* tiny, safe Markdown -> HTML (escapes first, then applies inline marks) */
+function mdToHtml(src){
+  const e = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const inline = t => t
+    .replace(/`([^`]+)`/g,(m,x)=>'<code>'+x+'</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const lines = String(src).replace(/\r\n?/g,'\n').split('\n');
+  let html='', inList=false, inCode=false, para=[];
+  const flush=()=>{ if(para.length){ html+='<p>'+inline(para.join(' '))+'</p>'; para=[]; } };
+  for(const raw of lines){
+    if(/^```/.test(raw)){ flush(); if(inList){html+='</ul>';inList=false;} if(inCode){html+='</pre>';inCode=false;}else{html+='<pre class="code">';inCode=true;} continue; }
+    if(inCode){ html += e(raw)+'\n'; continue; }
+    const h = raw.match(/^(#{1,6})\s+(.*)$/);
+    if(h){ flush(); if(inList){html+='</ul>';inList=false;} const lvl=Math.min(4,h[1].length); html+='<h'+lvl+'>'+inline(e(h[2]))+'</h'+lvl+'>'; continue; }
+    const li = raw.match(/^\s*[-*+]\s+(.*)$/);
+    if(li){ flush(); if(!inList){html+='<ul>';inList=true;} html+='<li>'+inline(e(li[1]))+'</li>'; continue; }
+    if(/^\s*>\s?/.test(raw)){ flush(); if(inList){html+='</ul>';inList=false;} html+='<blockquote>'+inline(e(raw.replace(/^\s*>\s?/,'')))+'</blockquote>'; continue; }
+    if(/^\s*$/.test(raw)){ flush(); if(inList){html+='</ul>';inList=false;} continue; }
+    para.push(e(raw));
+  }
+  flush(); if(inList)html+='</ul>'; if(inCode)html+='</pre>';
+  return html;
+}
+
 function resetLibrary(){
   localStorage.removeItem(LS_KEY);
+  FileDB.clear();
   state.books = structuredCloneSafe(SAMPLE_BOOKS);
   state.paths = structuredCloneSafe(SEED_PATHS);
   state.projects = [];
@@ -1072,8 +1167,9 @@ function cardHTML(b){
   const st = b.status||'unread';
   const fav = b.fav ? '<span class="badge fav">★ Favorite</span>' : '';
   const sample = b.isSample!==false && SAMPLE_BOOKS.some(s=>s.id===b.id) ? '<span class="badge sample">Sample</span>' : (b._userSample?'<span class="badge sample">Sample</span>':'');
-  return `<article class="book-card" data-id="${b.id}" tabindex="0" role="button" aria-label="${esc(b.title)} by ${esc(b.author)}" style="--c1:${c1};--c2:${c2}">
-    ${sample}
+  const readable = b.hasFile ? '<span class="badge readable">📖 Readable</span>' : '';
+  return `<article class="book-card" data-id="${b.id}" tabindex="0" role="button" aria-label="${esc(b.title)} by ${esc(b.author)}${b.hasFile?' — full text available':''}" style="--c1:${c1};--c2:${c2}">
+    ${sample}${readable}
     <div class="cover"><div class="gild"></div>
       <div class="ct">${esc(b.title)}</div><div class="ca">${esc(b.author||'Unknown')}</div></div>
     <div class="book-meta">
@@ -1359,7 +1455,7 @@ function openDetail(id){
     <div class="dt-body">
       ${ev?`<div style="margin:2px 0 12px">${ev}</div>`:''}
       <div class="dt-actions">
-        <button class="primary" data-act="open">📖 Open Book</button>
+        <button class="primary" data-act="open">${b.hasFile?'📖 Read full text':'📖 Open Book'}</button>
         <button data-act="note">✎ Add / Edit Note</button>
         <button data-act="path">＋ Add to Study Path</button>
         <button data-act="compare">⇄ Compare</button>
@@ -1379,6 +1475,7 @@ function openDetail(id){
         <dt>Time period</dt><dd>${miss(b.period)}</dd>
         <dt>Source type</dt><dd>${miss(b.sourceType)}</dd>
         <dt>File type</dt><dd>${miss(b.fileType)}</dd>
+        ${b.hasFile?`<dt>Attached file</dt><dd style="color:var(--teal)">📖 ${esc(b.fileName||'file')}${b.fileSize?' · '+fmtSize(b.fileSize):''} — readable in the library</dd>`:''}
         <dt>Importance</dt><dd>${miss(b.importance)}</dd>
       </dl>
       <div class="field"><div class="label">Key themes</div><div class="relchips">${chips(b.themes)}</div></div>
@@ -1412,7 +1509,10 @@ function detailAction(act,b){
   }
 }
 function openReader(b){
-  if(b._fileURL){ window.open(b._fileURL,'_blank'); return; }
+  if(b.hasFile) return openFileReader(b);
+  return openMetaReader(b);
+}
+function openMetaReader(b){
   const hasText = b.passages && b.passages.length;
   openModal(`<div class="modal-head"><div><div class="sub">Reading room</div><h3>${esc(b.title)}</h3></div><button class="x" data-close>×</button></div>
     <div class="modal-body"><div class="reader">
@@ -1421,8 +1521,92 @@ function openReader(b){
       ${b.toc&&b.toc.length?`<p style="margin-top:14px"><b style="color:var(--gold);font-weight:400">Contents:</b></p><ul class="toc">${b.toc.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
       ${hasText?`<p style="margin-top:16px;color:var(--gold)">Recorded passages</p>${b.passages.map(p=>`<blockquote style="border-left:2px solid var(--gold);padding-left:14px;margin:10px 0;font-style:italic">“${esc(p)}”</blockquote>`).join('')}`:''}
       <div class="placeholder" style="margin-top:18px">Full text is not loaded. The temple does not invent the contents of a book.
-      Add your own file for this title (<b>Edit metadata → upload</b>) and “Open Book” will open it directly.</div>
+      Add your own file for this title (<b>Edit metadata → upload</b>) and “Read full text” will open it right here.</div>
     </div></div>`);
+}
+async function openFileReader(b){
+  openModal(`<div class="modal-head"><div><div class="sub">Reading room</div><h3>${esc(b.title)}</h3></div>
+      <div class="reader-tools" id="rtools"></div>
+      <button class="x" data-close>×</button></div>
+    <div class="modal-body"><div id="readerHost" class="reader-host"><div class="placeholder">Unbinding the manuscript…</div></div></div>`, true);
+  const host = $('#readerHost'); const tools = $('#rtools'); if(!host) return;
+  const rec = await FileDB.get(b.id);
+  if(!host.isConnected) return; // user closed it
+  if(!rec || !rec.blob){
+    host.innerHTML = `<div class="placeholder">The stored file for this book could not be found — it may have been added in a different browser, or local storage was cleared. Re-attach it via <b>Edit metadata</b>.</div>`;
+    return;
+  }
+  const url = URL.createObjectURL(rec.blob);
+  state._readerURL = url;
+  const name = rec.name || b.fileName || 'book';
+  const dl = `<a class="btn ghost" href="${url}" download="${esc(name)}">⤓ Download original</a>`;
+  const type = String(b.fileType||'').toUpperCase();
+  const mime = (rec.mime || rec.blob.type || '').toLowerCase();
+  try{
+    if(mime.includes('pdf') || type==='PDF'){
+      host.innerHTML = `<iframe class="rframe" src="${url}" title="${esc(b.title)}"></iframe>`;
+      tools.innerHTML = dl;
+    } else if(mime.startsWith('image/') || type==='IMAGE SCAN'){
+      host.innerHTML = `<div class="img-read"><img src="${url}" alt="${esc(b.title)}"></div>`;
+      tools.innerHTML = dl;
+    } else if(type==='EPUB' || mime.includes('epub')){
+      await renderEpub(host, tools, rec, dl);
+    } else if(type==='DOCX' || mime.includes('officedocument.wordprocessing') || mime.includes('msword')){
+      await renderDocx(host, tools, rec, dl);
+    } else if(type==='HTML' || mime.includes('html')){
+      const text = await rec.blob.text();
+      host.innerHTML = `<iframe class="rframe" sandbox="" srcdoc="${esc(text)}" title="${esc(b.title)}"></iframe>`;
+      tools.innerHTML = dl;
+    } else {
+      const text = await rec.blob.text();
+      const isMd = type==='MARKDOWN' || /\.(md|markdown)$/i.test(name);
+      host.innerHTML = isMd ? `<div class="reader doc" id="readerDoc">${mdToHtml(text)}</div>`
+                            : `<pre class="txt" id="readerDoc">${esc(text)}</pre>`;
+      tools.innerHTML = fontTools() + dl;
+      wireFontTools(tools, $('#readerDoc'));
+    }
+  }catch(e){
+    host.innerHTML = `<div class="placeholder">This file couldn’t be displayed in the reader (${esc(e.message||'unknown error')}). You can still <a href="${url}" download="${esc(name)}" style="color:var(--teal)">download the original</a>.</div>`;
+  }
+}
+function fallbackDL(host, msg, url, name){
+  host.innerHTML = `<div class="placeholder">${esc(msg)} You can <a href="${url}" download="${esc(name)}" style="color:var(--teal)">download the original</a> instead.</div>`;
+}
+async function renderEpub(host, tools, rec, dl){
+  host.innerHTML = `<div class="placeholder">Loading the EPUB reader…</div>`;
+  const url = state._readerURL, name = rec.name||'book.epub';
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js');
+  }catch(e){ fallbackDL(host, 'The EPUB reader engine couldn’t be loaded (you may be offline).', url, name); tools.innerHTML=dl; return; }
+  if(!host.isConnected) return;
+  host.innerHTML = `<div id="epubArea" class="epub-area"></div>`;
+  tools.innerHTML = `<button class="btn ghost" id="epPrev">‹ Prev</button><button class="btn ghost" id="epNext">Next ›</button>` + dl;
+  const ab = await rec.blob.arrayBuffer();
+  const book = ePub(ab);
+  const rendition = book.renderTo('epubArea', {width:'100%', height:'72vh', spread:'none', flow:'paginated'});
+  state._epub = {book, rendition};
+  try{ rendition.themes.default({'body':{'background':'#f5efe0','color':'#1c150b'}}); }catch(e){}
+  await rendition.display();
+  $('#epPrev').onclick = ()=>rendition.prev();
+  $('#epNext').onclick = ()=>rendition.next();
+}
+async function renderDocx(host, tools, rec, dl){
+  host.innerHTML = `<div class="placeholder">Converting the document…</div>`;
+  const url = state._readerURL, name = rec.name||'document.docx';
+  try{ await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js'); }
+  catch(e){ fallbackDL(host, 'The .docx converter couldn’t be loaded (you may be offline).', url, name); tools.innerHTML=dl; return; }
+  if(!host.isConnected) return;
+  const ab = await rec.blob.arrayBuffer();
+  const out = await mammoth.convertToHtml({arrayBuffer:ab});
+  host.innerHTML = `<div class="reader doc" id="readerDoc">${out.value || '<p><i>(The document appears to be empty.)</i></p>'}</div>`;
+  tools.innerHTML = fontTools() + dl;
+  wireFontTools(tools, $('#readerDoc'));
+}
+function fontTools(){ return `<button class="btn ghost" data-fz="-1" title="Smaller text">A−</button><button class="btn ghost" data-fz="1" title="Larger text">A+</button>`; }
+function wireFontTools(tools, el){
+  if(!el) return; let fz=17; el.style.fontSize=fz+'px';
+  $$('[data-fz]', tools).forEach(btn=> btn.onclick=()=>{ fz=Math.max(12,Math.min(30, fz + (+btn.dataset.fz)*1.5)); el.style.fontSize=fz+'px'; });
 }
 /* ============================================================
    MODAL helpers
@@ -1433,7 +1617,11 @@ function openModal(html, wide){
   m.querySelectorAll('[data-close]').forEach(x=>x.onclick=closeOverlay);
   const f=m.querySelector('input,textarea,button'); if(f) try{f.focus();}catch(e){}
 }
-function closeOverlay(){ $('#overlay').classList.remove('open'); }
+function closeOverlay(){
+  $('#overlay').classList.remove('open');
+  if(state._epub){ try{ state._epub.rendition.destroy(); state._epub.book.destroy(); }catch(e){} state._epub=null; }
+  if(state._readerURL){ try{ URL.revokeObjectURL(state._readerURL); }catch(e){} state._readerURL=null; }
+}
 
 /* ============================================================
    STUDY PATHS
@@ -1682,11 +1870,12 @@ function openImport(existing){
   const wingOpts = WINGS.map(w=>`<option value="${w.id}" ${(b.wing||'')===w.id?'selected':''}>${esc(w.name)}</option>`).join('');
   openModal(`<div class="modal-head"><div><div class="sub">${isEdit?'Edit metadata':'The intake ritual'}</div><h3>${isEdit?esc(b.title):'Add a Book to the Archive'}</h3></div><button class="x" data-close>×</button></div>
     <div class="modal-body">
-      ${isEdit?'':`<div class="drop" id="drop"><div class="glyph">✶</div>
-        <div class="ds" id="dropLabel">Drop a file here, or click to choose — it appears as a glowing unbound manuscript.</div>
+      <div class="drop ${b.hasFile?'hasfile':''}" id="drop"><div class="glyph">✶</div>
+        <div class="ds" id="dropLabel">${b.hasFile?'A manuscript is bound to this book. Drop a new file to replace it.':'Drop a file here, or click to choose — it appears as a glowing unbound manuscript.'}</div>
         <div class="types"><span class="filetag">PDF</span><span class="filetag">EPUB</span><span class="filetag">TXT</span><span class="filetag">DOCX</span><span class="filetag">HTML</span><span class="filetag">Markdown</span><span class="filetag">Image scan</span></div>
         <input type="file" id="fileInput" style="display:none" accept=".pdf,.epub,.txt,.docx,.html,.htm,.md,.markdown,image/*">
-        <p class="src" style="margin-top:8px">If a file is provided, “Open Book” will open it. Without one, you can still record full metadata.</p></div>`}
+        ${b.hasFile?`<div class="curfile" id="curfile">📖 <b>${esc(b.fileName||'attached file')}</b>${b.fileSize?' · '+fmtSize(b.fileSize):''}<span class="rm" id="rmFile">remove</span></div>`:''}
+        <p class="src" style="margin-top:8px">If a file is provided, “Read full text” opens it right here in the library. Without one, you can still record full metadata.</p></div>
       <div class="form-grid" style="margin-top:14px">
         <div class="fld"><label>Title</label><input id="i_title" value="${esc(b.title||'')}" placeholder="Required"></div>
         <div class="fld"><label>Author</label><input id="i_author" value="${esc(b.author||'')}"></div>
@@ -1713,29 +1902,33 @@ function openImport(existing){
       <p class="src" style="margin-top:6px">The Archivist assigns a temporary category, you confirm the details, and the book flies to its proper shelf — updating the knowledge graph.</p>
     </div>`, true);
 
-  let chosen = {fileType:b.fileType, _fileURL:b._fileURL, name:null};
+  let chosen = {fileType:b.fileType, name:b.fileName||null, mime:b.fileMime||null, size:b.fileSize||null, file:null};
+  let removeFile = false;
   const evSel = new Set(b.evidence||[]);
   $$('#modal [data-ev]').forEach(p=>p.onclick=()=>{ const l=p.dataset.ev; if(evSel.has(l)){evSel.delete(l);p.classList.remove('on');}else{evSel.add(l);p.classList.add('on');} });
-  if(!isEdit){
+  {
     const drop=$('#drop'), fi=$('#fileInput');
     drop.onclick=()=>fi.click();
     drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot');};
     drop.ondragleave=()=>drop.classList.remove('hot');
     drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot'); if(e.dataTransfer.files[0]) takeFile(e.dataTransfer.files[0]);};
     fi.onchange=e=>{ if(e.target.files[0]) takeFile(e.target.files[0]); };
+    const rmBtn=$('#rmFile'); if(rmBtn) rmBtn.onclick=(ev)=>{ ev.stopPropagation(); removeFile=true; chosen.file=null;
+      const cf=$('#curfile'); if(cf) cf.innerHTML='<i>The attached file will be removed when you save.</i>'; drop.classList.remove('hasfile'); };
     function takeFile(f){
-      chosen.name=f.name;
+      chosen.file=f; chosen.name=f.name; chosen.mime=f.type||''; chosen.size=f.size; removeFile=false;
       const ext=(f.name.split('.').pop()||'').toLowerCase();
       const map={pdf:'PDF',epub:'EPUB',txt:'TXT',docx:'DOCX',doc:'DOCX',html:'HTML',htm:'HTML',md:'Markdown',markdown:'Markdown'};
       chosen.fileType = map[ext] || (f.type.startsWith('image')?'Image scan':'TXT');
-      try{ chosen._fileURL = URL.createObjectURL(f); }catch(_){}
       $('#i_fileType').value = chosen.fileType;
       if(!$('#i_title').value) $('#i_title').value = f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
-      $('#dropLabel').innerHTML = `✓ <b style="color:var(--teal)">${esc(f.name)}</b> received as a glowing manuscript.`;
+      $('#dropLabel').innerHTML = `✓ <b style="color:var(--teal)">${esc(f.name)}</b> received — ${fmtSize(f.size)}. It will be bound to this book when you save.`;
+      const cf=$('#curfile'); if(cf) cf.style.display='none';
+      drop.classList.add('hasfile');
       playCue('shimmer');
     }
   }
-  $('#i_save').onclick=()=>{
+  $('#i_save').onclick = async ()=>{
     const title=$('#i_title').value.trim(); if(!title){ toast('A book needs a title.'); $('#i_title').focus(); return; }
     const data={
       title, author:$('#i_author').value.trim(), category:$('#i_category').value||'Unsorted Archive',
@@ -1745,18 +1938,29 @@ function openImport(existing){
       themes:splitList($('#i_themes').value), tags:splitList($('#i_tags').value), symbols:splitList($('#i_symbols').value),
       evidence:[...evSel], summary:$('#i_summary').value.trim(), notes:$('#i_notes').value.trim(),
     };
-    if(isEdit){ Object.assign(b, data); save(); closeOverlay(); openDetail(b.id); render(); toast('Metadata updated.'); }
-    else {
-      const nb = Object.assign({id:uid(), added:Date.now(), rating:0, related:[], passages:[], toc:[], _userSample:false}, data);
-      if(chosen._fileURL) nb._fileURL=chosen._fileURL;
-      if(chosen.name) nb.sourceType=nb.sourceType||'User upload';
-      state.books.push(nb); save();
-      closeOverlay(); render(); flyTo(state.view); playCue('shimmer');
-      toast(`<b>${esc(title)}</b> has flown to the ${esc((WINGS.find(w=>w.id===wingOf(nb))||{}).name||'shelf')}.`);
-      setTimeout(()=>openDetail(nb.id), 400);
+    const btn=$('#i_save'); const btnLabel=isEdit?'Save changes':'Scan & shelve the book';
+    if(btn){ btn.disabled=true; btn.textContent = chosen.file?'Binding manuscript…':'Saving…'; }
+    try{
+      if(isEdit){
+        Object.assign(b, data);
+        if(removeFile){ await FileDB.del(b.id); b.hasFile=false; delete b.fileName; delete b.fileMime; delete b.fileSize; }
+        if(chosen.file){ const okF=await storeFile(b.id, chosen); if(okF){ b.hasFile=true; b.fileName=chosen.name; b.fileMime=chosen.mime; b.fileSize=chosen.size; b.fileType=chosen.fileType; if(!b.sourceType) b.sourceType='User upload'; } }
+        save(); closeOverlay(); openDetail(b.id); render(); toast('Metadata updated.'+(chosen.file?' Full text bound — open “Read full text”.':''));
+      } else {
+        const nb = Object.assign({id:uid(), added:Date.now(), rating:0, related:[], passages:[], toc:[], _userSample:false}, data);
+        if(chosen.name) nb.sourceType=nb.sourceType||'User upload';
+        if(chosen.file){ const okF=await storeFile(nb.id, chosen); if(okF){ nb.hasFile=true; nb.fileName=chosen.name; nb.fileMime=chosen.mime; nb.fileSize=chosen.size; nb.fileType=chosen.fileType; } }
+        state.books.push(nb); save();
+        closeOverlay(); render(); flyTo(state.view); playCue('shimmer');
+        toast(`<b>${esc(title)}</b> has flown to the ${esc((WINGS.find(w=>w.id===wingOf(nb))||{}).name||'shelf')}.`+(nb.hasFile?' Its full text is now readable.':''));
+        setTimeout(()=>openDetail(nb.id), 400);
+      }
+    }catch(e){
+      console.warn('save error', e); toast('Something went wrong while saving.');
+      if(btn){ btn.disabled=false; btn.textContent=btnLabel; }
     }
   };
-  if(isEdit){ $('#i_delete').onclick=()=>{ if(confirm('Remove this book from the archive?')){ state.books=state.books.filter(x=>x.id!==b.id); save(); closeOverlay(); closeDetail(); render(); toast('Removed from the archive.'); } }; }
+  if(isEdit){ $('#i_delete').onclick=()=>{ if(confirm('Remove this book from the archive?')){ FileDB.del(b.id); state.books=state.books.filter(x=>x.id!==b.id); save(); closeOverlay(); closeDetail(); render(); toast('Removed from the archive.'); } }; }
 }
 function splitList(s){ return s.split(',').map(x=>x.trim()).filter(Boolean); }
 
