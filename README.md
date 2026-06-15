@@ -13,6 +13,20 @@ must be *served*. Pages does exactly that.
 - **Virtual Library:** `https://atxgreene.github.io/greene-halls/the-greene-virtual-library.html`
 - Watchers: `https://atxgreene.github.io/greene-halls/hall-of-the-watchers.html`
 - Archangels: `https://atxgreene.github.io/greene-halls/hall-of-archangels.html`
+- Hall of UFOs: `https://atxgreene.github.io/greene-halls/hall-of-ufos.html`
+
+### The Hall of UFOs
+A cinematic, museum-grade wing on humanity's relationship with unexplained aerial phenomena —
+*observed, historical, and unexplained*. It is **fully self-contained**: one HTML file with
+embedded CSS/JS, a procedural Three.js r160 hub (a circular chamber orbiting a central
+"Phenomenon Core"), eight deep interactive exhibits, and a **procedurally generated
+WebAudio soundscape** (sub-bass hum, radar pings, faint chatter, per-room ambience) — **no
+model or audio asset files**. It loads Three.js from the CDN like the other halls but, lacking
+asset fetches, it also runs from `file://` or any static host. Includes a graceful no-WebGL
+fallback (the exhibits stay fully open), responsive mobile layout, keyboard navigation,
+and a reduced-motion mode. Every exhibit clearly labels its evidence tier — *Confirmed /
+Witnessed / Contested / Speculative / Artistic Reconstruction* — so the wing stays
+credible rather than conspiratorial.
 
 ## The Greene Virtual Library (`the-greene-virtual-library.html`)
 A single-file "Temple of Living Books" — a sacred reading hall + research command center for

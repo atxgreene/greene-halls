@@ -7,8 +7,8 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:#050406;color:#e9dcc0;
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:hidden}
-  .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:auto}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;background:radial-gradient(ellipse at 50% 30%,#15101a 0%,#070608 60%,#000 100%);padding:6vh 20px}
   h1{font-size:clamp(30px,6vw,64px);font-weight:400;letter-spacing:.12em;color:#e9dcc0;
     text-shadow:0 0 40px rgba(217,180,99,.35)}
@@ -21,9 +21,13 @@
   a.door .d{margin-top:12px;font-size:13.5px;font-style:italic;line-height:1.6;color:#a99e82}
   a.fallen .t{color:#e7b0a0;text-shadow:0 0 26px rgba(184,18,26,.5)}
   a.holy .t{color:#ffe6a8;text-shadow:0 0 26px rgba(217,180,99,.55)}
-  a.library{width:min(708px,86vw);border-color:rgba(32,240,208,.32)}
-  a.library:hover{border-color:#20F0D0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.15)}
-  a.library .t{color:#cdeee6;text-shadow:0 0 26px rgba(32,240,208,.4)}
+  a.library{width:min(708px,86vw);border-color:rgba(214,177,95,.4)}
+  a.library:hover{border-color:#D6B15F;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(214,177,95,.25)}
+  a.library .t{color:#e7d39a;text-shadow:0 0 26px rgba(214,177,95,.5)}
+  a.ufos{border-color:rgba(32,240,208,.32)}
+  a.ufos:hover{border-color:#20f0d0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.18)}
+  a.ufos .t{color:#a8f4e6;text-shadow:0 0 26px rgba(32,240,208,.5)}
+  a.ufos .d{color:#8fb3ad}
   .foot{margin-top:48px;font-size:12px;color:#6b6354;line-height:1.8;max-width:560px}
   .foot code{color:#9a8e72}
 </style>
@@ -31,7 +35,7 @@
 <body>
 <div class="wrap">
   <h1>The Greene Halls</h1>
-  <div class="sub">Of Heaven, of the Fall, and of the Living Book</div>
+  <div class="sub">Chambers of the Museum</div>
   <div class="doors">
     <a class="door library" href="the-greene-virtual-library.html">
       <div class="t">The Greene Virtual Library</div>
@@ -45,10 +49,14 @@
       <div class="t">The Hall of the Archangels</div>
       <div class="d">The holy ones who stand before the Throne — who beheld the ruin below and were sent to bind the fallen.</div>
     </a>
+    <a class="door ufos" href="hall-of-ufos.html">
+      <div class="t">The Hall of UFOs</div>
+      <div class="d">A classified wing beneath the museum — a record of what humanity has seen, feared, studied, and never fully explained.</div>
+    </a>
   </div>
-  <div class="foot">The Virtual Library is self-contained and works on its own (it falls back gracefully without WebGL).
-    For the two halls' 3D models and narration to load, open them from a local server
-    (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
+  <div class="foot">The Virtual Library and the Hall of UFOs are self-contained — they fall back gracefully
+    and run from any static host. For the Watchers and Archangels halls' 3D models and narration to load,
+    open them from a local server (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
 </div>
 </body>
 </html>

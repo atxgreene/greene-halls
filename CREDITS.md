@@ -21,6 +21,18 @@ file (and ideally a visible in-app credits line) intact.
 ## Audio
 - **Narration** (`audio/*.mp3`, 24 Watchers + 12 Archangels): generated locally via Windows SAPI TTS ("Microsoft David Desktop") — no third-party rights.
 - **`music-archangels.mp3`**: "Angelic Choir" — **Pixabay** (track #179081), Pixabay Content License (royalty-free; attribution not required, credited here). The Watchers hall uses a generative WebAudio score (no asset).
+- **Hall of UFOs**: entirely **procedural WebAudio** (sub-bass hum, radar pings, room tone, faint
+  chatter, per-room ambience) generated in-browser — no audio asset files, no third-party rights.
+
+## Hall of UFOs — content & framing
+- **No model or image assets**: all 3D and 2D visuals are procedural (Three.js geometry, GLSL
+  shaders, and `<canvas>` reconstructions). Craft renderings are explicitly labeled
+  *Artistic Reconstruction*.
+- **Cases & documents** referenced are matters of public record (e.g. Project Blue Book, the
+  Condon Report, the DoD-released Navy sensor videos, the 2021 ODNI preliminary assessment,
+  NASA's 2023 UAP study, AARO). Each is framed as documented history with its evidence tier and
+  open questions stated — no claim is presented as proven beyond its source.
+- **Engine**: Three.js r160 (MIT) via jsDelivr CDN, as with the other halls.
 
 ## Text / lore
 Public domain: *1 Enoch* (R.H. Charles, 1917), *Book of Giants*, Genesis 6, Leviticus 16.
