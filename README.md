@@ -10,6 +10,7 @@ must be *served*. Pages does exactly that.
 
 ## Live URLs (after the first push + Pages build)
 - Hub: `https://atxgreene.github.io/greene-halls/`
+- **Virtual Library:** `https://atxgreene.github.io/greene-halls/the-greene-virtual-library.html`
 - Watchers: `https://atxgreene.github.io/greene-halls/hall-of-the-watchers.html`
 - Archangels: `https://atxgreene.github.io/greene-halls/hall-of-archangels.html`
 - Hall of UFOs: `https://atxgreene.github.io/greene-halls/hall-of-ufos.html`
@@ -26,6 +27,27 @@ fallback (the exhibits stay fully open), responsive mobile layout, keyboard navi
 and a reduced-motion mode. Every exhibit clearly labels its evidence tier — *Confirmed /
 Witnessed / Contested / Speculative / Artistic Reconstruction* — so the wing stays
 credible rather than conspiratorial.
+
+## The Greene Virtual Library (`the-greene-virtual-library.html`)
+A single-file "Temple of Living Books" — a sacred reading hall + research command center for
+theology, apocrypha/Enochic literature, Hermetica, occult history, symbolism, and personal study.
+
+- **Self-contained.** One HTML file; embedded CSS/JS. The full catalog, search, filters, book
+  detail panels, study paths, compare, knowledge graph, the **Archivist** assistant, and the
+  import flow all work **without** any assets or server. The Three.js temple (r160 from the
+  jsDelivr CDN) is a progressive-enhancement backdrop and **degrades gracefully** if WebGL or the
+  CDN is unavailable.
+- **Your data stays local.** Books, notes, ratings, study paths, and projects persist in the
+  browser's `localStorage`. Nothing is uploaded.
+- **Sample books are clearly labeled** and meant to be replaced with your own collection (use
+  **Add**, or **Edit metadata → upload a file**). The point this repo lives near:
+  `C:\Users\austi\iCloudDrive\Book Library`. The app cannot reach a local drive — import the files
+  through the in-app intake ritual.
+- **The Archivist** is a disciplined, catalog-grounded helper. It works only from your metadata and
+  cautious general scholarship; it never invents book contents and flags interpretation, tradition,
+  and speculation as such.
+- Keyboard: `/` search · `g` graph · `a` Archivist · `i` add book · `c` compare · `Esc` close.
+  Includes reduced-motion and audio toggles, ARIA labels, and a mobile layout.
 
 ## Pushing the content (from the Windows authoring PC)
 

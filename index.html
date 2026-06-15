@@ -21,6 +21,9 @@
   a.door .d{margin-top:12px;font-size:13.5px;font-style:italic;line-height:1.6;color:#a99e82}
   a.fallen .t{color:#e7b0a0;text-shadow:0 0 26px rgba(184,18,26,.5)}
   a.holy .t{color:#ffe6a8;text-shadow:0 0 26px rgba(217,180,99,.55)}
+  a.library{width:min(708px,86vw);border-color:rgba(214,177,95,.4)}
+  a.library:hover{border-color:#D6B15F;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(214,177,95,.25)}
+  a.library .t{color:#e7d39a;text-shadow:0 0 26px rgba(214,177,95,.5)}
   a.ufos{border-color:rgba(32,240,208,.32)}
   a.ufos:hover{border-color:#20f0d0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.18)}
   a.ufos .t{color:#a8f4e6;text-shadow:0 0 26px rgba(32,240,208,.5)}
@@ -34,6 +37,10 @@
   <h1>The Greene Halls</h1>
   <div class="sub">Chambers of the Museum</div>
   <div class="doors">
+    <a class="door library" href="the-greene-virtual-library.html">
+      <div class="t">The Greene Virtual Library</div>
+      <div class="d">A temple of living books, hidden knowledge, and disciplined study — theology, apocrypha, Hermetica, and your own research, ordered beneath one dome.</div>
+    </a>
     <a class="door fallen" href="hall-of-the-watchers.html">
       <div class="t">The Hall of the Watchers</div>
       <div class="d">The two hundred who swore the oath on Hermon and fell — their forbidden arts, their offspring, their doom.</div>
@@ -47,9 +54,9 @@
       <div class="d">A classified wing beneath the museum — a record of what humanity has seen, feared, studied, and never fully explained.</div>
     </a>
   </div>
-  <div class="foot">For the 3D models and narration to load, open this from the local server
-    (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly. The Hall of UFOs is fully
-    procedural — no model or audio files — so it also runs from any static host.</div>
+  <div class="foot">The Virtual Library and the Hall of UFOs are self-contained — they fall back gracefully
+    and run from any static host. For the Watchers and Archangels halls' 3D models and narration to load,
+    open them from a local server (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
 </div>
 </body>
 </html>
