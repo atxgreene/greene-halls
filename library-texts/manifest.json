@@ -1,4 +1,131 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "enoch1",
+      "title": "1 Enoch (The Book of Enoch)",
+      "file": "library-texts/1-enoch-the-book-of-enoch.txt",
+      "format": "TXT",
+      "edition": "R.H. Charles, 1917",
+      "source": "https://www.gutenberg.org/cache/epub/77935/pg77935.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "enoch2",
+      "title": "2 Enoch (Slavonic Enoch)",
+      "file": "library-texts/2-enoch-slavonic-enoch.txt",
+      "format": "TXT",
+      "edition": "W.R. Morfill & R.H. Charles, 1896",
+      "source": "https://archive.org/download/cu31924014633568/cu31924014633568_hocr_searchtext.txt.gz",
+      "license": "Public domain"
+    },
+    {
+      "id": "jubilees",
+      "title": "The Book of Jubilees",
+      "file": "library-texts/the-book-of-jubilees.txt",
+      "format": "TXT",
+      "edition": "R.H. Charles, 1902",
+      "source": "https://archive.org/download/cu31924060029984/cu31924060029984_djvu.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "corpus",
+      "title": "The Corpus Hermeticum",
+      "file": "library-texts/the-corpus-hermeticum.txt",
+      "format": "TXT",
+      "edition": "G.R.S. Mead, 'Thrice-Greatest Hermes', 1906",
+      "source": "https://archive.org/details/thrice-greatest-hermes-vol-1-2-3-grs-mead",
+      "license": "Public domain"
+    },
+    {
+      "id": "emerald",
+      "title": "The Emerald Tablet",
+      "file": "library-texts/the-emerald-tablet.txt",
+      "format": "TXT",
+      "edition": "Multiple PD translations: Isaac Newton (c.1680), standard Latin-to-English, Jabir ibn Hayyan Arabic version in English",
+      "source": "https://sacred-texts.com/alc/emerald.htm",
+      "license": "Public domain"
+    },
+    {
+      "id": "kybalion",
+      "title": "The Kybalion",
+      "file": "library-texts/the-kybalion.txt",
+      "format": "TXT",
+      "edition": "\"Three Initiates\", 1908",
+      "source": "https://www.gutenberg.org/cache/epub/14209/pg14209.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "nag",
+      "title": "The Nag Hammadi Library",
+      "file": "library-texts/nag-hammadi-pd-tractates.txt",
+      "format": "TXT",
+      "edition": "G.R.S. Mead, 'Fragments of a Faith Forgotten', 1900 (2nd ed. 1906)",
+      "source": "https://archive.org/download/fragmentsoffaith00meaduoft/fragmentsoffaith00meaduoft_hocr_searchtext.txt.gz",
+      "license": "Public domain"
+    },
+    {
+      "id": "pistis",
+      "title": "Pistis Sophia",
+      "file": "library-texts/pistis-sophia.txt",
+      "format": "TXT",
+      "edition": "G.R.S. Mead, 1896",
+      "source": "https://archive.org/download/pistissophia00mead/pistissophia00mead_hocr_searchtext.txt.gz",
+      "license": "Public domain"
+    },
+    {
+      "id": "augustine",
+      "title": "Confessions",
+      "file": "library-texts/confessions-augustine.txt",
+      "format": "TXT",
+      "edition": "E.B. Pusey, 1838",
+      "source": "https://www.gutenberg.org/cache/epub/3296/pg3296.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "cityofgod",
+      "title": "The City of God",
+      "file": "library-texts/city-of-god-augustine.txt",
+      "format": "TXT",
+      "edition": "Marcus Dods, 1887",
+      "source": "https://www.gutenberg.org/cache/epub/45304/pg45304.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "cloud",
+      "title": "The Cloud of Unknowing",
+      "file": "library-texts/the-cloud-of-unknowing.txt",
+      "format": "TXT",
+      "edition": "Evelyn Underhill edition, 1922",
+      "source": "https://archive.org/download/TheCloudOfUnknowing_201808/The%20Cloud%20of%20Unknowing_djvu.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "divine",
+      "title": "The Divine Comedy",
+      "file": "library-texts/the-divine-comedy-dante.txt",
+      "format": "TXT",
+      "edition": "Henry Wadsworth Longfellow, 1867",
+      "source": "https://www.gutenberg.org/cache/epub/1004/pg1004.txt",
+      "license": "Public domain"
+    },
+    {
+      "id": "solomon",
+      "title": "The Testament of Solomon",
+      "file": "library-texts/the-testament-of-solomon.txt",
+      "format": "TXT",
+      "edition": "F.C. Conybeare, 1898",
+      "source": "https://www.esotericarchives.com/solomon/testamen.htm",
+      "license": "Public domain · CC-BY hosting"
+    },
+    {
+      "id": "kjv",
+      "title": "The Holy Bible (King James Version)",
+      "file": "library-texts/holy-bible-king-james-version.txt",
+      "format": "TXT",
+      "edition": "King James Bible Committee, 1611 (1769 Oxford standard text)",
+      "source": "https://www.gutenberg.org/cache/epub/10/pg10.txt",
+      "license": "Public domain (US) · UK Crown copyright"
+    }
+  ]
 }

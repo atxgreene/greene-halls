@@ -39,6 +39,16 @@ Public domain: *1 Enoch* (R.H. Charles, 1917), *Book of Giants*, Genesis 6, Levi
 Later-tradition figures (Metatron, Sandalphon, Raziel, etc.) are labeled as Kabbalah /
 3 Enoch tradition in-app.
 
+## Bundled full texts (Virtual Library)
+The Virtual Library serves complete public-domain editions from `library-texts/` — see
+[`library-texts/SOURCES.md`](library-texts/SOURCES.md) for full per-title provenance
+(translator, year, source URL, and PD basis). All 14 bundled texts are public domain by age
+(R.H. Charles, G.R.S. Mead, Marcus Dods, E.B. Pusey, Longfellow, the 1611/1769 KJV, etc.); the
+Testament of Solomon reuses Joseph H. Peterson's **CC-BY** hosting of Conybeare's 1898 PD text.
+Copyrighted modern editions were deliberately excluded (the Robinson Nag Hammadi translation,
+the Soncino Zohar, Doreal's Emerald Tablets). Titles with no pre-1928 PD English translation
+(3 Enoch, the Book of Giants, the Zohar) are left unbundled and remain on the metadata view.
+
 ## Engine
 Three.js r160 (MIT) via jsDelivr CDN.
 
