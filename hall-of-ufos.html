@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>The Hall of UFOs — The Greene Museum</title>
+<meta name="description" content="A museum of the unknown, the observed, and the unexplained — a classified wing beneath the Greene Museum." />
+<style>
+  /* ============================================================
+     DESIGN SYSTEM — THE HALL OF UFOs
+     Palette per museum brief; sans for UI, serif for titles.
+     ============================================================ */
+  :root{
+    --space:#05070B;        /* deep space black */
+    --navy:#08111F;         /* museum navy      */
+    --teal:#20F0D0;         /* hologram teal    */
+    --orange:#FF8A3D;       /* signal orange    */
+    --gold:#D6B26D;         /* archive gold     */
+    --silver:#C8D0D8;       /* moon silver      */
+    --red:#FF3B30;          /* classified red   */
+    --ink:#cdd6dd;
+    --dim:#7e8a96;
+    --faint:#566370;
+    --glass:rgba(10,18,28,.62);
+    --glass-line:rgba(32,240,208,.20);
+    --sans:"SF Pro Display","Inter","Helvetica Neue","Segoe UI",system-ui,Arial,sans-serif;
+    --serif:"New York","Iowan Old Style","Palatino Linotype",Palatino,"Spectral",Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;background:var(--space);color:var(--ink);
+    font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{position:fixed;inset:0}
+  canvas#scene{display:block;position:fixed;inset:0;z-index:1}
+  a{color:var(--teal);text-decoration:none}
+  ::selection{background:rgba(32,240,208,.25);color:#fff}
+  .mono{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  .serif{font-family:var(--serif)}
+  button{font-family:inherit}
+
+  /* fine scrollbars */
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:rgba(32,240,208,.22);border-radius:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* tier chips ----------------------------------------------------*/
+  .tier{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;padding:4px 11px;border-radius:999px;border:1px solid;white-space:nowrap;line-height:1}
+  .tier::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .tier.confirmed{color:var(--teal);border-color:rgba(32,240,208,.5)}
+  .tier.witnessed{color:var(--gold);border-color:rgba(214,178,109,.5)}
+  .tier.contested{color:var(--orange);border-color:rgba(255,138,61,.5)}
+  .tier.speculative{color:#b79bff;border-color:rgba(183,155,255,.5)}
+  .tier.artistic{color:var(--silver);border-color:rgba(200,208,216,.4);border-style:dashed}
+
+  /* ===========================================================
+     GATE — enable audio / begin descent
+     =========================================================== */
+  #gate{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:7vh 22px;background:radial-gradient(ellipse at 50% 38%,#0b1422 0%,#06090f 58%,#000 100%);
+    transition:opacity 1s ease}
+  #gate .kicker{font-size:11px;letter-spacing:.52em;text-transform:uppercase;color:var(--teal);opacity:.85;margin-bottom:22px}
+  #gate h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,8vw,86px);letter-spacing:.06em;line-height:1.02;
+    color:#eef4f6;text-shadow:0 0 50px rgba(32,240,208,.28)}
+  #gate h1 .of{color:var(--teal);text-shadow:0 0 60px rgba(32,240,208,.6)}
+  #gate .tag{font-family:var(--serif);font-style:italic;font-size:clamp(14px,2.3vw,20px);color:var(--silver);
+    margin-top:20px;max-width:640px;line-height:1.6;opacity:.9}
+  #gate .clearance{margin-top:26px;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--orange);opacity:.75}
+  #gate .actions{margin-top:46px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .btn-major{position:relative;padding:17px 52px;font-size:15px;letter-spacing:.26em;text-transform:uppercase;
+    color:#03110e;background:linear-gradient(180deg,#5cf6e0,#16c7ad);border:none;border-radius:3px;cursor:pointer;
+    box-shadow:0 0 44px rgba(32,240,208,.45);transition:transform .2s,box-shadow .2s;font-weight:600}
+  .btn-major:hover{transform:translateY(-2px);box-shadow:0 0 70px rgba(32,240,208,.7)}
+  .btn-ghost{background:none;border:none;color:var(--dim);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    cursor:pointer;padding:8px}
+  .btn-ghost:hover{color:var(--teal)}
+  #gate .audio-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+  .switch{display:inline-flex;align-items:center;gap:10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--silver);cursor:pointer}
+  .switch .track{width:46px;height:24px;border-radius:999px;border:1px solid rgba(32,240,208,.4);background:rgba(32,240,208,.08);position:relative;transition:.2s}
+  .switch .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--teal);transition:.2s;box-shadow:0 0 10px var(--teal)}
+  .switch.off .track{border-color:rgba(120,134,146,.4);background:rgba(120,134,146,.06)}
+  .switch.off .knob{left:24px;background:var(--faint);box-shadow:none}
+  #gate .hint{margin-top:30px;font-size:11.5px;color:var(--faint);max-width:560px;line-height:1.7;letter-spacing:.02em}
+  #gate .hint b{color:var(--silver);font-weight:600}
+
+  /* ===========================================================
+     ELEVATOR DESCENT
+     =========================================================== */
+  #elevator{position:fixed;inset:0;z-index:70;display:none;background:#04060a;overflow:hidden}
+  #elevator .shaft{position:absolute;inset:0;background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 2px,transparent 2px 80px),
+    radial-gradient(ellipse at 50% 50%,#0a1422 0%,#04060a 70%)}
+  #elevator .readout{position:absolute;top:8%;left:0;right:0;text-align:center}
+  #elevator .depth{font-size:clamp(40px,9vw,92px);font-family:var(--serif);color:var(--teal);
+    text-shadow:0 0 40px rgba(32,240,208,.4);letter-spacing:.02em}
+  #elevator .depthlabel{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+  #elevator .marquee{position:absolute;bottom:9%;left:0;right:0;text-align:center;font-size:12px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--orange);opacity:.8;height:18px}
+  #elevator .doors{position:absolute;inset:0;display:flex;pointer-events:none}
+  #elevator .door{flex:1;background:linear-gradient(90deg,#0d1726,#060b14);position:relative;transition:transform 2.2s cubic-bezier(.7,.02,.2,1)}
+  #elevator .door.l{border-right:1px solid rgba(32,240,208,.25);box-shadow:inset -30px 0 60px rgba(0,0,0,.7)}
+  #elevator .door.r{border-left:1px solid rgba(32,240,208,.25);box-shadow:inset 30px 0 60px rgba(0,0,0,.7)}
+  #elevator .door::after{content:"";position:absolute;top:0;bottom:0;width:30%;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 26px)}
+  #elevator .door.l::after{right:6%}#elevator .door.r::after{left:6%}
+  #elevator.open .door.l{transform:translateX(-102%)}
+  #elevator.open .door.r{transform:translateX(102%)}
+  #elevator .seam{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);
+    background:linear-gradient(180deg,transparent,rgba(32,240,208,.6),transparent);box-shadow:0 0 18px rgba(32,240,208,.7);transition:opacity .6s}
+  #elevator.open .seam{opacity:0}
+  #elevator .skip{position:absolute;bottom:4%;right:5%;z-index:5}
+
+  /* ===========================================================
+     HUB HUD — title, compass, controls
+     =========================================================== */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;transition:opacity 1.2s ease}
+  #hud.show{opacity:1}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%)}
+  #scanline{position:absolute;inset:0;opacity:.05;background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+
+  /* top bar */
+  #topbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+  #topbar .t{font-family:var(--serif);font-size:16px;letter-spacing:.34em;text-transform:uppercase;color:#dfe9ee;text-shadow:0 1px 6px #000}
+  #topbar .s{font-size:9.5px;letter-spacing:.46em;text-transform:uppercase;color:var(--teal);opacity:.7;margin-top:5px}
+
+  /* glass nav (top-left) */
+  #brand{position:absolute;top:14px;left:16px;display:flex;align-items:center;gap:11px;pointer-events:auto}
+  #brand .seal{width:34px;height:34px;border-radius:50%;border:1px solid rgba(32,240,208,.45);position:relative;flex:none;
+    background:radial-gradient(circle at 50% 40%,rgba(32,240,208,.22),transparent 70%)}
+  #brand .seal::before,#brand .seal::after{content:"";position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(32,240,208,.35)}
+  #brand .seal::after{inset:11px;border-color:rgba(214,178,109,.5)}
+  #brand .lbl{font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--dim);line-height:1.5}
+  #brand .lbl b{display:block;color:var(--silver);font-weight:600;font-size:10.5px;letter-spacing:.2em}
+
+  /* control buttons (top-right) */
+  #controls{position:absolute;top:14px;right:14px;display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
+  .ibtn{pointer-events:auto;background:var(--glass);border:1px solid var(--glass-line);color:var(--silver);
+    font-size:11px;letter-spacing:.12em;padding:9px 13px;border-radius:4px;cursor:pointer;backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);transition:.18s;white-space:nowrap}
+  .ibtn:hover{background:rgba(32,240,208,.14);border-color:rgba(32,240,208,.5);color:#eafffb}
+  .ibtn.off{color:var(--faint);border-color:rgba(120,134,146,.28)}
+  .ibtn:focus-visible,a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  /* center prompt */
+  #centerhint{position:absolute;left:50%;bottom:15%;transform:translateX(-50%);text-align:center;
+    font-size:12.5px;letter-spacing:.16em;color:var(--silver);background:var(--glass);border:1px solid var(--glass-line);
+    padding:11px 22px;border-radius:999px;backdrop-filter:blur(10px);opacity:0;transition:opacity .5s;max-width:88vw}
+  #centerhint.show{opacity:.92}
+  #centerhint .key{display:inline-block;border:1px solid var(--teal);border-radius:4px;padding:1px 7px;margin:0 3px;font-size:11px;color:var(--teal)}
+
+  /* compass — exhibit selector (bottom-right) */
+  #compass{position:absolute;right:16px;bottom:16px;width:min(330px,86vw);max-height:62vh;pointer-events:auto;
+    background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;
+    transform:translateY(calc(100% - 52px));transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+  #compass.open{transform:translateY(0)}
+  #compass .ch{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;cursor:pointer;
+    border-bottom:1px solid rgba(32,240,208,.12)}
+  #compass .ch .ttl{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal)}
+  #compass .ch .chev{color:var(--dim);font-size:13px;transition:transform .3s}
+  #compass.open .ch .chev{transform:rotate(180deg)}
+  #compass .list{overflow-y:auto;max-height:calc(62vh - 52px)}
+  .exrow{display:flex;align-items:center;gap:13px;padding:12px 18px;cursor:pointer;border-left:3px solid transparent;transition:.15s}
+  .exrow:hover,.exrow:focus-visible{background:rgba(32,240,208,.08);border-left-color:var(--teal);outline:none}
+  .exrow .num{font-family:var(--serif);font-size:15px;color:var(--teal);width:30px;flex:none;opacity:.8}
+  .exrow .meta .nm{font-size:14px;color:#e7eef2;letter-spacing:.01em}
+  .exrow .meta .ds{font-size:11px;color:var(--dim);margin-top:2px}
+  .exrow.core .num{color:var(--gold)}
+  .exrow.core .nm{color:#fff}
+
+  /* ===========================================================
+     EXHIBIT OVERLAY (rooms)
+     =========================================================== */
+  #exhibit{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;
+    background:linear-gradient(180deg,rgba(5,8,13,.93),rgba(4,6,11,.97));backdrop-filter:blur(4px);opacity:0;transition:opacity .5s ease}
+  #exhibit.show{display:flex;opacity:1}
+  #exhibit .roomglow{position:absolute;inset:0;pointer-events:none;opacity:.5;z-index:0;transition:background .8s}
+  #exhibit .exhead{position:relative;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+    padding:22px clamp(18px,4vw,52px) 18px;border-bottom:1px solid rgba(32,240,208,.14);
+    background:linear-gradient(180deg,rgba(8,14,24,.7),transparent)}
+  #exhibit .exhead .eyebrow{font-size:10.5px;letter-spacing:.4em;text-transform:uppercase;color:var(--teal);opacity:.85}
+  #exhibit .exhead h2{font-family:var(--serif);font-weight:400;font-size:clamp(26px,4.4vw,46px);color:#eef4f6;
+    line-height:1.04;margin:9px 0 8px;letter-spacing:.01em}
+  #exhibit .exhead .thesis{font-family:var(--serif);font-style:italic;color:var(--silver);font-size:clamp(14px,2vw,19px);max-width:720px;line-height:1.5}
+  #exhibit .exhead .htools{display:flex;gap:8px;flex:none}
+  #exclose{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid rgba(32,240,208,.4);background:var(--glass);
+    color:var(--silver);font-size:22px;cursor:pointer;line-height:1;transition:.18s}
+  #exclose:hover{background:rgba(255,59,48,.18);border-color:var(--red);color:#ffd9d5}
+  #exbody{position:relative;z-index:2;flex:1;overflow-y:auto;padding:clamp(18px,3.5vw,40px) clamp(18px,4vw,52px) 130px;scroll-behavior:smooth}
+  #exfoot{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px clamp(18px,4vw,52px);background:linear-gradient(0deg,rgba(5,8,13,.96),rgba(5,8,13,.7) 70%,transparent);
+    border-top:1px solid rgba(32,240,208,.12);flex-wrap:wrap}
+  #exfoot .closing{font-family:var(--serif);font-style:italic;color:var(--gold);font-size:14.5px;max-width:60%;line-height:1.4}
+  #exfoot .nav{display:flex;gap:9px;align-items:center}
+  .navbtn{background:var(--glass);border:1px solid var(--glass-line);color:var(--silver);font-size:12px;letter-spacing:.08em;
+    padding:11px 16px;border-radius:6px;cursor:pointer;transition:.18s}
+  .navbtn:hover{background:rgba(32,240,208,.14);color:#eafffb;border-color:rgba(32,240,208,.5)}
+  .navbtn.primary{background:linear-gradient(180deg,#23e7cf,#13b69d);color:#04130f;border:none;font-weight:600}
+
+  /* shared exhibit content components */
+  .lead{font-size:15.5px;line-height:1.8;color:#c4cfd7;max-width:760px;margin:0 0 22px}
+  .lead.big{font-size:17px}
+  .section-rule{display:flex;align-items:center;gap:14px;margin:34px 0 18px}
+  .section-rule .ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(32,240,208,.5),transparent)}
+  .section-rule .lb{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--teal)}
+  .grid{display:grid;gap:16px}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .card{background:linear-gradient(160deg,rgba(14,24,38,.7),rgba(8,14,24,.6));border:1px solid rgba(32,240,208,.14);
+    border-radius:12px;padding:18px;transition:.2s;position:relative;overflow:hidden}
+  .card:hover{border-color:rgba(32,240,208,.4);transform:translateY(-3px);box-shadow:0 14px 40px rgba(0,0,0,.4)}
+  .card h3{font-family:var(--serif);font-weight:400;font-size:20px;color:#eaf2f5;margin-bottom:4px;line-height:1.15}
+  .card .sub{font-size:12px;color:var(--dim);letter-spacing:.04em;margin-bottom:11px}
+  .card p{font-size:13.5px;line-height:1.65;color:#aeb9c2}
+  .kv{display:flex;gap:10px;font-size:13px;margin:6px 0;line-height:1.5}
+  .kv .k{color:var(--teal);min-width:120px;flex:none;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;padding-top:2px}
+  .kv .v{color:#c4cfd7}
+
+  /* credibility meter */
+  .meter{margin:5px 0}
+  .meter .ml{display:flex;justify-content:space-between;font-size:11px;color:var(--silver);margin-bottom:4px;letter-spacing:.02em}
+  .meter .ml span:last-child{color:var(--teal);font-variant-numeric:tabular-nums}
+  .meter .bar{height:6px;border-radius:4px;background:rgba(120,134,146,.18);overflow:hidden}
+  .meter .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#16c7ad,var(--teal));box-shadow:0 0 10px rgba(32,240,208,.5)}
+
+  /* toggle button group */
+  .seg{display:inline-flex;flex-wrap:wrap;gap:6px;background:rgba(8,14,24,.5);border:1px solid rgba(32,240,208,.16);border-radius:10px;padding:6px}
+  .seg button{background:none;border:none;color:var(--dim);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    padding:8px 14px;border-radius:7px;cursor:pointer;transition:.16s}
+  .seg button:hover{color:var(--silver)}
+  .seg button.active{background:rgba(32,240,208,.18);color:#eafffb;box-shadow:inset 0 0 0 1px rgba(32,240,208,.4)}
+
+  /* sliders */
+  .slider-row{display:grid;grid-template-columns:130px 1fr 74px;align-items:center;gap:14px;margin:14px 0}
+  .slider-row label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+  .slider-row output{font-variant-numeric:tabular-nums;font-size:13px;color:#dfe9ee;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;
+    background:linear-gradient(90deg,var(--teal),rgba(32,240,208,.15));outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#eafffb;box-shadow:0 0 12px var(--teal);cursor:pointer;border:2px solid var(--teal)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#eafffb;border:2px solid var(--teal);cursor:pointer}
+
+  /* canvas widget frames */
+  .stage{position:relative;width:100%;border-radius:14px;overflow:hidden;border:1px solid rgba(32,240,208,.18);
+    background:radial-gradient(ellipse at 50% 40%,#0a1626,#05080d);box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+  .stage canvas{display:block;width:100%;height:100%}
+  .stage .badge{position:absolute;top:12px;left:12px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--teal);background:rgba(5,8,13,.6);border:1px solid rgba(32,240,208,.3);padding:5px 10px;border-radius:5px}
+
+  .warn{display:flex;align-items:center;gap:10px;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.4);
+    color:#ffc9c4;border-radius:9px;padding:11px 15px;font-size:13px;margin:8px 0;letter-spacing:.02em}
+  .warn::before{content:"⚠";color:var(--red);font-size:15px}
+  .note-ok{display:flex;align-items:center;gap:10px;background:rgba(32,240,208,.07);border:1px solid rgba(32,240,208,.3);
+    color:#bdeee5;border-radius:9px;padding:11px 15px;font-size:13px;margin:8px 0}
+  .note-ok::before{content:"◷";color:var(--teal)}
+
+  .inscription{font-family:var(--serif);text-align:center;margin:40px auto;max-width:840px}
+  .inscription .big{font-size:clamp(30px,5.5vw,58px);letter-spacing:.04em;line-height:1.1;color:#eef4f6;
+    text-shadow:0 0 50px rgba(32,240,208,.3)}
+  .inscription .small{font-style:italic;color:var(--gold);font-size:clamp(15px,2.3vw,22px);margin-top:18px}
+
+  /* monolith / final */
+  .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;max-width:780px;margin:26px auto 0}
+  .choice{background:linear-gradient(160deg,rgba(14,24,38,.66),rgba(8,14,24,.6));border:1px solid rgba(32,240,208,.2);
+    border-radius:11px;padding:18px;cursor:pointer;text-align:left;color:#d6e0e7;font-size:14.5px;line-height:1.45;
+    font-family:var(--serif);transition:.2s}
+  .choice:hover{border-color:var(--teal);background:rgba(32,240,208,.1);transform:translateY(-2px)}
+
+  /* timeline strip */
+  .timeline{display:flex;gap:16px;overflow-x:auto;padding:6px 2px 20px;scroll-snap-type:x mandatory}
+  .tcard{scroll-snap-align:start;flex:0 0 clamp(230px,30vw,300px);background:linear-gradient(170deg,rgba(14,24,38,.7),rgba(8,14,24,.55));
+    border:1px solid rgba(32,240,208,.16);border-radius:12px;padding:18px;display:flex;flex-direction:column}
+  .tcard .yr{font-family:var(--serif);font-size:13px;color:var(--gold);letter-spacing:.1em}
+  .tcard h4{font-family:var(--serif);font-weight:400;font-size:19px;color:#eaf2f5;margin:6px 0 8px;line-height:1.15}
+  .tcard .what{font-size:13px;color:#aeb9c2;line-height:1.6;flex:1}
+  .tcard .interp{margin-top:12px;font-size:13px;line-height:1.55;color:var(--teal);border-top:1px solid rgba(32,240,208,.16);padding-top:11px;min-height:64px}
+  .tcard .interp b{color:#bdeee5;font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;display:block;margin-bottom:4px}
+
+  /* archive document files */
+  .docrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  .doc{background:linear-gradient(160deg,rgba(16,24,36,.75),rgba(9,14,22,.6));border:1px solid rgba(214,178,109,.2);
+    border-radius:11px;padding:0;overflow:hidden;cursor:pointer;transition:.2s}
+  .doc:hover{border-color:rgba(214,178,109,.55);transform:translateY(-3px)}
+  .doc .dh{padding:14px 16px;border-bottom:1px dashed rgba(214,178,109,.3);background:rgba(214,178,109,.05)}
+  .doc .dh .claz{font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--orange);opacity:.85}
+  .doc .dh h4{font-family:var(--serif);font-weight:400;font-size:18px;color:#eef0e6;margin-top:5px;line-height:1.2}
+  .doc .db{padding:14px 16px;font-size:13px;color:#b3bcc4;line-height:1.6}
+  .doc .db .redact{display:inline-block;background:#1a232e;color:transparent;border-radius:2px;padding:0 2px;user-select:none}
+
+  /* language shift wall */
+  .langwall{display:flex;gap:0;flex-wrap:wrap;margin:14px 0;border:1px solid rgba(32,240,208,.16);border-radius:12px;overflow:hidden}
+  .langstep{flex:1;min-width:150px;padding:16px 14px;border-right:1px solid rgba(32,240,208,.12);
+    background:linear-gradient(180deg,rgba(10,18,28,.6),rgba(6,10,16,.5));position:relative}
+  .langstep:last-child{border-right:none}
+  .langstep .yr{font-size:11px;color:var(--gold);letter-spacing:.1em}
+  .langstep .term{font-family:var(--serif);font-size:17px;color:#eaf2f5;margin:6px 0}
+  .langstep .mood{font-size:11px;color:var(--dim);font-style:italic}
+  .langstep:nth-child(odd){background:linear-gradient(180deg,rgba(12,22,34,.6),rgba(6,10,16,.5))}
+
+  /* contact themes */
+  .themegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .theme{padding:20px;border-radius:12px;border:1px solid rgba(200,208,216,.16);background:rgba(10,16,24,.4);text-align:center}
+  .theme .q{font-family:var(--serif);font-style:italic;font-size:17px;color:#dfe9ee;line-height:1.4}
+  .theme .a{font-size:13px;color:#9fabb5;line-height:1.6;margin-top:10px}
+
+  /* error / no-webgl */
+  #err{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:40px;text-align:center;
+    background:radial-gradient(ellipse at 50% 40%,#0a1422,#04060a)}
+  #err .box{max-width:560px}
+  #err h2{font-family:var(--serif);color:var(--orange);font-weight:400;font-size:28px;margin-bottom:14px;letter-spacing:.04em}
+  #err p{color:#aeb9c2;line-height:1.7;font-size:15px;margin-bottom:22px}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:11%;transform:translate(-50%,12px);z-index:55;background:var(--glass);
+    border:1px solid var(--glass-line);backdrop-filter:blur(12px);color:#eafffb;padding:13px 24px;border-radius:999px;
+    font-size:13.5px;letter-spacing:.03em;opacity:0;transition:.35s;pointer-events:none;text-align:center;max-width:88vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast b{color:var(--teal);font-weight:600}
+
+  /* reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;transition-duration:.18s !important}
+  }
+
+  /* responsive / mobile */
+  @media (max-width:760px){
+    #topbar .t{font-size:12.5px;letter-spacing:.22em}
+    #topbar .s{display:none}
+    #brand .lbl{display:none}
+    #exhibit .exhead{flex-direction:column}
+    #exfoot .closing{max-width:100%;font-size:12.5px}
+    #exfoot{gap:10px}
+    .slider-row{grid-template-columns:96px 1fr 60px;gap:9px}
+    .kv{flex-direction:column;gap:2px}
+    .kv .k{min-width:0}
+    #compass{right:10px;bottom:10px;left:10px;width:auto}
+  }
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ====================== GATE ====================== -->
+<div id="gate">
+  <div class="kicker">The Greene Museum · Sublevel Archive</div>
+  <h1 class="serif">The Hall <span class="of">of</span> UFOs</h1>
+  <p class="tag">A museum of the unknown, the observed, and the unexplained — a record of what humanity has seen, feared, studied, and never fully explained.</p>
+  <div class="clearance">▣ Restricted Wing · Clearance Granted · Descent Authorized</div>
+  <div class="actions">
+    <button class="btn-major" id="begin">Begin the Descent</button>
+    <div class="audio-row">
+      <div class="switch" id="audioToggle" role="switch" aria-checked="true" tabindex="0">
+        <span class="track"><span class="knob"></span></span>
+        <span>Enable Audio</span>
+      </div>
+    </div>
+    <button class="btn-ghost" id="reduceToggle" aria-pressed="false">◑ Reduced motion: off</button>
+  </div>
+  <div class="hint">This wing builds a real-time 3D chamber and a procedurally generated soundscape — <b>sub-bass hum, radar pings, distant chatter</b>. Audio is optional and stays under your control. Best with headphones. <b>Drag</b> to look · <b>scroll/pinch</b> to move · select any portal to enter an exhibit.</div>
+</div>
+
+<!-- ====================== ELEVATOR ====================== -->
+<div id="elevator" aria-hidden="true">
+  <div class="shaft"></div>
+  <div class="readout">
+    <div class="depth mono" id="depth">−0 m</div>
+    <div class="depthlabel" id="depthlabel">Greene Museum · Main Atrium</div>
+  </div>
+  <div class="marquee" id="marquee">● descending ● pressurizing ● aligning archive</div>
+  <div class="doors"><div class="door l"></div><div class="door r"></div><div class="seam"></div></div>
+  <button class="btn-ghost skip" id="elevSkip">skip ▸</button>
+</div>
+
+<!-- ====================== SCENE ====================== -->
+<canvas id="scene"></canvas>
+
+<!-- ====================== HUD ====================== -->
+<div id="hud">
+  <div id="vignette"></div>
+  <div id="scanline"></div>
+  <div id="topbar"><div class="t serif">The Hall of UFOs</div><div class="s">A record of the observed &amp; the unexplained</div></div>
+
+  <div id="brand">
+    <div class="seal" aria-hidden="true"></div>
+    <div class="lbl"><b>The Greene Museum</b>Hall of the Unknown</div>
+  </div>
+
+  <div id="controls">
+    <button class="ibtn" id="btnAudio">◉ Audio On</button>
+    <button class="ibtn" id="btnAmbience">Ambience</button>
+    <button class="ibtn" id="btnReduce">Motion</button>
+    <a class="ibtn" href="index.html" id="btnExit">↩ Atrium</a>
+  </div>
+
+  <div id="centerhint"><span class="key">drag</span> look · <span class="key">scroll</span> approach · <span class="key">click a portal</span> to enter · <span class="key">⊕</span> compass for the directory</div>
+
+  <!-- compass / directory -->
+  <nav id="compass" aria-label="Exhibit directory">
+    <div class="ch" id="compassHead" tabindex="0" role="button" aria-expanded="false">
+      <span class="ttl">⊕ Exhibit Compass</span><span class="chev">▲</span>
+    </div>
+    <div class="list" id="compassList"></div>
+  </nav>
+</div>
+
+<!-- ====================== EXHIBIT OVERLAY ====================== -->
+<div id="exhibit" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+  <div class="roomglow" id="roomglow"></div>
+  <div class="exhead">
+    <div>
+      <div class="eyebrow" id="exEyebrow">Exhibit</div>
+      <h2 class="serif" id="exTitle">Title</h2>
+      <div class="thesis" id="exThesis">Thesis</div>
+    </div>
+    <div class="htools">
+      <button id="exclose" aria-label="Return to the main hall">×</button>
+    </div>
+  </div>
+  <div id="exbody"></div>
+  <div id="exfoot">
+    <div class="closing serif" id="exClosing"></div>
+    <div class="nav">
+      <button class="navbtn" id="exPrev">‹ Prev</button>
+      <button class="navbtn primary" id="exReturn">Return to Main Hall</button>
+      <button class="navbtn" id="exNext">Next ›</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== ERROR ====================== -->
+<div id="err"><div class="box">
+  <h2>The Chamber Could Not Be Rendered</h2>
+  <p id="errmsg">This wing builds a real-time 3D chamber and needs WebGL plus a one-time download of the rendering engine. The exhibits remain fully open below — the 3D hub is the only part that requires it.</p>
+  <button class="btn-major" id="errContinue">Enter the Archive Anyway</button>
+</div></div>
+
+<div id="toast"></div>
+
+<!-- ====================== ENGINE ====================== -->
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+/* =====================================================================
+   THE HALL OF UFOs  ·  The Greene Museum
+   A self-contained cinematic museum wing.
+   Sections:  (A) State + helpers   (B) Audio engine   (C) Exhibit data
+              (D) Exhibit renderers  (E) Overlay system  (F) Three.js hub
+   ===================================================================== */
+
+/* ----------------------------------------------------------------------
+   (A) STATE + SMALL HELPERS
+   ---------------------------------------------------------------------- */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const fmt=n=>n.toLocaleString('en-US');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const reduceQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const state = {
+  audioOn: true,
+  reduced: reduceQuery.matches,
+  ambience: true,
+  started: false,
+  webgl: false,
+  currentExhibit: -1,
+  hubReady: false,
+};
+let widgetCleanup = null;   // stop fn for the open exhibit's animations
+
+function tierChip(tier){
+  const map={
+    confirmed:'Confirmed / Documented', witnessed:'Witnessed / Reported',
+    contested:'Contested / Unverified', speculative:'Speculative / Mythic',
+    artistic:'Artistic Reconstruction'
+  };
+  return `<span class="tier ${tier}">${map[tier]||tier}</span>`;
+}
+function toast(html, ms=2600){
+  const t=$('#toast'); t.innerHTML=html; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* ----------------------------------------------------------------------
+   (B) PROCEDURAL AUDIO ENGINE  (WebAudio — no asset files)
+   Beds: sub-bass hum, room-tone noise, radar pings, faint radio chatter.
+   Per-room ambience layers fade in/out on enter.
+   ---------------------------------------------------------------------- */
+const Audio = (()=> {
+  let ctx=null, master=null, hum=null, room=null, pingTimer=null, chatterTimer=null;
+  let started=false, room_layer=null, noiseBuf=null;
+  function noise(seconds=2){
+    const len=ctx.sampleRate*seconds, b=ctx.createBuffer(1,len,ctx.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    return b;
+  }
+  function ensure(){
+    if(ctx) return;
+    const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+    master=ctx.createGain(); master.gain.value=0; master.connect(ctx.destination);
+    noiseBuf=noise(3);
+
+    // sub-bass hum: two detuned low sines + filtered noise floor
+    hum=ctx.createGain(); hum.gain.value=.6; hum.connect(master);
+    [42,63.5].forEach((f,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=ctx.createGain(); g.gain.value=i?0.12:0.2; o.connect(g).connect(hum); o.start(); });
+    const lfo=ctx.createOscillator(); lfo.frequency.value=0.07; const lg=ctx.createGain(); lg.gain.value=0.06;
+    lfo.connect(lg).connect(hum.gain); lfo.start();
+
+    // room tone: looping noise through a low bandpass (metallic air)
+    room=ctx.createGain(); room.gain.value=0.05; room.connect(master);
+    const rn=ctx.createBufferSource(); rn.buffer=noiseBuf; rn.loop=true;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=420; bp.Q.value=0.6;
+    rn.connect(bp).connect(room); rn.start();
+
+    schedulePing(); scheduleChatter();
+  }
+  function pingOnce(){
+    if(!ctx||!state.audioOn) return;
+    const t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(880,t);
+    o.frequency.exponentialRampToValueAtTime(640,t+0.18);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.9);
+    const dl=ctx.createDelay(); dl.delayTime.value=0.26; const fb=ctx.createGain(); fb.gain.value=0.32;
+    dl.connect(fb).connect(dl); g.connect(dl).connect(master); o.connect(g).connect(master);
+    o.start(t); o.stop(t+1);
+  }
+  function schedulePing(){
+    clearTimeout(pingTimer);
+    const delay = state.reduced ? 9000 : (3200+Math.random()*2600);
+    pingTimer=setTimeout(()=>{ pingOnce(); schedulePing(); }, delay);
+  }
+  function chatterOnce(){
+    if(!ctx||!state.audioOn||state.reduced) return;
+    const t=ctx.currentTime, dur=0.5+Math.random()*0.8;
+    const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1100+Math.random()*900; bp.Q.value=6;
+    const g=ctx.createGain(); g.gain.value=0; src.connect(bp).connect(g).connect(master);
+    // syllable-like amplitude wobble
+    const am=ctx.createOscillator(); am.type='square'; am.frequency.value=5+Math.random()*7;
+    const amg=ctx.createGain(); amg.gain.value=0.018; am.connect(amg).connect(g.gain);
+    g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.022,t+0.1);
+    g.gain.setValueAtTime(0.022,t+dur-0.1); g.gain.linearRampToValueAtTime(0.0001,t+dur);
+    src.start(t); src.stop(t+dur); am.start(t); am.stop(t+dur);
+  }
+  function scheduleChatter(){
+    clearTimeout(chatterTimer);
+    chatterTimer=setTimeout(()=>{ chatterOnce(); scheduleChatter(); }, 7000+Math.random()*9000);
+  }
+  function fadeMaster(to,ms=600){
+    if(!ctx) return; const t=ctx.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(master.gain.value,t);
+    master.gain.linearRampToValueAtTime(to,t+ms/1000);
+  }
+  return {
+    start(){ if(started) return; ensure(); started=true;
+      if(ctx.state==='suspended') ctx.resume();
+      fadeMaster(state.audioOn?0.9:0, 1500);
+    },
+    setOn(on){ state.audioOn=on;
+      if(ctx){ if(on && ctx.state==='suspended') ctx.resume(); fadeMaster(on?0.9:0,500); }
+      if(on && started){ schedulePing(); scheduleChatter(); }
+    },
+    // a soft cue chord for transitions / selections
+    cue(base=523.25, vol=0.1){
+      if(!ctx||!state.audioOn) return; const t=ctx.currentTime;
+      [1,1.5,2].forEach((m,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=base*m;
+        const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+        g.gain.exponentialRampToValueAtTime(vol*(1-i*0.25),t+0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+1.6); o.connect(g).connect(master); o.start(t); o.stop(t+1.7); });
+    },
+    // swap a per-room ambience layer (kind: 'pilot'|'contact'|'archive'|'science'|'ancient'|null)
+    room(kind){
+      if(!ctx||!state.ambience) { if(room_layer){ try{room_layer.stop();}catch(e){} room_layer=null;} return; }
+      if(room_layer){ try{room_layer.stop();}catch(e){} room_layer=null; }
+      const t=ctx.currentTime, out=ctx.createGain(); out.gain.value=0; out.connect(master);
+      let nodes=[];
+      if(kind==='pilot'){ // ocean wind: noise through slowly sweeping lowpass
+        const s=ctx.createBufferSource(); s.buffer=noiseBuf; s.loop=true;
+        const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=500;
+        const l=ctx.createOscillator(); l.frequency.value=0.08; const lg=ctx.createGain(); lg.gain.value=260;
+        l.connect(lg).connect(lp.frequency); s.connect(lp).connect(out); s.start(); l.start(); nodes=[s,l];
+        out.gain.linearRampToValueAtTime(0.08,t+1.2);
+      } else if(kind==='contact'){ // distant choir: soft detuned sines
+        [220,277.18,329.63].forEach((f,i)=>{ const o=ctx.createOscillator(); o.type='sine';
+          o.frequency.value=f; const g=ctx.createGain(); g.gain.value=0; o.connect(g).connect(out);
+          g.gain.linearRampToValueAtTime(0.03,t+2.5); o.start(); nodes.push(o);
+          const v=ctx.createOscillator(); v.frequency.value=0.1+i*0.05; const vg=ctx.createGain(); vg.gain.value=1.5;
+          v.connect(vg).connect(o.detune); v.start(); nodes.push(v); });
+        out.gain.linearRampToValueAtTime(0.7,t+2);
+      } else if(kind==='science'){ // electrical resonance shimmer
+        const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=180;
+        const g=ctx.createGain(); g.gain.value=0; o.connect(g).connect(out);
+        const l=ctx.createOscillator(); l.frequency.value=6; const lg=ctx.createGain(); lg.gain.value=40;
+        l.connect(lg).connect(o.frequency); o.start(); l.start(); nodes=[o,l];
+        out.gain.linearRampToValueAtTime(0.04,t+1.4);
+      } else if(kind==='archive'){ // tape hiss
+        const s=ctx.createBufferSource(); s.buffer=noiseBuf; s.loop=true;
+        const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2600;
+        s.connect(hp).connect(out); s.start(); nodes=[s]; out.gain.linearRampToValueAtTime(0.03,t+1);
+      } else if(kind==='ancient'){ // low drone + slow bowl
+        const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=98;
+        const g=ctx.createGain(); g.gain.value=0; o.connect(g).connect(out); o.start(); nodes=[o];
+        out.gain.linearRampToValueAtTime(0.06,t+2);
+      }
+      room_layer={ stop(){ const tt=ctx.currentTime; out.gain.cancelScheduledValues(tt);
+        out.gain.setValueAtTime(out.gain.value,tt); out.gain.linearRampToValueAtTime(0,tt+0.8);
+        nodes.forEach(n=>{ try{ n.stop(tt+0.9); }catch(e){} }); } };
+    },
+    pageTurn(){ if(!ctx||!state.audioOn) return; const t=ctx.currentTime;
+      const s=ctx.createBufferSource(); s.buffer=noiseBuf; s.loop=true;
+      const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=3000; bp.Q.value=2;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+      g.gain.linearRampToValueAtTime(0.05,t+0.04); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+      s.connect(bp).connect(g).connect(master); s.start(t); s.stop(t+0.25);
+    }
+  };
+})();
+
+/* ----------------------------------------------------------------------
+   (C) EXHIBIT DATA — eight rooms. Each carries title, thesis, label,
+   closing question, an accent hue, and a render() that builds its body.
+   ---------------------------------------------------------------------- */
+const EXHIBITS = [
+  /* 1 -------------------------------------------------------------- */
+  { id:'sky', n:'I', title:'The Sky Before History', accent:'#D6B26D', glyph:'eye',
+    angle:0,
+    thesis:'Humanity has always looked upward and recorded encounters with lights, wheels, messengers, and fire.',
+    closing:'Did our ancestors see the unknown — or invent the language we still use to describe it?',
+    render: renderSky },
+  /* 2 -------------------------------------------------------------- */
+  { id:'modern', n:'II', title:'The Modern Age of Sightings', accent:'#C8D0D8', glyph:'disc',
+    angle:45,
+    thesis:'From foo fighters to flying discs — the moment the unknown entered the age of radar, film, and the press.',
+    closing:'A sighting is not proof. But what does a pattern of sightings deserve?',
+    render: renderModern },
+  /* 3 -------------------------------------------------------------- */
+  { id:'pilot', n:'III', title:"The Pilot's Room", accent:'#20F0D0', glyph:'jet',
+    angle:90,
+    thesis:'When trained observers report something they cannot identify, the question is not belief. It is investigation.',
+    closing:'If the instruments and the eyes agree — what is left to dismiss?',
+    render: renderPilot },
+  /* 4 -------------------------------------------------------------- */
+  { id:'shapes', n:'IV', title:'The Shape Gallery', accent:'#b79bff', glyph:'orb',
+    angle:135,
+    thesis:'Forms of the unknown — the recurring silhouettes that witnesses across decades keep describing.',
+    closing:'Why do the same shapes return, to people who never met?',
+    render: renderShapes },
+  /* 5 -------------------------------------------------------------- */
+  { id:'propulsion', n:'V', title:'Propulsion of the Impossible', accent:'#5fa8ff', glyph:'field',
+    angle:180,
+    thesis:'Physics, fields, and speculation — exploring how such movement could work, without pretending we know that it does.',
+    closing:'Where exactly does known physics end and speculation begin?',
+    render: renderPropulsion },
+  /* 6 -------------------------------------------------------------- */
+  { id:'archive', n:'VI', title:'The Archive of Disclosure', accent:'#FF8A3D', glyph:'file',
+    angle:225,
+    thesis:'Documents, hearings, signals, silence — and how the public language shifted from ridicule to investigation.',
+    closing:'The answers have not arrived. But why are the questions finally allowed?',
+    render: renderArchive },
+  /* 7 -------------------------------------------------------------- */
+  { id:'contact', n:'VII', title:'The Contact Room', accent:'#9fb4ff', glyph:'figure',
+    angle:270,
+    thesis:'Human meaning, fear, faith, and the Other — why we keep looking up, and what it reveals about us.',
+    closing:'When we imagine who is out there, who are we really describing?',
+    render: renderContact },
+  /* 8 -------------------------------------------------------------- */
+  { id:'greene', n:'VIII', title:'The Greene Interpretation', accent:'#20F0D0', glyph:'monolith',
+    angle:315,
+    thesis:'Mystery is not the enemy of reason. Mystery is where exploration begins.',
+    closing:'What do you believe is possible?',
+    render: renderGreene },
+];
+
+/* shared sub-builders ---------------------------------------------------*/
+function meter(label,val){ return `<div class="meter"><div class="ml"><span>${esc(label)}</span><span>${val}%</span></div>
+  <div class="bar"><i style="width:${clamp(val,0,100)}%"></i></div></div>`; }
+
+/* ----------------------------------------------------------------------
+   (D) EXHIBIT RENDERERS
+   Each returns optionally a cleanup function (stops canvas animation).
+   ---------------------------------------------------------------------- */
+
+/* ---- canvas helper: a self-stopping RAF loop ----------------------- */
+function rafLoop(draw){
+  let id, t0=performance.now(), running=true;
+  function frame(now){ if(!running) return; draw((now-t0)/1000); id=requestAnimationFrame(frame); }
+  id=requestAnimationFrame(frame);
+  return ()=>{ running=false; cancelAnimationFrame(id); };
+}
+function fitCanvas(cv, h){
+  const dpr=Math.min(devicePixelRatio||1, 2);
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  cv.width=w*dpr; cv.height=(h||cv.clientHeight)*dpr;
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); return c;
+}
+
+/* ===== EXHIBIT 1 — THE SKY BEFORE HISTORY ===== */
+function renderSky(body){
+  Audio.room('ancient');
+  const ENTRIES=[
+    {yr:'c. 1600 BCE', t:'The Nebra Sky Disc', what:'A bronze disc inlaid with gold sun, moon, and a cluster read as the Pleiades — among the oldest known maps of the sky.',
+      interp:{Religious:'A cultic instrument: the heavens rendered sacred and portable.',Astronomical:'A genuine calendrical tool encoding solstice horizons.',Mythic:'The vault of heaven brought down into the hand.',Speculative:'Evidence of unexpectedly early, precise sky-watching.',Psychological:'The human need to fix the wandering lights in place.'}},
+    {yr:'c. 50 BCE', t:'The Dendera Zodiac', what:'An Egyptian temple ceiling mapping constellations and planetary positions as a circle of divine figures.',
+      interp:{Religious:'The sky as a council of gods, each star a presence.',Astronomical:'A datable star-map of real planetary alignments.',Mythic:'Order imposed on the night by sacred story.',Speculative:'A record argued by some to encode rare conjunctions.',Psychological:'Comfort drawn from a cosmos that can be named.'}},
+    {yr:'c. 593 BCE', t:"Ezekiel's Wheel", what:'A prophet by the river Chebar describes wheels within wheels, gleaming like beryl, full of eyes, moving without turning.',
+      interp:{Religious:'A theophany — the mobile throne-chariot of God.',Astronomical:'Possibly a luminous atmospheric or storm phenomenon.',Mythic:'The vehicle of the divine, recurring across cultures.',Speculative:'Read by some as a described craft; the text resists it.',Psychological:'Vision under exile: the mind reaching for the transcendent.'}},
+    {yr:'1561', t:'The Nuremberg Broadsheet', what:'A printed woodcut reports cylinders, spheres, and crosses seen battling in the dawn sky over the city.',
+      interp:{Religious:'An omen — a sign of divine displeasure read in the heavens.',Astronomical:'Likely a sun-dog / parhelion ice-halo display.',Mythic:'The sky as a stage for cosmic conflict.',Speculative:'Cited in modern UFO literature, though its frame is news, not science.',Psychological:'A society primed to read warning into the air.'}},
+    {yr:'Ancient', t:'Chariots of Fire', what:'Across Hebrew, Greek, and Vedic texts, the holy and the heroic ascend in wheels, chariots, and flying cars of light.',
+      interp:{Religious:'Ascension: the body taken up beyond the world.',Astronomical:'Meteors and fireballs woven into sacred memory.',Mythic:'A near-universal grammar of flight and the divine.',Speculative:'A motif later re-read through a technological lens.',Psychological:'The longing to be lifted out of mortality.'}},
+    {yr:'Pre-history', t:'The Painted Sky', what:'Cave and rock art the world over fixes discs, rayed figures, and beings descending — the first records of looking up.',
+      interp:{Religious:'Shamanic encounter with sky-spirits and ancestors.',Astronomical:'Suns, comets, and eclipses preserved in pigment.',Mythic:'The origin of the sky-being, told before writing.',Speculative:'Ambiguous forms that invite — and resist — modern reading.',Psychological:'The oldest evidence that we have always wondered.'}},
+  ];
+  let mode='Religious';
+  body.innerHTML=`
+    <p class="lead big">Long before radar and the press, the record of the unknown was kept in bronze, stone, and scripture.
+    This wing does not present ancient art as proof of visitors. It presents it as evidence of something better attested:
+    that <em style="color:#dfe9ee">humanity has always recorded encounters with the sky</em> — and has always reached for a language to hold them.</p>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">${tierChip('artistic')} ${tierChip('speculative')}</div>
+
+    <div class="section-rule"><span class="lb">Interpretation Layer</span><span class="ln"></span></div>
+    <p class="lead">The same record reads differently through different eyes. Choose a lens — every entry below re-frames itself.</p>
+    <div class="seg" id="skySeg" role="tablist">
+      ${['Religious','Astronomical','Mythic','Speculative','Psychological'].map(m=>`<button data-m="${m}" class="${m===mode?'active':''}" role="tab">${m}</button>`).join('')}
+    </div>
+
+    <div class="section-rule"><span class="lb">Holographic Timeline</span><span class="ln"></span></div>
+    <div class="timeline" id="skyTL">
+      ${ENTRIES.map((e,i)=>`<div class="tcard"><div class="yr">${esc(e.yr)}</div><h4>${esc(e.t)}</h4>
+        <div class="what">${esc(e.what)}</div>
+        <div class="interp" data-i="${i}"><b>${mode} reading</b>${esc(e.interp[mode])}</div></div>`).join('')}
+    </div>
+
+    <div class="section-rule"><span class="lb">The Celestial Wheel</span><span class="ln"></span></div>
+    <p class="lead">A reconstruction in the spirit of Ezekiel and the temple ceilings — wheels within wheels, turning slowly,
+    “full of eyes.” It is an artistic rendering, not a claim. Watch it long enough and you understand why every culture
+    reached for the circle to describe the heavens.</p>
+    <div class="stage" style="height:min(46vh,420px)"><div class="badge">Artistic Reconstruction · Ezekiel 1</div><canvas id="wheelCv"></canvas></div>
+  `;
+  // interpretation toggle
+  const segUpdate=(m)=>{ mode=m;
+    $$('#skySeg button').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+    $$('#skyTL .interp').forEach(el=>{ const e=ENTRIES[+el.dataset.i]; el.innerHTML=`<b>${m} reading</b>${esc(e.interp[m])}`; });
+    Audio.cue(392,0.05);
+  };
+  $('#skySeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) segUpdate(b.dataset.m); });
+
+  // celestial wheel canvas
+  const cv=$('#wheelCv'); const stop=rafLoop((t)=>{
+    const c=fitCanvas(cv, cv.parentElement.clientHeight); const W=cv.clientWidth, H=cv.parentElement.clientHeight;
+    c.clearRect(0,0,W,H); const cx=W/2, cy=H/2, R=Math.min(W,H)*0.42;
+    const spin = state.reduced ? 0 : t*0.18;
+    // outer zodiac ring
+    c.save(); c.translate(cx,cy);
+    for(let ring=0;ring<3;ring++){
+      const rr=R*(1-ring*0.26), dir=ring%2?-1:1;
+      c.save(); c.rotate(spin*dir*(1+ring*0.4));
+      c.strokeStyle='rgba(214,178,109,'+(0.5-ring*0.12)+')'; c.lineWidth=1.2;
+      c.beginPath(); c.arc(0,0,rr,0,Math.PI*2); c.stroke();
+      const spokes=12+ring*6;
+      for(let i=0;i<spokes;i++){ const a=i/spokes*Math.PI*2;
+        c.strokeStyle='rgba(32,240,208,'+(0.16+0.1*Math.sin(t+i))+')';
+        c.beginPath(); c.moveTo(Math.cos(a)*rr*0.7,Math.sin(a)*rr*0.7); c.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); c.stroke();
+        // "eyes" on the rim
+        c.fillStyle='rgba(32,240,208,'+(0.25+0.25*Math.abs(Math.sin(t*1.5+i)))+')';
+        c.beginPath(); c.arc(Math.cos(a)*rr,Math.sin(a)*rr,2.4,0,Math.PI*2); c.fill();
+      }
+      c.restore();
+    }
+    // inner glow core
+    const g=c.createRadialGradient(0,0,0,0,0,R*0.4);
+    g.addColorStop(0,'rgba(32,240,208,0.5)'); g.addColorStop(1,'rgba(32,240,208,0)');
+    c.fillStyle=g; c.beginPath(); c.arc(0,0,R*0.4,0,Math.PI*2); c.fill();
+    c.restore();
+  });
+  return ()=>{ stop(); };
+}
+
+/* ===== EXHIBIT 2 — THE MODERN AGE OF SIGHTINGS ===== */
+function silhouette(c,W,H,kind,t){
+  c.clearRect(0,0,W,H); c.save(); c.translate(W/2,H/2);
+  const glow=(state.reduced?0.5:0.5+0.4*Math.sin(t*2));
+  c.shadowColor='rgba(32,240,208,'+glow+')'; c.shadowBlur=24; c.fillStyle='#0c1622'; c.strokeStyle='rgba(200,210,220,.9)'; c.lineWidth=1.4;
+  const s=Math.min(W,H)/4.5;
+  c.beginPath();
+  if(kind==='disc'){ c.ellipse(0,0,s*1.7,s*0.5,0,0,Math.PI*2); c.fill(); c.stroke(); c.beginPath(); c.ellipse(0,-s*0.28,s*0.8,s*0.4,0,Math.PI,0); }
+  else if(kind==='triangle'){ c.moveTo(0,-s*1.1); c.lineTo(s*1.3,s*0.8); c.lineTo(-s*1.3,s*0.8); c.closePath(); }
+  else if(kind==='light'){ c.arc(0,0,s*0.5,0,Math.PI*2); }
+  c.fill(); c.stroke();
+  if(kind==='triangle'){ c.fillStyle='rgba(32,240,208,.8)'; [[0,s*0.55],[s*0.95,s*0.6],[-s*0.95,s*0.6]].forEach(p=>{c.beginPath();c.arc(p[0],p[1],3,0,Math.PI*2);c.fill();}); }
+  c.restore();
+}
+function renderModern(body){
+  Audio.room('archive');
+  const CASES=[
+    {id:'foo',date:'1944–45',loc:'European & Pacific theatres',type:'Visual · airborne',wit:'Allied & Axis aircrew',tier:'witnessed',shape:'light',
+      desc:'Bomber crews on both sides reported glowing balls of light pacing their aircraft at night — dubbed “foo fighters.” No craft was ever downed or recovered; the objects did nothing but accompany.',
+      explain:'St. Elmo’s fire, ball lightning, reflections, combat fatigue — and, for some cases, no settled explanation.',
+      cred:{'Sensor Data':25,'Multiple Witnesses':85,'Official Documentation':55,'Photographic Evidence':10,'Alternative Explanation':70,'Mythic/Cultural Impact':60}},
+    {id:'arnold',date:'June 1947',loc:'Mount Rainier, Washington',type:'Visual · daylight',wit:'Civilian pilot (Kenneth Arnold)',tier:'witnessed',shape:'disc',
+      desc:'A private pilot reported nine objects moving “like saucers skipping on water.” A reporter’s shorthand turned the motion into a shape — and the “flying saucer” was born into the language.',
+      explain:'Misjudged meteors, lenticular clouds, or a real unidentified formation; the cultural footprint outran the sighting itself.',
+      cred:{'Sensor Data':5,'Multiple Witnesses':30,'Official Documentation':50,'Photographic Evidence':5,'Alternative Explanation':65,'Mythic/Cultural Impact':100}},
+    {id:'roswell',date:'July 1947',loc:'Roswell, New Mexico',type:'Material recovery (disputed)',wit:'Military & ranchers',tier:'contested',shape:'disc',
+      desc:'An Army Air Field press release announced a recovered “flying disc,” retracted within a day as a weather balloon. Decades later, declassified files tied the debris to the classified Project Mogul.',
+      explain:'A high-altitude surveillance balloon train (Project Mogul), per later official accounts; the retraction itself became the seed of an enduring legend.',
+      cred:{'Sensor Data':10,'Multiple Witnesses':35,'Official Documentation':75,'Photographic Evidence':20,'Alternative Explanation':80,'Mythic/Cultural Impact':100}},
+    {id:'dc',date:'July 1952',loc:'Washington, D.C.',type:'Radar + visual',wit:'Air-traffic & military radar; pilots',tier:'contested',shape:'light',
+      desc:'Over two weekends, unknown blips appeared on National Airport and Andrews radar; jets were scrambled; pilots saw lights that faded as they closed. The Air Force attributed it to a temperature inversion.',
+      explain:'Radar refraction from a temperature inversion — though the simultaneous visual and multi-scope returns kept the case contested.',
+      cred:{'Sensor Data':80,'Multiple Witnesses':75,'Official Documentation':85,'Photographic Evidence':15,'Alternative Explanation':60,'Mythic/Cultural Impact':80}},
+    {id:'belgian',date:'1989–90',loc:'Belgium (Wallonia)',type:'Radar + mass visual',wit:'Police, civilians, F-16 radar',tier:'contested',shape:'triangle',
+      desc:'A months-long wave of slow, silent, triangular craft with corner lights. On one night, two F-16s were vectored to radar contacts that performed extreme accelerations the pilots could not match or visually confirm.',
+      explain:'Radar lock anomalies and misidentification are argued; the Belgian Air Force published its data openly, and the case remains unresolved.',
+      cred:{'Sensor Data':70,'Multiple Witnesses':90,'Official Documentation':80,'Photographic Evidence':40,'Alternative Explanation':45,'Mythic/Cultural Impact':75}},
+    {id:'phoenix',date:'March 1997',loc:'Phoenix, Arizona',type:'Mass visual',wit:'Thousands across the state',tier:'contested',shape:'triangle',
+      desc:'Thousands watched a vast V of lights drift silently over Arizona, followed later that night by a separate set of lights. The two events are often merged in memory.',
+      explain:'The later lights were identified as flares dropped on a military range; the earlier silent formation is still debated.',
+      cred:{'Sensor Data':20,'Multiple Witnesses':100,'Official Documentation':55,'Photographic Evidence':70,'Alternative Explanation':60,'Mythic/Cultural Impact':95}},
+  ];
+  body.innerHTML=`
+    <p class="lead big">In the mid-twentieth century the unknown stepped into a new world — one of radar scopes, gun-camera film,
+    newspaper wires, and a public ready to look up. Here the report becomes a <em style="color:#dfe9ee">case file</em>: dated,
+    located, and weighed. Each is a museum reconstruction, not a verdict.</p>
+    <div class="section-rule"><span class="lb">Case File Drawers</span><span class="ln"></span></div>
+    <p class="lead">Open any drawer. Every file carries its evidence tier and a six-factor credibility profile — including the
+    weight of the most plausible ordinary explanation.</p>
+    <div class="grid cards" id="caseGrid">
+      ${CASES.map(c=>`<div class="card" data-id="${c.id}" tabindex="0" role="button" aria-label="Open case file ${esc(c.date)} ${esc(c.loc)}">
+        <div style="margin-bottom:8px">${tierChip(c.tier)}</div>
+        <h3>${esc(c.loc)}</h3><div class="sub">${esc(c.date)} · ${esc(c.type)}</div>
+        <p>${esc(c.desc.slice(0,96))}…</p>
+        <div style="margin-top:12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)">Open file ▸</div>
+      </div>`).join('')}
+    </div>
+  `;
+  let drawAnim=null;
+  function openCase(c){
+    Audio.pageTurn();
+    const html=`<div role="dialog" aria-modal="true" style="position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(3,5,9,.78)" id="caseModal">
+      <div style="max-width:860px;width:100%;max-height:90vh;overflow-y:auto;background:linear-gradient(170deg,#0c1726,#070d16);border:1px solid rgba(32,240,208,.3);border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,.7)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:22px 26px;border-bottom:1px solid rgba(32,240,208,.15)">
+          <div><div style="font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--orange)">Case File · ${esc(c.date)}</div>
+            <h3 class="serif" style="font-size:28px;color:#eef4f6;font-weight:400;margin:6px 0">${esc(c.loc)}</h3>
+            <div style="margin-top:4px">${tierChip(c.tier)}</div></div>
+          <button class="navbtn" id="caseClose" aria-label="Close case file">✕ Close</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:24px 26px" id="caseInner">
+          <div>
+            <div class="kv"><span class="k">Date</span><span class="v">${esc(c.date)}</span></div>
+            <div class="kv"><span class="k">Location</span><span class="v">${esc(c.loc)}</span></div>
+            <div class="kv"><span class="k">Report type</span><span class="v">${esc(c.type)}</span></div>
+            <div class="kv"><span class="k">Witnesses</span><span class="v">${esc(c.wit)}</span></div>
+            <p class="lead" style="margin-top:14px">${esc(c.desc)}</p>
+            <div class="section-rule"><span class="lb">Competing Explanation</span><span class="ln"></span></div>
+            <p style="font-size:13.5px;line-height:1.7;color:#aeb9c2">${esc(c.explain)}</p>
+          </div>
+          <div>
+            <div class="stage" style="height:180px;margin-bottom:16px"><div class="badge">Artistic Reconstruction</div><canvas id="caseCv"></canvas></div>
+            <div class="section-rule"><span class="lb">Credibility Profile</span><span class="ln"></span></div>
+            ${Object.entries(c.cred).map(([k,v])=>meter(k,v)).join('')}
+          </div>
+        </div>
+      </div></div>`;
+    const wrap=document.createElement('div'); wrap.innerHTML=html; body.appendChild(wrap.firstElementChild);
+    const modal=$('#caseModal'); const close=()=>{ if(drawAnim){drawAnim();drawAnim=null;} modal.remove(); };
+    $('#caseClose').onclick=close; modal.addEventListener('click',e=>{ if(e.target===modal) close(); });
+    $('#caseClose').focus();
+    const cv=$('#caseCv');
+    drawAnim=rafLoop(t=>{ const c2=fitCanvas(cv,180); silhouette(c2,cv.clientWidth,180,c.shape,t); });
+  }
+  $('#caseGrid').addEventListener('click',e=>{ const card=e.target.closest('.card'); if(card) openCase(CASES.find(x=>x.id===card.dataset.id)); });
+  $('#caseGrid').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const card=e.target.closest('.card'); if(card){ e.preventDefault(); openCase(CASES.find(x=>x.id===card.dataset.id)); } } });
+  return ()=>{ if(drawAnim) drawAnim(); };
+}
+
+/* ===== EXHIBIT 3 — THE PILOT'S ROOM ===== */
+function renderPilot(body){
+  Audio.room('pilot');
+  const VIEWS={
+    Visual:{badge:'Mk.1 Eyeball · Daylight',text:'<b>What the pilot sees:</b> a white, featureless object — described as a 40-foot “Tic Tac” — with no wings, no exhaust, no contrail. It hangs, then departs faster than the eye can track.'},
+    Infrared:{badge:'FLIR · Forward-Looking Infrared',text:'<b>What the pod sees:</b> a hot, sharp-edged shape against cold sky. The sensor holds a track even when the object jinks. No engine plume blooms where a jet’s would.'},
+    Radar:{badge:'AN/SPY Radar · Track',text:'<b>What the scope sees:</b> a contact dropping from above 80,000 ft to near sea level in seconds, holding, then accelerating off-scope — a track no known airframe of the era could fly.'},
+    Testimony:{badge:'Pilot Debrief · Verbatim spirit',text:'<b>“It was reacting to us.”</b> The aviators report the object appeared to anticipate their movements and out-position them, with no visible means of lift, thrust, or control surfaces.'},
+    Physics:{badge:'Kinematic Estimate',text:'<b>The numbers, if the track is real:</b> the implied acceleration reaches thousands of g — forces that would liquefy a human crew and shred a conventional airframe. Either the track is in error, or the craft does not obey our limits.'},
+    Skeptical:{badge:'Null-Hypothesis Analysis',text:'<b>The disciplined doubt:</b> parallax, sensor artifacts, gimbal rotation reading as object rotation, and misjudged range can all manufacture “impossible” motion. Extraordinary tracks demand extraordinary calibration before belief.'}
+  };
+  let view='Visual';
+  body.innerHTML=`
+    <p class="lead big">Strap into the observation seat. The pilots, radar operators, and weapons-system officers in this room
+    were trained for years to identify everything in the sky — which is exactly what makes the word
+    <em style="color:#dfe9ee">unidentified</em>, in their mouths, worth taking seriously.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${tierChip('contested')} ${tierChip('artistic')}</div>
+
+    <div class="stage" style="height:min(52vh,460px)"><div class="badge" id="pilotBadge">${VIEWS[view].badge}</div><canvas id="pilotCv"></canvas></div>
+
+    <div class="section-rule"><span class="lb">Sensor Channel</span><span class="ln"></span></div>
+    <div class="seg" id="pilotSeg">
+      ${Object.keys(VIEWS).map(v=>`<button data-v="${v}" class="${v===view?'active':''}">${v}</button>`).join('')}
+    </div>
+    <p class="lead" id="pilotText" style="margin-top:16px;min-height:70px">${VIEWS[view].text}</p>
+
+    <div class="section-rule"><span class="lb">Tic-Tac · Modern UAP Reconstruction</span><span class="ln"></span></div>
+    <p class="lead">This sequence is an <em>artistic reconstruction</em> in the spirit of declassified naval encounters off the
+    California coast in 2004 — released years later by the U.S. Department of Defense. It is a teaching model of a
+    well-documented modern case, not gun-camera footage. The point of this room is not belief. It is the principle that
+    <em style="color:#dfe9ee">a credible report deserves investigation, not ridicule.</em></p>
+  `;
+  // cockpit / radar canvas
+  const cv=$('#pilotCv'); let target={x:-0.4,y:-0.2,vx:0.12,vy:0.02}; let trail=[];
+  const stop=rafLoop(t=>{
+    const H=cv.parentElement.clientHeight, c=fitCanvas(cv,H), W=cv.clientWidth;
+    c.clearRect(0,0,W,H);
+    // sky gradient depends on view
+    const ir = view==='Infrared'; const rad = view==='Radar';
+    let g=c.createLinearGradient(0,0,0,H);
+    if(ir){ g.addColorStop(0,'#2a0a3a'); g.addColorStop(1,'#08111f'); }
+    else if(rad){ g.addColorStop(0,'#04130d'); g.addColorStop(1,'#02080a'); }
+    else { g.addColorStop(0,'#0a1830'); g.addColorStop(0.6,'#0b1422'); g.addColorStop(1,'#06101c'); }
+    c.fillStyle=g; c.fillRect(0,0,W,H);
+    // horizon + ocean
+    const hor=H*0.6;
+    if(!rad){ c.fillStyle=ir?'rgba(10,4,18,.6)':'rgba(4,10,20,.7)'; c.fillRect(0,hor,W,H-hor);
+      c.strokeStyle=ir?'rgba(255,120,60,.5)':'rgba(32,240,208,.45)'; c.lineWidth=1; c.beginPath(); c.moveTo(0,hor); c.lineTo(W,hor); c.stroke(); }
+    // HUD grid
+    c.strokeStyle = ir?'rgba(255,138,61,.25)':'rgba(32,240,208,.22)'; c.lineWidth=1;
+    for(let i=1;i<6;i++){ c.beginPath(); c.moveTo(W*i/6,0); c.lineTo(W*i/6,H); c.stroke(); }
+    for(let i=1;i<5;i++){ c.beginPath(); c.moveTo(0,H*i/5); c.lineTo(W,H*i/5); c.stroke(); }
+    // radar sweep overlay for radar view
+    if(rad){ const cx=W/2,cy=H/2,R=Math.min(W,H)*0.46;
+      c.strokeStyle='rgba(32,240,208,.4)'; for(let r=1;r<=3;r++){ c.beginPath(); c.arc(cx,cy,R*r/3,0,Math.PI*2); c.stroke(); }
+      const sw=(state.reduced?0:t*1.6)%(Math.PI*2);
+      c.save(); c.translate(cx,cy); c.rotate(sw);
+      const lg=c.createLinearGradient(0,0,R,0); lg.addColorStop(0,'rgba(32,240,208,.5)'); lg.addColorStop(1,'rgba(32,240,208,0)');
+      c.strokeStyle=lg; c.lineWidth=2; c.beginPath(); c.moveTo(0,0); c.lineTo(R,0); c.stroke(); c.restore();
+    }
+    // move target — impossible jinks
+    if(!state.reduced){
+      target.x+=target.vx*0.016*(rad?0.6:1); target.y+=target.vy*0.016;
+      target.vy+=Math.sin(t*2.3)*0.02;
+      if(target.x>0.55||target.x<-0.55){ // sudden re-position ("teleport")
+        target.x=(Math.random()*0.9-0.45); target.y=(Math.random()*0.5-0.35); target.vx=(Math.random()*0.3-0.15)+ (target.vx>0?0.1:-0.1); trail=[];
+        Audio.cue(1046,0.04);
+      }
+    }
+    const px=W*0.5+target.x*W*0.5, py=hor*0.5+target.y*H*0.5 + (rad?H*0.1:0);
+    trail.push({x:px,y:py}); if(trail.length>26) trail.shift();
+    // trail
+    c.lineWidth=2; c.beginPath();
+    trail.forEach((p,i)=>{ c.strokeStyle='rgba(255,138,61,'+(i/trail.length*0.5)+')'; if(i){c.beginPath();c.moveTo(trail[i-1].x,trail[i-1].y);c.lineTo(p.x,p.y);c.stroke();} });
+    // target
+    c.save(); c.translate(px,py);
+    const col = ir?'#ffcaa0':(rad?'#7dffe6':'#eafffb');
+    c.shadowColor=col; c.shadowBlur=18; c.fillStyle=col;
+    c.beginPath(); c.ellipse(0,0,16,7,0,0,Math.PI*2); c.fill();
+    c.shadowBlur=0; c.strokeStyle=col; c.lineWidth=1; c.strokeRect(-26,-16,52,32);
+    c.beginPath(); c.moveTo(-40,0);c.lineTo(-26,0); c.moveTo(26,0);c.lineTo(40,0);
+    c.moveTo(0,-30);c.lineTo(0,-16); c.moveTo(0,16);c.lineTo(0,30); c.stroke();
+    c.restore();
+    // crosshair center
+    c.strokeStyle='rgba(255,255,255,.6)'; c.lineWidth=1; const ccx=W/2,ccy=hor*0.55;
+    c.beginPath(); c.moveTo(ccx-14,ccy);c.lineTo(ccx-4,ccy);c.moveTo(ccx+4,ccy);c.lineTo(ccx+14,ccy);
+    c.moveTo(ccx,ccy-14);c.lineTo(ccx,ccy-4);c.moveTo(ccx,ccy+4);c.lineTo(ccx,ccy+14); c.stroke();
+    // readouts
+    c.fillStyle=ir?'rgba(255,180,140,.8)':'rgba(32,240,208,.8)'; c.font='11px monospace';
+    c.fillText('ALT  '+(34000+Math.round(Math.sin(t)*1200)).toLocaleString()+' FT', 14, 22);
+    c.fillText('SPD  '+(Math.round(420+Math.abs(target.vx)*900))+' KTS', 14, 38);
+    c.fillText('LOCK '+(rad?'RADAR':ir?'IR':'EO'), 14, 54);
+    c.textAlign='right'; c.fillText('CONTACT · UNIDENTIFIED', W-14, 22);
+    c.fillText('BRG '+Math.round(((target.x+1)*180))%360+'°', W-14, 38); c.textAlign='left';
+  });
+  const setView=v=>{ view=v; $('#pilotBadge').textContent=VIEWS[v].badge; $('#pilotText').innerHTML=VIEWS[v].text;
+    $$('#pilotSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v===v)); Audio.cue(659,0.05); };
+  $('#pilotSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setView(b.dataset.v); });
+  return ()=>{ stop(); };
+}
+
+/* ===== EXHIBIT 4 — THE SHAPE GALLERY ===== */
+function renderShapes(body){
+  Audio.room('science');
+  const SHAPES=[
+    {id:'disc',nm:'The Disc',behave:'Hover, then instantaneous departure',move:'Falling-leaf wobble; right-angle turns',light:'Steady glow or rotating rim lights',sound:'Silent, or a faint hum',explain:'Lenticular cloud · disc-shaped aircraft · reflection',mystery:55,
+      desc:'The classic saucer. The shape that a reporter’s phrase gave the century, recurring in reports that predate and postdate the word.'},
+    {id:'sphere',nm:'The Sphere / Orb',behave:'Drift, dart, sudden stops',move:'Frictionless changes of direction',light:'Self-luminous; color shifts',sound:'Silent',explain:'Drone · balloon · plasma · ball lightning',mystery:60,
+      desc:'The most-reported modern form: a featureless glowing ball, increasingly captured on military sensors.'},
+    {id:'tictac',nm:'The Tic-Tac',behave:'Station-keeping, then off-scope acceleration',move:'No visible control surfaces',light:'Dull white, non-luminous',sound:'Silent',explain:'Sensor artifact · classified craft · unknown',mystery:80,
+      desc:'An elongated capsule with no wings, intakes, or exhaust — the signature form of recent naval encounters.'},
+    {id:'triangle',nm:'The Black Triangle',behave:'Slow, silent, low-altitude transit',move:'Deliberate, almost ceremonial drift',light:'A light at each corner; sometimes a central red',sound:'Silent or low hum',explain:'Blimp · secret aircraft · formation of lights',mystery:70,
+      desc:'A vast, silent delta that defined the sighting waves of the 1980s–90s over Belgium, Arizona, and beyond.'},
+    {id:'cigar',nm:'The Cigar',behave:'Steady high-altitude cruise',move:'Linear; occasionally drops smaller objects',light:'Reflective metallic body',sound:'Silent',explain:'Airship · contrail · fuselage glint',mystery:50,
+      desc:'A long cylindrical craft, prominent in mid-century European and South American reports.'},
+    {id:'cube',nm:'Cube-in-Sphere',behave:'Slow rotation while hovering',move:'Rigid, geometric',light:'Translucent shell around a dark core',sound:'Silent',explain:'Optical artifact · unknown',mystery:85,
+      desc:'A reported geometry of a cube suspended within a transparent sphere — rare, strange, and resistant to easy explanation.'},
+    {id:'swarm',nm:'The Orb Swarm',behave:'Coordinated cluster; splits and merges',move:'Flocking; sudden reformation',light:'Many small lights moving as one',sound:'Silent',explain:'Drones · flares · birds · balloons',mystery:65,
+      desc:'Multiple lights behaving as a single intelligence — the hardest form to film, the easiest to misjudge.'},
+    {id:'plasma',nm:'Luminous Plasma',behave:'Pulsing, shape-shifting',move:'Fluid, amoeba-like',light:'Intense, color-changing',sound:'Crackle or silence',explain:'Atmospheric plasma · ball lightning · earthlight',mystery:62,
+      desc:'A glowing, formless luminosity — possibly a natural phenomenon we have not fully characterized.'},
+    {id:'chevron',nm:'The Chevron',behave:'Smooth gliding transit',move:'Banking turns, no roll',light:'Edge lighting along a boomerang',sound:'Silent',explain:'Flight of aircraft · single wing-shaped craft',mystery:58,
+      desc:'A boomerang or V, often reported as enormous and utterly silent.'},
+    {id:'jelly',nm:'Atmospheric Jellyfish',behave:'Slow hover with trailing filaments',move:'Pulsing, biological-seeming',light:'Soft IR signature',sound:'Silent',explain:'Sensor bloom · balloon · unknown',mystery:75,
+      desc:'A recent infrared form with dangling appendages — a reminder that the unknown still produces new categories.'},
+    {id:'diamond',nm:'The Black Diamond',behave:'Hover and slow tumble',move:'Angular, deliberate',light:'Matte; occasional corner glints',sound:'Low hum',explain:'Faceted aircraft · misperceived triangle',mystery:66,
+      desc:'A dark, faceted form — like a triangle’s heavier cousin, seen edge-on.'},
+    {id:'rect',nm:'The Silent Rectangle',behave:'Low, slow, impossibly stable',move:'No banking, no drift',light:'Dark mass blotting the stars',sound:'Total silence',explain:'Blimp · large drone · misperception of scale',mystery:64,
+      desc:'A flat slab that crosses overhead with no sound and no apparent means of lift.'},
+  ];
+  let cur=SHAPES[0];
+  body.innerHTML=`
+    <p class="lead big">A cathedral of forms. For a century, witnesses who never met have described the same recurring
+    silhouettes. This gallery does not claim what they are. It asks a quieter question:
+    <em style="color:#dfe9ee">why do the shapes repeat?</em></p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${tierChip('witnessed')} ${tierChip('artistic')}</div>
+    <div style="display:grid;grid-template-columns:minmax(180px,230px) 1fr;gap:22px;align-items:start" id="shapeWrap">
+      <div class="seg" style="flex-direction:column;align-items:stretch;gap:4px" id="shapeList">
+        ${SHAPES.map(s=>`<button data-id="${s.id}" class="${s.id===cur.id?'active':''}" style="text-align:left;text-transform:none;letter-spacing:.02em;font-size:13px">${esc(s.nm)}</button>`).join('')}
+      </div>
+      <div>
+        <div class="stage" style="height:min(40vh,360px)"><div class="badge" id="shapeBadge">Artistic Reconstruction</div><canvas id="shapeCv"></canvas></div>
+        <h3 class="serif" id="shapeNm" style="font-size:26px;color:#eef4f6;font-weight:400;margin:16px 0 6px"></h3>
+        <p class="lead" id="shapeDesc" style="margin-bottom:14px"></p>
+        <div id="shapeKV"></div>
+        <div class="section-rule"><span class="lb">Mystery Level</span><span class="ln"></span></div>
+        <div id="shapeMystery"></div>
+        <div class="note-ok" style="margin-top:14px">Every form here is an artistic reconstruction assembled from witness description — not a photograph of a confirmed object.</div>
+      </div>
+    </div>
+  `;
+  let shapeT=0;
+  function paint(c,W,H,id,t){
+    c.clearRect(0,0,W,H); c.save(); c.translate(W/2,H/2);
+    const spin=state.reduced?0.3:t*0.5; const s=Math.min(W,H)/4;
+    // field lines
+    for(let i=0;i<5;i++){ const rr=s*(1.4+i*0.32+0.08*Math.sin(t*1.5+i));
+      c.strokeStyle='rgba(32,240,208,'+(0.18-i*0.03)+')'; c.lineWidth=1;
+      c.beginPath(); c.ellipse(0,0,rr,rr*0.34,0,0,Math.PI*2); c.stroke(); }
+    c.rotate(Math.sin(spin)*0.25);
+    c.shadowColor='rgba(32,240,208,.6)'; c.shadowBlur=26; c.lineWidth=1.6;
+    c.strokeStyle='rgba(214,224,231,.95)'; c.fillStyle='#0d1826';
+    c.beginPath();
+    switch(id){
+      case 'disc': c.ellipse(0,0,s*1.8,s*0.45,0,0,Math.PI*2); c.fill(); c.stroke();
+        c.beginPath(); c.ellipse(0,-s*0.22,s*0.7,s*0.42,0,Math.PI,Math.PI*2); c.fill(); c.stroke(); break;
+      case 'sphere': c.arc(0,0,s,0,Math.PI*2); c.fill(); c.stroke();
+        c.strokeStyle='rgba(32,240,208,.5)'; c.beginPath(); c.ellipse(0,0,s,s*0.4,0,0,Math.PI*2); c.stroke(); break;
+      case 'tictac': c.save(); c.beginPath(); roundedRect(c,-s*1.7,-s*0.5,s*3.4,s,s*0.5); c.fill(); c.stroke(); c.restore(); break;
+      case 'triangle': c.moveTo(0,-s*1.2); c.lineTo(s*1.4,s*0.9); c.lineTo(-s*1.4,s*0.9); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle='rgba(32,240,208,.9)'; [[0,-s*1.0],[s*1.15,s*0.78],[-s*1.15,s*0.78]].forEach(p=>{c.beginPath();c.arc(p[0],p[1],4,0,Math.PI*2);c.fill();}); break;
+      case 'cigar': roundedRect(c,-s*2,-s*0.35,s*4,s*0.7,s*0.35); c.fill(); c.stroke(); break;
+      case 'cube': c.strokeStyle='rgba(32,240,208,.7)'; c.arc(0,0,s*1.1,0,Math.PI*2); c.stroke();
+        c.strokeStyle='rgba(214,224,231,.95)'; c.fillStyle='#0d1826'; drawCube(c,s*0.6,t); break;
+      case 'swarm': for(let i=0;i<7;i++){ const a=i/7*Math.PI*2+t; const rr=s*(0.6+0.3*Math.sin(t*2+i));
+          c.beginPath(); c.fillStyle='rgba(32,240,208,.85)'; c.shadowBlur=14; c.arc(Math.cos(a)*rr,Math.sin(a)*rr*0.5,5,0,Math.PI*2); c.fill(); } break;
+      case 'plasma': { const g=c.createRadialGradient(0,0,0,0,0,s*1.4);
+          g.addColorStop(0,'rgba(255,255,255,.9)'); g.addColorStop(0.4,'rgba(32,240,208,.7)'); g.addColorStop(1,'rgba(32,240,208,0)');
+          c.fillStyle=g; c.beginPath();
+          for(let a=0;a<=Math.PI*2+0.1;a+=0.2){ const rr=s*(1+0.3*Math.sin(a*3+t*3)); const x=Math.cos(a)*rr,y=Math.sin(a)*rr; a?c.lineTo(x,y):c.moveTo(x,y);} c.fill(); break; }
+      case 'chevron': c.moveTo(0,-s*0.3); c.lineTo(s*1.7,s*0.7); c.lineTo(s*1.3,s*0.9); c.lineTo(0,s*0.3); c.lineTo(-s*1.3,s*0.9); c.lineTo(-s*1.7,s*0.7); c.closePath(); c.fill(); c.stroke(); break;
+      case 'jelly': c.beginPath(); c.ellipse(0,-s*0.2,s*0.9,s*0.7,0,Math.PI,0); c.fill(); c.stroke();
+        c.strokeStyle='rgba(32,240,208,.6)'; for(let i=-3;i<=3;i++){ c.beginPath(); c.moveTo(i*s*0.22,s*0.45);
+          for(let y=0;y<6;y++){ c.lineTo(i*s*0.22+Math.sin(t*3+y+i)*8, s*0.45+y*s*0.16);} c.stroke(); } break;
+      case 'diamond': c.moveTo(0,-s*1.1); c.lineTo(s*1.1,0); c.lineTo(0,s*1.1); c.lineTo(-s*1.1,0); c.closePath(); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(-s*1.1,0); c.lineTo(s*1.1,0); c.strokeStyle='rgba(32,240,208,.5)'; c.stroke(); break;
+      case 'rect': roundedRect(c,-s*1.7,-s*0.4,s*3.4,s*0.8,6); c.fill(); c.stroke(); break;
+    }
+    c.restore();
+  }
+  function roundedRect(c,x,y,w,h,r){ c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+  function drawCube(c,s,t){ const a=state.reduced?0.6:t*0.6; const pts=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(p=>{
+      let[x,y,z]=p; let X=x*Math.cos(a)-z*Math.sin(a), Z=x*Math.sin(a)+z*Math.cos(a); let Y=y*Math.cos(a*0.7)-Z*Math.sin(a*0.7);
+      const sc=s/(2+ (Z=Z*Math.cos(a*0.7)+y*Math.sin(a*0.7))*0.3); return [X*sc,Y*sc]; });
+    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    edges.forEach(([i,j])=>{ c.beginPath(); c.moveTo(pts[i][0],pts[i][1]); c.lineTo(pts[j][0],pts[j][1]); c.stroke(); }); }
+  const cv=$('#shapeCv'); const stop=rafLoop(t=>{ shapeT=t; const H=cv.parentElement.clientHeight, c=fitCanvas(cv,H); paint(c,cv.clientWidth,H,cur.id,t); });
+  function select(s){ cur=s; $$('#shapeList button').forEach(b=>b.classList.toggle('active',b.dataset.id===s.id));
+    $('#shapeNm').textContent=s.nm; $('#shapeDesc').textContent=s.desc;
+    $('#shapeKV').innerHTML=[['Observed behavior',s.behave],['Movement style',s.move],['Light behavior',s.light],['Sound profile',s.sound],['Common explanations',s.explain]]
+      .map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('');
+    $('#shapeMystery').innerHTML=meter('Resistance to explanation',s.mystery);
+    Audio.cue(523,0.05);
+  }
+  $('#shapeList').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) select(SHAPES.find(s=>s.id===b.dataset.id)); });
+  select(cur);
+  return ()=>{ stop(); };
+}
+
+/* ===== EXHIBIT 5 — PROPULSION OF THE IMPOSSIBLE ===== */
+function renderPropulsion(body){
+  Audio.room('science');
+  body.innerHTML=`
+    <p class="lead big">Reported UAP behavior breaks the rules of flight as we practice it: instant acceleration, no sonic boom,
+    no heat plume, no visible lift. This lab does not claim to know how that is done. It maps
+    <em style="color:#dfe9ee">where our physics ends</em> — and lets you push a model until it warns you.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${tierChip('speculative')}</div>
+
+    <div style="display:grid;grid-template-columns:1fr minmax(260px,360px);gap:22px;align-items:start" id="propWrap">
+      <div class="stage" style="height:min(48vh,440px)"><div class="badge">Field Drive Simulator · Speculative Model</div><canvas id="propCv"></canvas></div>
+      <div>
+        <div class="section-rule" style="margin-top:0"><span class="lb">Field Drive Simulator</span><span class="ln"></span></div>
+        <div class="slider-row"><label>Mass</label><input type="range" id="pMass" min="1" max="100" value="40"><output id="oMass"></output></div>
+        <div class="slider-row"><label>Energy</label><input type="range" id="pEnergy" min="1" max="100" value="30"><output id="oEnergy"></output></div>
+        <div class="slider-row"><label>Field str.</label><input type="range" id="pField" min="0" max="100" value="45"><output id="oField"></output></div>
+        <div class="slider-row"><label>Accel.</label><input type="range" id="pAccel" min="1" max="100" value="35"><output id="oAccel"></output></div>
+        <div class="slider-row" style="grid-template-columns:130px 1fr"><label>Medium</label>
+          <div class="seg" id="pMedium" style="padding:4px">
+            <button data-m="air" class="active">Air</button><button data-m="water">Water</button><button data-m="vacuum">Vacuum</button>
+          </div></div>
+        <div id="propWarn" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="section-rule"><span class="lb">The Problems Worth Naming</span><span class="ln"></span></div>
+    <div class="grid cards">
+      ${[['The acceleration problem','Tracks imply thousands of g. A human crew would not survive; a conventional airframe would disintegrate. Inertial-mass-reduction concepts try to dissolve the problem rather than solve it.'],
+         ['The heat-signature problem','Extreme speed in atmosphere should glow. Reports of cool, non-luminous transit imply either we mismeasure, or the craft sheds energy by means we don’t model.'],
+         ['The silent-flight problem','Supersonic motion should crack the air. Silence suggests the medium is being managed — a plasma sheath, a field — or that the motion is not what it appears.'],
+         ['The transmedium problem','Objects reported moving seamlessly from air to water face a brutal density change. Almost nothing we build does this well.'],
+         ['The energy problem','Even speculative spacetime-engineering (Alcubierre-style metrics) demands energies near a star’s output, and exotic matter we have never isolated.'],
+         ['The discipline problem','The hardest constraint is intellectual: holding wonder and rigor at once, and refusing to fill the unknown with a comfortable answer.']]
+        .map(([h,p])=>`<div class="card"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join('')}
+    </div>
+  `;
+  // simulator
+  let medium='air';
+  const cv=$('#propCv');
+  const get=id=>+$('#'+id).value;
+  const params=()=>({mass:get('pMass'),energy:get('pEnergy'),field:get('pField'),accel:get('pAccel')});
+  function evaluate(){
+    const p=params();
+    // toy "physics": required energy scales with mass*accel^2 / fieldShield; g-load from accel
+    const gLoad=Math.round(p.accel*p.accel*0.9); // up to ~9000 g
+    const shield=clamp(p.field/100,0.02,1);
+    const need=(p.mass*p.accel*p.accel)/(shield*38); // arbitrary units
+    const mediumFactor={air:1,water:3.2,vacuum:0.4}[medium];
+    const energyReq=need*mediumFactor;
+    const haveBudget=p.energy*4;
+    const warns=[];
+    if(gLoad>50 && p.field<60) warns.push(['warn',`Crew survivability exceeded: ${fmt(gLoad)} g without sufficient inertial shielding. Known physics constraint exceeded.`]);
+    if(energyReq>haveBudget) warns.push(['warn',`Energy requirement (${energyReq.toFixed(0)} u) beyond supplied power (${haveBudget} u) — beyond current human capability.`]);
+    if(medium==='water' && p.accel>50) warns.push(['warn','Transmedium drag at this acceleration would tear a conventional hull apart.']);
+    if(p.field>85 && p.energy<40) warns.push(['warn','Field strength cannot be sustained at this power draw — containment collapse.']);
+    if(!warns.length) warns.push(['ok','Within the speculative model’s envelope. Still a speculative model only — not a description of any confirmed craft.']);
+    $('#propWarn').innerHTML=warns.map(([k,m])=>`<div class="${k==='warn'?'warn':'note-ok'}">${esc(m)}</div>`).join('');
+    return {gLoad,shield,energyReq,haveBudget,...p};
+  }
+  let cache=evaluate();
+  ['pMass','pEnergy','pField','pAccel'].forEach(id=>{
+    const o={pMass:'oMass',pEnergy:'oEnergy',pField:'oField',pAccel:'oAccel'}[id];
+    const upd=()=>{ $('#'+o).textContent=$('#'+id).value+'%'; cache=evaluate(); };
+    $('#'+id).addEventListener('input',upd); upd();
+  });
+  $('#pMedium').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; medium=b.dataset.m;
+    $$('#pMedium button').forEach(x=>x.classList.toggle('active',x===b)); cache=evaluate(); Audio.cue(440,0.05); });
+  const stop=rafLoop(t=>{
+    const H=cv.parentElement.clientHeight, c=fitCanvas(cv,H), W=cv.clientWidth;
+    c.clearRect(0,0,W,H);
+    // medium tint
+    const tint={air:'#0a1626',water:'#04141c',vacuum:'#05070b'}[medium];
+    c.fillStyle=tint; c.fillRect(0,0,W,H);
+    const cx=W/2,cy=H/2; const field=cache.field/100, accel=cache.accel/100, energy=cache.energy/100;
+    // distortion grid bent by field strength
+    c.strokeStyle='rgba(95,168,255,'+(0.12+field*0.25)+')'; c.lineWidth=1;
+    const N=16;
+    for(let i=0;i<=N;i++){ c.beginPath();
+      for(let j=0;j<=N;j++){ const x=j/N*W, y=i/N*H; const dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy)+1;
+        const warp=field*5500/(d); const wx=x - dx/d*warp, wy=y - dy/d*warp; j?c.lineTo(wx,wy):c.moveTo(wx,wy); } c.stroke(); }
+    for(let j=0;j<=N;j++){ c.beginPath();
+      for(let i=0;i<=N;i++){ const x=j/N*W, y=i/N*H; const dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy)+1;
+        const warp=field*5500/(d); const wx=x - dx/d*warp, wy=y - dy/d*warp; i?c.lineTo(wx,wy):c.moveTo(wx,wy); } c.stroke(); }
+    // plasma halo
+    const haloR=Math.min(W,H)*0.22*(0.7+accel*0.8);
+    const g=c.createRadialGradient(cx,cy,haloR*0.2,cx,cy,haloR);
+    const hot = cache.gLoad>50 ? '255,90,60' : '95,200,255';
+    g.addColorStop(0,'rgba(255,255,255,'+(0.5+energy*0.4)+')');
+    g.addColorStop(0.45,'rgba('+hot+','+(0.4+accel*0.4)+')');
+    g.addColorStop(1,'rgba('+hot+',0)');
+    c.fillStyle=g; c.beginPath(); c.arc(cx,cy,haloR,0,Math.PI*2); c.fill();
+    // craft (tic-tac)
+    c.save(); c.translate(cx,cy); c.shadowColor='rgba(95,168,255,.7)'; c.shadowBlur=20;
+    c.fillStyle='#0d1826'; c.strokeStyle='rgba(214,224,231,.95)'; c.lineWidth=1.6;
+    const s=Math.min(W,H)/9; c.beginPath();
+    roundedRect(c,-s*1.8,-s*0.55,s*3.6,s*1.1,s*0.55); c.fill(); c.stroke(); c.restore();
+    function roundedRect(c,x,y,w,h,r){ c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+    // field rings pulsing with field strength
+    if(!state.reduced) for(let i=0;i<3;i++){ const rr=haloR*(0.5+i*0.3)+(t*40+i*30)%80;
+      c.strokeStyle='rgba(95,168,255,'+clamp(field*0.5-(rr/(haloR*2)),0,0.5)+')'; c.beginPath(); c.ellipse(cx,cy,rr,rr*0.4,0,0,Math.PI*2); c.stroke(); }
+    // readouts
+    c.fillStyle='rgba(95,168,255,.85)'; c.font='11px monospace';
+    c.fillText('MEDIUM  '+medium.toUpperCase(),14,22);
+    c.fillText('G-LOAD  '+fmt(cache.gLoad)+' g',14,38);
+    c.fillText('FIELD   '+Math.round(field*100)+'%',14,54);
+    c.textAlign='right'; c.fillStyle=cache.energyReq>cache.haveBudget?'rgba(255,90,60,.9)':'rgba(32,240,208,.85)';
+    c.fillText('E-REQ '+cache.energyReq.toFixed(0)+' u',W-14,22);
+    c.fillText('E-SUP '+cache.haveBudget+' u',W-14,38); c.textAlign='left';
+  });
+  return ()=>{ stop(); };
+}
+
+/* ===== EXHIBIT 6 — THE ARCHIVE OF DISCLOSURE ===== */
+function renderArchive(body){
+  Audio.room('archive');
+  const DOCS=[
+    {claz:'U.S. Air Force · 1952–1969',t:'Project Blue Book',rec:'A 17-year official Air Force investigation cataloguing 12,618 reports.',claim:'The program concluded most were explainable; 701 remained “unidentified.”',ev:'High — a documented government record.',q:'Were the 701 unknowns truly unexplainable, or merely under-investigated?',matters:'It set the official posture for a generation: study, then dismiss.',unknown:'Why some well-documented cases were closed as “insufficient data.”'},
+    {claz:'University of Colorado · 1968',t:'The Condon Report',rec:'A federally funded scientific study of UFOs led by physicist Edward Condon.',claim:'It recommended ending official study — yet roughly a third of its own cases stayed unexplained.',ev:'High — public, peer-discussed document.',q:'Did the conclusion match the contents, or precede them?',matters:'It justified closing Blue Book and stigmatized the subject in science for decades.',unknown:'How much the framing shaped the funding, and vice versa.'},
+    {claz:'U.S. Navy · 2004 / 2015',t:'The Navy Sensor Videos',rec:'Three infrared clips (“FLIR1/Nimitz,” “Gimbal,” “Go Fast”) recorded by naval aviators.',claim:'The U.S. Department of Defense formally released and authenticated them in 2020.',ev:'High — official sensor data, government-confirmed as genuine.',q:'Do the videos show novel craft, or sensor and parallax effects?',matters:'For the first time, the government said: these are real, and unidentified.',unknown:'What the objects were — still officially undetermined.'},
+    {claz:'Press · 2017',t:'The AATIP Disclosure',rec:'Reporting revealed a Pentagon program, the Advanced Aerospace Threat Identification Program.',claim:'It confirmed the government had quietly studied UAP after publicly stepping away.',ev:'Medium-high — corroborated by officials on record.',q:'What did the program find, and how much remains classified?',matters:'It broke the taboo: officials discussing UAP without ridicule, on the record.',unknown:'The full scope and conclusions of the work.'},
+    {claz:'ODNI · 2021',t:'Preliminary Assessment on UAP',rec:'An unclassified intelligence report to Congress on 144 military encounters.',claim:'It could explain only one; the rest lacked sufficient data to resolve.',ev:'High — an official intelligence community product.',q:'Are the unresolved cases sensor gaps, foreign tech, or something else?',matters:'It reframed UAP as a flight-safety and national-security question, not a fringe one.',unknown:'The nature of the 143 it could not explain.'},
+    {claz:'NASA & AARO · 2022–2023',t:'Open Scientific Study',rec:'NASA convened an independent UAP study panel; the Pentagon stood up the All-domain Anomaly Resolution Office.',claim:'Both called for better data, rigorous methods, and an end to stigma — finding no verified evidence of extraterrestrial origin.',ev:'High — standing public institutions.',q:'Can open science gather clean data on a sporadic, unscheduled phenomenon?',matters:'It moved the subject from leaks and rumor toward transparent method.',unknown:'Whether the phenomenon will yield to instruments built to catch it.'},
+  ];
+  body.innerHTML=`
+    <p class="lead big">A quiet room of records. The story here is not that answers have arrived — they have not. The story is the
+    <em style="color:#dfe9ee">change in posture</em>: from a subject that ended careers to one debated in Congress, studied by
+    NASA, and confirmed, in part, by the government’s own cameras.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${tierChip('confirmed')} ${tierChip('contested')}</div>
+
+    <div class="section-rule"><span class="lb">The Files</span><span class="ln"></span></div>
+    <p class="lead">Each file is real and publicly documented. Open one to read the record, the claim, what it changed, and —
+    most honestly — what remains unknown.</p>
+    <div class="docrow" id="docRow">
+      ${DOCS.map((d,i)=>`<div class="doc" data-i="${i}" tabindex="0" role="button" aria-label="Open file ${esc(d.t)}">
+        <div class="dh"><div class="claz">${esc(d.claz)}</div><h4>${esc(d.t)}</h4></div>
+        <div class="db">${esc(d.rec)} <span style="color:var(--teal)">Open ▸</span></div></div>`).join('')}
+    </div>
+
+    <div class="section-rule"><span class="lb">The Language-Shift Wall</span><span class="ln"></span></div>
+    <p class="lead">Watch the words change. How a culture names a thing reveals how seriously it intends to look.</p>
+    <div class="langwall">
+      ${[['1947','“Flying saucers”','novelty &amp; ridicule'],['1953','“UFOs”','a coined neutral term'],['2017','“UAP”','un­identified <i>aerial</i> phenomena'],
+         ['2022','“Anomalous phenomena”','air, sea &amp; space'],['2021','“National-security concern”','a flight-safety question'],['2023','“A scientific unknown”','open, fundable study']]
+        .map(s=>`<div class="langstep"><div class="yr">${s[0]}</div><div class="term">${s[1]}</div><div class="mood">${s[2]}</div></div>`).join('')}
+    </div>
+    <div class="inscription" style="margin:34px auto"><div class="small" style="color:var(--gold)">“The most important shift is not that answers have arrived. It is that serious questions are now allowed.”</div></div>
+  `;
+  function openDoc(d){
+    Audio.pageTurn();
+    const html=`<div id="docModal" style="position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(3,5,9,.8)">
+      <div style="max-width:720px;width:100%;max-height:90vh;overflow-y:auto;background:linear-gradient(170deg,#101826,#08111c);border:1px solid rgba(214,178,109,.4);border-radius:16px">
+        <div style="display:flex;justify-content:space-between;gap:14px;padding:22px 26px;border-bottom:1px dashed rgba(214,178,109,.35)">
+          <div><div style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--orange)">${esc(d.claz)}</div>
+            <h3 class="serif" style="font-size:27px;color:#eef0e6;font-weight:400;margin-top:6px">${esc(d.t)}</h3></div>
+          <button class="navbtn" id="docClose">✕ Close</button></div>
+        <div style="padding:22px 26px">
+          <div class="kv"><span class="k">Public record</span><span class="v">${esc(d.rec)}</span></div>
+          <div class="kv"><span class="k">Claim</span><span class="v">${esc(d.claim)}</span></div>
+          <div class="kv"><span class="k">Evidence level</span><span class="v">${esc(d.ev)}</span></div>
+          <div class="kv"><span class="k">Open question</span><span class="v">${esc(d.q)}</span></div>
+          <div class="kv"><span class="k">Why it matters</span><span class="v">${esc(d.matters)}</span></div>
+          <div class="section-rule"><span class="lb">What remains unknown</span><span class="ln"></span></div>
+          <p class="lead" style="margin:0">${esc(d.unknown)}</p>
+        </div></div></div>`;
+    const wrap=document.createElement('div'); wrap.innerHTML=html; body.appendChild(wrap.firstElementChild);
+    const m=$('#docModal'); const close=()=>m.remove(); $('#docClose').onclick=close; $('#docClose').focus();
+    m.addEventListener('click',e=>{ if(e.target===m) close(); });
+  }
+  $('#docRow').addEventListener('click',e=>{ const d=e.target.closest('.doc'); if(d) openDoc(DOCS[+d.dataset.i]); });
+  $('#docRow').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const d=e.target.closest('.doc'); if(d){ e.preventDefault(); openDoc(DOCS[+d.dataset.i]); } } });
+  return ()=>{};
+}
+
+/* ===== EXHIBIT 7 — THE CONTACT ROOM ===== */
+function renderContact(body){
+  Audio.room('contact');
+  body.innerHTML=`
+    <div class="stage" style="height:min(34vh,300px);margin-bottom:24px"><div class="badge">The Contact Room</div><canvas id="starCv"></canvas></div>
+    <p class="lead big" style="text-align:center;max-width:820px;margin:0 auto 26px">Set the instruments aside. This room is about us.
+    Across every age and tongue, the moment we imagine something greater in the sky, the story turns inward — it becomes a story
+    about <em style="color:#dfe9ee">fear, faith, humility, and who we believe we are.</em></p>
+
+    <div class="section-rule"><span class="lb">Voices Across the Eras</span><span class="ln"></span></div>
+    <p class="lead">A soft ambience of human listening — choose an era to color the room.</p>
+    <div class="seg" id="eraSeg">
+      <button data-e="ancient" class="active">Ancient prayer</button>
+      <button data-e="radio">The radio age</button>
+      <button data-e="apollo">Apollo</button>
+      <button data-e="today">Today</button>
+    </div>
+    <p class="lead" id="eraText" style="margin-top:16px;min-height:54px;font-style:italic;font-family:var(--serif);color:var(--silver)">
+      “We have always whispered the same question into the dark, in different words.”</p>
+
+    <div class="section-rule"><span class="lb">What the Unknown Asks of Us</span><span class="ln"></span></div>
+    <div class="themegrid">
+      ${[['Why do we fear the unknown?','Because the unmapped once meant the predator at the edge of the firelight. The sky inherits that ancient vigilance.'],
+         ['Why do we mythologize the sky?','Because it is the one screen every human shares. Onto it each age projects its gods, its enemies, and its hopes.'],
+         ['Why does contact become spiritual?','When we meet what we cannot place, we reach for the only language large enough — the language of the sacred.'],
+         ['Why does intelligence beyond us unsettle?','It asks whether we are the center or a chapter. Maturity is learning to be a chapter and still matter.'],
+         ['What is humility at cosmic scale?','Not smallness, but proportion: knowing we are recent, partial observers — and choosing to observe better.'],
+         ['What is discernment without proof?','Holding a question open without collapsing it into the answer that comforts us fastest.']]
+        .map(([q,a])=>`<div class="theme"><div class="q">${q}</div><div class="a">${a}</div></div>`).join('')}
+    </div>
+
+    <div class="inscription"><div class="big serif">The unknown does not diminish humanity.</div>
+      <div class="small">It reveals the scale of the human calling.</div></div>
+  `;
+  const ERA={
+    ancient:'“Lift up your eyes on high, and see who has created these.” — the oldest instinct: to look up, and to wonder who looks back.',
+    radio:'A century ago, a voice on a broadcast convinced thousands the sky had opened. We were ready to believe, and ready to be afraid.',
+    apollo:'“We came in peace for all mankind.” For a moment, looking back at a small blue Earth, the whole species saw itself from outside.',
+    today:'A child still points upward at a light that will not resolve. The question has not aged. Only our instruments have.'
+  };
+  $('#eraSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+    $$('#eraSeg button').forEach(x=>x.classList.toggle('active',x===b)); $('#eraText').textContent='“'+ERA[b.dataset.e]+'”'; Audio.cue(330,0.06); });
+  // star ceiling
+  const cv=$('#starCv'); const stars=[...Array(160)].map(()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.6+0.3,p:Math.random()*Math.PI*2}));
+  const stop=rafLoop(t=>{ const H=cv.parentElement.clientHeight, c=fitCanvas(cv,H), W=cv.clientWidth;
+    c.clearRect(0,0,W,H); const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0a1020'); g.addColorStop(1,'#05070b'); c.fillStyle=g; c.fillRect(0,0,W,H);
+    stars.forEach(s=>{ const a=0.4+0.6*Math.abs(Math.sin((state.reduced?0:t)+s.p)); c.fillStyle='rgba(200,220,240,'+a+')';
+      c.beginPath(); c.arc(s.x*W,s.y*H,s.r,0,Math.PI*2); c.fill(); });
+    // two upward silhouettes
+    c.fillStyle='rgba(5,7,11,.95)'; const bh=H*0.34;
+    [W*0.4,W*0.56].forEach((x,i)=>{ c.beginPath(); c.ellipse(x,H-bh*0.2,16,bh*0.5,0,0,Math.PI*2); c.fill();
+      c.beginPath(); c.arc(x,H-bh*0.55,9,0,Math.PI*2); c.fill(); });
+  });
+  return ()=>{ stop(); };
+}
+
+/* ===== EXHIBIT 8 — THE GREENE INTERPRETATION ===== */
+function renderGreene(body){
+  Audio.room('contact');
+  body.innerHTML=`
+    <p class="lead big">One room remains — the museum’s own. The Hall of UFOs was never built to prove a single answer.
+    It was built to train a harder skill: <em style="color:#dfe9ee">holding several truths at once without flinching.</em></p>
+
+    <div class="section-rule"><span class="lb">The Greene Thesis</span><span class="ln"></span></div>
+    <div class="grid cards">
+      ${[['Some sightings are misidentified.','Balloons, planets, drones, lens flares, and the tricks of a tired eye account for most reports — and that is not a disappointment. It is calibration.'],
+         ['Some are cultural projection.','Each era sees the craft it expects: airships, then saucers, then triangles, then orbs. The unknown wears the costume of its moment.'],
+         ['Some are advanced human technology.','Secret aircraft and sensors explain more cases than mythology allows — and less than skeptics assume.'],
+         ['Some are natural and unmodeled.','Plasmas, atmospheric optics, and effects we have not characterized may hide inside the residue.'],
+         ['Some remain genuinely unexplained.','After every ordinary cause is subtracted, a disciplined remainder survives. Honesty requires naming it.'],
+         ['The unknown is not a failure.','It is the birthplace of better questions — the working edge of every science we now take for granted.']]
+        .map(([h,p])=>`<div class="card"><h3>${esc(h)}</h3><p>${esc(p)}</p></div>`).join('')}
+    </div>
+
+    <div class="inscription" style="margin:46px auto"><div class="big serif">The sky has always been a mirror.</div>
+      <div class="small">What we see above us reveals what we are becoming within us.</div></div>
+
+    <div class="section-rule"><span class="lb">The Monolith</span><span class="ln"></span></div>
+    <div id="monoWrap">
+      <p class="lead" style="text-align:center;font-family:var(--serif);font-style:italic;font-size:clamp(18px,3vw,26px);color:#eef4f6">“What do you believe is possible?”</p>
+      <div class="choices" id="monoChoices">
+        ${[['alone','We are alone, but still responsible.'],['notalone','We are not alone, and must mature.'],['human','The phenomenon is human, but hidden.'],
+           ['natural','The phenomenon is natural, but misunderstood.'],['layered','The answer is layered.'],['unknown','I do not know yet.']]
+          .map(c=>`<button class="choice" data-c="${c[0]}">${esc(c[1])}</button>`).join('')}
+      </div>
+    </div>
+    <div id="monoResult" class="hidden"></div>
+  `;
+  const RESP={
+    alone:{line:'Then the responsibility is wholly ours — to be the discipline, the mercy, and the wonder we hoped to find out there.',hue:'#D6B26D'},
+    notalone:{line:'Then maturity is the work: to become a species worth meeting before we are met.',hue:'#20F0D0'},
+    human:{line:'Then the mystery is a mirror of our own secrets — and the duty is transparency.',hue:'#FF8A3D'},
+    natural:{line:'Then nature still keeps chapters we have not read — and the duty is better instruments.',hue:'#5fa8ff'},
+    layered:{line:'Then you have understood the museum: not one answer, but the courage to hold many.',hue:'#b79bff'},
+    unknown:{line:'Then you are exactly where every real inquiry begins — and you said it without fear.',hue:'#C8D0D8'}
+  };
+  $('#monoChoices').addEventListener('click',e=>{
+    const b=e.target.closest('.choice'); if(!b) return; const r=RESP[b.dataset.c];
+    Audio.cue(523.25,0.14); if(window.__hubBurst) window.__hubBurst(r.hue);
+    $('#roomglow').style.background=`radial-gradient(ellipse at 50% 40%, ${r.hue}22, transparent 70%)`;
+    const res=$('#monoResult'); res.classList.remove('hidden');
+    res.innerHTML=`
+      <div class="inscription" style="margin:30px auto 10px"><div class="small" style="color:${r.hue};font-size:clamp(17px,2.6vw,24px)">${esc(r.line)}</div></div>
+      <div class="inscription" style="margin:24px auto"><div class="big serif" style="text-shadow:0 0 60px ${r.hue}88">The unknown is not empty.</div>
+        <div class="small">It is waiting for better observers.</div></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+        <button class="navbtn primary" id="monoHall">Return to the Main Hall</button>
+        <a class="navbtn" href="index.html">↩ Return to the Greene Museum atrium</a>
+      </div>`;
+    res.scrollIntoView({behavior: state.reduced?'auto':'smooth', block:'center'});
+    $('#monoHall').onclick=()=>closeExhibit();
+  });
+  return ()=>{ $('#roomglow').style.background=''; };
+}
+
+/* ----------------------------------------------------------------------
+   (E) EXHIBIT OVERLAY SYSTEM
+   ---------------------------------------------------------------------- */
+const exEl=$('#exhibit');
+function openExhibit(i){
+  i=(i+EXHIBITS.length)%EXHIBITS.length;
+  const ex=EXHIBITS[i]; state.currentExhibit=i;
+  if(widgetCleanup){ try{widgetCleanup();}catch(e){} widgetCleanup=null; }
+  $('#exEyebrow').textContent=`Exhibit ${ex.n} · The Hall of UFOs`;
+  $('#exTitle').textContent=ex.title;
+  $('#exThesis').textContent=ex.thesis;
+  $('#exClosing').textContent='“'+ex.closing+'”';
+  $('#roomglow').style.background=`radial-gradient(ellipse at 50% 30%, ${ex.accent}1f, transparent 65%)`;
+  document.documentElement.style.setProperty('--ex-accent', ex.accent);
+  const bodyEl=$('#exbody'); bodyEl.innerHTML=''; bodyEl.scrollTop=0;
+  exEl.classList.add('show'); exEl.setAttribute('aria-hidden','false');
+  $('#hud').classList.remove('show');
+  Audio.cue(ex.id==='greene'?392:494, 0.08);
+  // run the renderer (may return a cleanup fn)
+  try{ widgetCleanup = ex.render(bodyEl) || null; }catch(err){ console.error('exhibit render',err); bodyEl.innerHTML='<p class="lead">This exhibit could not be assembled. Please return to the main hall.</p>'; }
+  if(window.__hubFocus) window.__hubFocus(i);
+  $('#exTitle').setAttribute('tabindex','-1'); $('#exTitle').focus();
+  history.replaceState(null,'','#'+ex.id);
+}
+function closeExhibit(){
+  if(widgetCleanup){ try{widgetCleanup();}catch(e){} widgetCleanup=null; }
+  Audio.room(null);
+  exEl.classList.remove('show'); exEl.setAttribute('aria-hidden','true');
+  state.currentExhibit=-1;
+  $('#hud').classList.add('show');
+  history.replaceState(null,'','#hall');
+  Audio.cue(330,0.06);
+}
+$('#exclose').onclick=closeExhibit;
+$('#exReturn').onclick=closeExhibit;
+$('#exPrev').onclick=()=>openExhibit(state.currentExhibit-1);
+$('#exNext').onclick=()=>openExhibit(state.currentExhibit+1);
+
+/* build the compass directory */
+(function buildCompass(){
+  const list=$('#compassList');
+  list.innerHTML=`<div class="exrow core" data-core="1" tabindex="0" role="button">
+      <span class="num">◉</span><div class="meta"><div class="nm">The Phenomenon Core</div><div class="ds">Return your view to the central hologram</div></div></div>`
+    + EXHIBITS.map((e,i)=>`<div class="exrow" data-i="${i}" tabindex="0" role="button">
+        <span class="num serif">${e.n}</span><div class="meta"><div class="nm">${esc(e.title)}</div><div class="ds">${esc(e.thesis.slice(0,52))}…</div></div></div>`).join('');
+  list.addEventListener('click',e=>{ const row=e.target.closest('.exrow'); if(!row) return;
+    if(row.dataset.core){ if(window.__hubFocus) window.__hubFocus(-1); $('#compass').classList.remove('open'); $('#compassHead').setAttribute('aria-expanded','false'); return; }
+    openExhibit(+row.dataset.i); $('#compass').classList.remove('open'); $('#compassHead').setAttribute('aria-expanded','false'); });
+  list.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const row=e.target.closest('.exrow'); if(row){ e.preventDefault(); row.click(); } } });
+  const head=$('#compassHead'); const toggle=()=>{ const o=$('#compass').classList.toggle('open'); head.setAttribute('aria-expanded',o?'true':'false'); };
+  head.addEventListener('click',toggle);
+  head.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+})();
+
+/* ----------------------------------------------------------------------
+   GLOBAL CONTROLS + KEYBOARD + ACCESSIBILITY
+   ---------------------------------------------------------------------- */
+function setAudio(on){ state.audioOn=on; Audio.setOn(on);
+  $('#btnAudio').textContent=on?'◉ Audio On':'○ Audio Off'; $('#btnAudio').classList.toggle('off',!on);
+  const sw=$('#audioToggle'); sw.classList.toggle('off',!on); sw.setAttribute('aria-checked',on?'true':'false');
+}
+function setReduced(on){ state.reduced=on;
+  $('#btnReduce').textContent=on?'Motion: Min':'Motion: Full'; $('#btnReduce').classList.toggle('off',on);
+  $('#reduceToggle').textContent=on?'◑ Reduced motion: on':'◐ Reduced motion: off'; $('#reduceToggle').setAttribute('aria-pressed',on?'true':'false');
+  if(window.__hubReduced) window.__hubReduced(on);
+}
+function setAmbience(on){ state.ambience=on; $('#btnAmbience').classList.toggle('off',!on);
+  $('#btnAmbience').textContent=on?'Ambience On':'Ambience Off';
+  if(!on) Audio.room(null); else if(state.currentExhibit>=0) Audio.cue(440,0.04); }
+
+$('#btnAudio').onclick=()=>setAudio(!state.audioOn);
+$('#btnReduce').onclick=()=>setReduced(!state.reduced);
+$('#btnAmbience').onclick=()=>setAmbience(!state.ambience);
+$('#audioToggle').onclick=()=>setAudio(!state.audioOn);
+$('#audioToggle').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setAudio(!state.audioOn); } });
+$('#reduceToggle').onclick=()=>setReduced(!state.reduced);
+reduceQuery.addEventListener?.('change',e=>setReduced(e.matches));
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ if(exEl.classList.contains('show')) closeExhibit(); return; }
+  if(exEl.classList.contains('show')){
+    if(e.key==='ArrowRight'){ openExhibit(state.currentExhibit+1); }
+    if(e.key==='ArrowLeft'){ openExhibit(state.currentExhibit-1); }
+    return;
+  }
+  if(!state.started) return;
+  if(e.key>='1'&&e.key<='8'){ openExhibit(+e.key-1); }
+  if(e.key.toLowerCase()==='m'){ $('#compassHead').click(); }
+});
+
+/* ----------------------------------------------------------------------
+   OPENING SEQUENCE — gate → elevator → hall
+   ---------------------------------------------------------------------- */
+function runElevator(){
+  const el=$('#elevator'); el.style.display='block'; el.setAttribute('aria-hidden','false');
+  const depth=$('#depth'), label=$('#depthlabel'), marquee=$('#marquee');
+  const stops=[[0,'Greene Museum · Main Atrium'],[48,'Sublevel 1 · Reading Rooms'],[112,'Sublevel 2 · Restricted Archive'],
+    [186,'Sublevel 3 · Sensor Vault'],[240,'Sublevel 4 · The Hall of the Unknown']];
+  const marquees=['● descending ●','● pressurizing ●','● aligning archive ●','● clearance: granted ●','● doors releasing ●'];
+  let d=0, target=240, dur=state.reduced?1200:5200, t0=performance.now(), done=false;
+  function step(now){
+    if(done) return; const k=clamp((now-t0)/dur,0,1); d=Math.round(target*k);
+    depth.textContent='−'+d+' m';
+    let s=stops[0]; for(const st of stops){ if(d>=st[0]) s=st; } label.textContent=s[1];
+    marquee.textContent=marquees[Math.min(marquees.length-1,Math.floor(k*marquees.length))];
+    if(!state.reduced){ el.querySelector('.shaft').style.transform=`translateY(${Math.sin(now/40)*1.4}px)`; }
+    if(k<1) requestAnimationFrame(step); else openDoors();
+  }
+  function openDoors(){ done=true; depth.textContent='−240 m'; label.textContent='The Hall of the Unknown'; marquee.textContent='● welcome ●';
+    Audio.cue(196,0.12);
+    setTimeout(()=>{ el.classList.add('open'); $('#hud').classList.add('show'); revealHall();
+      setTimeout(()=>{ el.style.display='none'; el.setAttribute('aria-hidden','true'); }, state.reduced?400:2400);
+    }, state.reduced?200:700);
+  }
+  requestAnimationFrame(step);
+  $('#elevSkip').onclick=()=>{ done=true; openDoors(); };
+}
+function revealHall(){
+  state.started=true;
+  setTimeout(()=>{ $('#centerhint').classList.add('show'); setTimeout(()=>$('#centerhint').classList.remove('show'),6500); }, 900);
+  toast('<b>The Hall of UFOs</b> · select a portal, or open the compass directory ⊕', 4200);
+  // honor a deep link
+  const h=location.hash.replace('#','');
+  const idx=EXHIBITS.findIndex(e=>e.id===h); if(idx>=0) setTimeout(()=>openExhibit(idx),1200);
+}
+function begin(){
+  if(state.started) return;
+  Audio.start();
+  const g=$('#gate'); g.style.opacity='0'; setTimeout(()=>g.style.display='none',1000);
+  runElevator();
+}
+$('#begin').onclick=begin;
+$('#errContinue').onclick=()=>{ $('#err').style.display='none'; if(!state.started) begin(); else { $('#hud').classList.add('show'); } };
+
+/* ----------------------------------------------------------------------
+   (F) THREE.JS HUB — the circular chamber + Phenomenon Core + portals
+   Built after import; failure is non-fatal (exhibits still work).
+   ---------------------------------------------------------------------- */
+async function initThree(){
+  let THREE, OrbitControls, EffectComposer, RenderPass, UnrealBloomPass;
+  try{
+    THREE = await import('three');
+    ({OrbitControls} = await import('three/addons/controls/OrbitControls.js'));
+    ({EffectComposer} = await import('three/addons/postprocessing/EffectComposer.js'));
+    ({RenderPass}     = await import('three/addons/postprocessing/RenderPass.js'));
+    ({UnrealBloomPass}= await import('three/addons/postprocessing/UnrealBloomPass.js'));
+  }catch(err){
+    console.error('WebGL/Three load failed',err);
+    state.webgl=false; $('#err').style.display='flex';
+    $('#errmsg').textContent='The 3D engine could not load ('+(err?.message||err)+'). The exhibits below remain fully open — only the 3D hub needs it.';
+    return;
+  }
+
+  const canvas=$('#scene'); let renderer;
+  try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'}); }
+  catch(e){ state.webgl=false; $('#err').style.display='flex'; return; }
+  state.webgl=true;
+  const isMobile=matchMedia('(max-width:760px)').matches;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1, isMobile?1.6:2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x05070b);
+  scene.fog=new THREE.FogExp2(0x05070b, isMobile?0.018:0.014);
+  const camera=new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 400);
+  camera.position.set(0,7,30);
+
+  const controls=new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0,5,0); controls.enableDamping=true; controls.dampingFactor=0.06;
+  controls.minDistance=10; controls.maxDistance=46; controls.maxPolarAngle=Math.PI*0.56; controls.minPolarAngle=Math.PI*0.16;
+  controls.enablePan=false; controls.rotateSpeed=0.6; controls.zoomSpeed=0.7;
+  controls.autoRotate=!state.reduced; controls.autoRotateSpeed=0.35;
+
+  // lights
+  scene.add(new THREE.AmbientLight(0x223344, 0.6));
+  const core1=new THREE.PointLight(0x20f0d0, 60, 80); core1.position.set(0,8,0); scene.add(core1);
+  const amber=new THREE.PointLight(0xffae5e, 18, 60); amber.position.set(0,16,0); scene.add(amber);
+
+  // ---- floor (dark reflective with radial grid) ----
+  const floorGeo=new THREE.CircleGeometry(34,72);
+  const floorMat=new THREE.MeshStandardMaterial({color:0x070d16, metalness:0.9, roughness:0.32});
+  const floor=new THREE.Mesh(floorGeo,floorMat); floor.rotation.x=-Math.PI/2; floor.position.y=-0.01; scene.add(floor);
+  // glowing radial grid
+  const gridG=new THREE.BufferGeometry(); const gpts=[];
+  for(let r=4;r<=32;r+=4){ const seg=96; for(let i=0;i<seg;i++){ const a0=i/seg*Math.PI*2,a1=(i+1)/seg*Math.PI*2;
+    gpts.push(Math.cos(a0)*r,0.02,Math.sin(a0)*r, Math.cos(a1)*r,0.02,Math.sin(a1)*r); } }
+  for(let i=0;i<24;i++){ const a=i/24*Math.PI*2; gpts.push(Math.cos(a)*4,0.02,Math.sin(a)*4, Math.cos(a)*32,0.02,Math.sin(a)*32); }
+  gridG.setAttribute('position',new THREE.Float32BufferAttribute(gpts,3));
+  const grid=new THREE.LineSegments(gridG,new THREE.LineBasicMaterial({color:0x20f0d0,transparent:true,opacity:0.16}));
+  scene.add(grid);
+
+  // ---- curved wall + ceiling rim ----
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(34,34,26,80,1,true),
+    new THREE.MeshStandardMaterial({color:0x070c14,metalness:0.7,roughness:0.5,side:THREE.BackSide}));
+  wall.position.y=12; scene.add(wall);
+  // vertical accent lines on wall
+  const wlG=new THREE.BufferGeometry(); const wl=[];
+  for(let i=0;i<48;i++){ const a=i/48*Math.PI*2,x=Math.cos(a)*33.7,z=Math.sin(a)*33.7; wl.push(x,0,z,x,24,z); }
+  wlG.setAttribute('position',new THREE.Float32BufferAttribute(wl,3));
+  scene.add(new THREE.LineSegments(wlG,new THREE.LineBasicMaterial({color:0x16314a,transparent:true,opacity:0.5})));
+
+  // ---- starfield (ceiling dome) ----
+  const starG=new THREE.BufferGeometry(); const sv=[];
+  for(let i=0;i<1400;i++){ const u=Math.random(),v=Math.random(); const th=u*Math.PI*2, ph=Math.acos(2*v-1);
+    const R=60+Math.random()*60; const x=R*Math.sin(ph)*Math.cos(th), y=Math.abs(R*Math.cos(ph))*0.8+18, z=R*Math.sin(ph)*Math.sin(th);
+    sv.push(x,y,z); }
+  starG.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+  const stars=new THREE.Points(starG,new THREE.PointsMaterial({color:0xbcd2e6,size:0.4,transparent:true,opacity:0.8,sizeAttenuation:true}));
+  scene.add(stars);
+
+  // ---- dust particles ----
+  const dustG=new THREE.BufferGeometry(); const dv=[],dsp=[];
+  for(let i=0;i<(isMobile?350:700);i++){ dv.push((Math.random()-0.5)*54,Math.random()*22,(Math.random()-0.5)*54); dsp.push(0.2+Math.random()*0.5); }
+  dustG.setAttribute('position',new THREE.Float32BufferAttribute(dv,3));
+  const dust=new THREE.Points(dustG,new THREE.PointsMaterial({color:0x9fe8df,size:0.12,transparent:true,opacity:0.5}));
+  scene.add(dust);
+
+  // ============== THE PHENOMENON CORE ==============
+  const core=new THREE.Group(); core.position.y=8; scene.add(core);
+
+  // hologram globe — custom shader (lat/long grid + fresnel rim)
+  const globeMat=new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    uniforms:{ uTime:{value:0}, uColor:{value:new THREE.Color(0x20f0d0)} },
+    vertexShader:`varying vec3 vN; varying vec3 vView; varying vec2 vUv;
+      void main(){ vUv=uv; vN=normalize(normalMatrix*normal);
+        vec4 mv=modelViewMatrix*vec4(position,1.0); vView=normalize(-mv.xyz);
+        gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`varying vec3 vN; varying vec3 vView; varying vec2 vUv; uniform float uTime; uniform vec3 uColor;
+      void main(){ float lon=abs(fract(vUv.x*24.0)-0.5); float lat=abs(fract(vUv.y*16.0)-0.5);
+        float line=smoothstep(0.46,0.5,max(1.0-lon*2.0,1.0-lat*2.0));
+        float fres=pow(1.0-max(dot(vN,vView),0.0),2.0);
+        float sweep=smoothstep(0.0,0.04,abs(fract(vUv.x - uTime*0.05)-0.5)) ;
+        float a=line*0.5 + fres*0.9 + (1.0-sweep)*0.25;
+        gl_FragColor=vec4(uColor,a*0.85); }`
+  });
+  const globe=new THREE.Mesh(new THREE.SphereGeometry(4.2,48,32),globeMat); core.add(globe);
+  // faint solid inner sphere
+  core.add(new THREE.Mesh(new THREE.SphereGeometry(4.05,32,24),
+    new THREE.MeshBasicMaterial({color:0x06222a,transparent:true,opacity:0.55})));
+
+  // sighting clusters (glowing points at lat/long)
+  const SITES=[[33.4,-104.5],[33.4,-112.0],[32.9,-117.2],[50.5,4.5],[38.9,-77.0],[63.0,11.1],[52.1,1.4],[49.4,11.1],[27.0,33.8],[-23.5,-46.6],[35.7,139.7],[51.5,-0.1]];
+  const clusterG=new THREE.BufferGeometry(); const cv2=[];
+  SITES.forEach(([la,lo])=>{ const phi=(90-la)*Math.PI/180, th=(lo+180)*Math.PI/180, R=4.25;
+    cv2.push(-R*Math.sin(phi)*Math.cos(th), R*Math.cos(phi), R*Math.sin(phi)*Math.sin(th)); });
+  clusterG.setAttribute('position',new THREE.Float32BufferAttribute(cv2,3));
+  const clusters=new THREE.Points(clusterG,new THREE.PointsMaterial({color:0xff8a3d,size:0.5,transparent:true,opacity:0.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+  globe.add(clusters);
+
+  // orbital + radar rings
+  const ringMat=new THREE.MeshBasicMaterial({color:0x20f0d0,transparent:true,opacity:0.4,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false});
+  const ring1=new THREE.Mesh(new THREE.TorusGeometry(6.2,0.03,8,96),ringMat.clone()); ring1.rotation.x=Math.PI/2.3; core.add(ring1);
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(7.4,0.02,8,96),ringMat.clone()); ring2.rotation.x=Math.PI/1.7; ring2.rotation.z=0.5; core.add(ring2);
+  const radarArc=new THREE.Mesh(new THREE.TorusGeometry(5.4,0.04,8,64,Math.PI*0.6),new THREE.MeshBasicMaterial({color:0xff8a3d,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false}));
+  radarArc.rotation.x=Math.PI/2; core.add(radarArc);
+
+  // the suspended UFO form (saucer hologram), hovering above the globe
+  const saucer=new THREE.Group(); saucer.position.y=0; core.add(saucer);
+  const lathePts=[]; for(let i=0;i<=12;i++){ const x=i/12; lathePts.push(new THREE.Vector2(Math.sin(x*Math.PI)*2.4+0.05, (x-0.5)*0.9)); }
+  const saucerBody=new THREE.Mesh(new THREE.LatheGeometry(lathePts,40),
+    new THREE.MeshBasicMaterial({color:0x20f0d0,wireframe:true,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending,depthWrite:false}));
+  saucer.add(saucerBody);
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(0.9,20,12,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshBasicMaterial({color:0x9ffff0,wireframe:true,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending,depthWrite:false}));
+  dome.position.y=0.35; saucer.add(dome);
+  const saucerRing=new THREE.Mesh(new THREE.TorusGeometry(2.45,0.05,8,64),
+    new THREE.MeshBasicMaterial({color:0xff8a3d,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false}));
+  saucerRing.rotation.x=Math.PI/2; saucer.add(saucerRing);
+
+  // engraved title (canvas plane high on the far wall)
+  function makeLabel(text,sub,w=1024,h=256,big=120,col='#dfeef0',sc='#20f0d0'){
+    const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
+    x.clearRect(0,0,w,h); x.textAlign='center'; x.textBaseline='middle';
+    x.shadowColor='rgba(32,240,208,0.8)'; x.shadowBlur=24; x.fillStyle=col;
+    x.font=`${big}px "Iowan Old Style", Palatino, Georgia, serif`; x.fillText(text,w/2,h*0.42);
+    if(sub){ x.shadowBlur=8; x.fillStyle=sc; x.font=`28px "SF Pro Display", Inter, Arial, sans-serif`;
+      x.fillText(sub.toUpperCase(),w/2,h*0.82); }
+    const tex=new THREE.CanvasTexture(c); tex.anisotropy=4; return tex;
+  }
+  const titleTex=makeLabel('THE HALL OF UFOs','A record of what humanity has seen, feared & never fully explained',1400,300,118);
+  const titleMesh=new THREE.Mesh(new THREE.PlaneGeometry(28,6),
+    new THREE.MeshBasicMaterial({map:titleTex,transparent:true,opacity:0.96,blending:THREE.AdditiveBlending,depthWrite:false}));
+  titleMesh.position.set(0,17,-33.5); scene.add(titleMesh);
+
+  // ============== PORTALS ==============
+  const portals=[]; const R=20;
+  const glyphCol={eye:'#D6B26D',disc:'#C8D0D8',jet:'#20F0D0',orb:'#b79bff',field:'#5fa8ff',file:'#FF8A3D',figure:'#9fb4ff',monolith:'#20F0D0'};
+  EXHIBITS.forEach((ex,i)=>{
+    const a=ex.angle*Math.PI/180; const x=Math.cos(a)*R, z=Math.sin(a)*R;
+    const g=new THREE.Group(); g.position.set(x,0,z); g.lookAt(0,4,0); g.userData.exhibit=i; scene.add(g);
+    // pylon
+    const pyl=new THREE.Mesh(new THREE.BoxGeometry(0.5,8,0.5),
+      new THREE.MeshStandardMaterial({color:0x0c1622,metalness:0.85,roughness:0.35,emissive:new THREE.Color(ex.accent),emissiveIntensity:0.05}));
+    pyl.position.y=4; g.add(pyl);
+    // emissive label panel
+    const tex=makeLabel(ex.n, ex.title.length>22?ex.title.slice(0,22):ex.title, 640,300,150, ex.accent, '#cfe0e6');
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(5.4,2.6),
+      new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.92,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+    panel.position.set(0,6.4,0.05); g.add(panel);
+    // glowing portal arch (torus)
+    const arch=new THREE.Mesh(new THREE.TorusGeometry(2.1,0.07,10,40),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(ex.accent),transparent:true,opacity:0.7,blending:THREE.AdditiveBlending,depthWrite:false}));
+    arch.position.y=3; g.add(arch);
+    // inner shimmer disc (the "doorway")
+    const door=new THREE.Mesh(new THREE.CircleGeometry(2,32),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(ex.accent),transparent:true,opacity:0.1,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+    door.position.y=3; g.add(door);
+    // base glow ring
+    const base=new THREE.Mesh(new THREE.RingGeometry(0.8,2.4,32),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(ex.accent),transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false}));
+    base.rotation.x=-Math.PI/2; base.position.y=0.03; g.add(base);
+    // hit target (invisible, larger)
+    const hit=new THREE.Mesh(new THREE.BoxGeometry(5,9,2),new THREE.MeshBasicMaterial({visible:false}));
+    hit.position.y=4; hit.userData.exhibit=i; g.add(hit);
+    portals.push({group:g,arch,door,panel,base,accent:new THREE.Color(ex.accent),hit,i,hover:0,active:0});
+  });
+
+  // ============== INTERACTION (raycast / hover) ==============
+  const ray=new THREE.Raycaster(); const mouse=new THREE.Vector2();
+  let down=null, hovered=-1;
+  function setMouse(e){ const r=renderer.domElement.getBoundingClientRect();
+    mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1; }
+  function pick(){ ray.setFromCamera(mouse,camera);
+    const hits=ray.intersectObjects(portals.map(p=>p.hit),false);
+    return hits.length?hits[0].object.userData.exhibit:-1; }
+  renderer.domElement.addEventListener('pointerdown',e=>{ down={x:e.clientX,y:e.clientY,t:performance.now()}; });
+  renderer.domElement.addEventListener('pointerup',e=>{
+    if(!down) return; const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y); const dt=performance.now()-down.t; down=null;
+    if(moved>8||dt>500) return; // a drag, not a click
+    setMouse(e); const idx=pick(); if(idx>=0){ flyToPortal(idx, ()=>openExhibit(idx)); }
+  });
+  renderer.domElement.addEventListener('pointermove',e=>{ setMouse(e); const idx=pick();
+    if(idx!==hovered){ hovered=idx; renderer.domElement.style.cursor=idx>=0?'pointer':'grab';
+      if(idx>=0){ toast('<b>Exhibit '+EXHIBITS[idx].n+'</b> · '+esc(EXHIBITS[idx].title)+' — click to enter',1600); } } });
+  renderer.domElement.style.cursor='grab';
+
+  // camera moves
+  let flying=null;
+  function flyToPortal(i, cb){
+    const p=portals[i]; const tp=new THREE.Vector3(); p.group.getWorldPosition(tp);
+    const camTarget=tp.clone().multiplyScalar(0.62); camTarget.y=4;
+    const look=tp.clone(); look.y=4;
+    flying={from:camera.position.clone(),to:camTarget,lookFrom:controls.target.clone(),lookTo:look,t:0,cb};
+    controls.autoRotate=false;
+  }
+  function focusPortal(i){ // from compass
+    controls.autoRotate=false;
+    if(i<0){ flying={from:camera.position.clone(),to:new THREE.Vector3(0,7,30),lookFrom:controls.target.clone(),lookTo:new THREE.Vector3(0,5,0),t:0,cb:()=>{controls.autoRotate=!state.reduced;}}; return; }
+    const p=portals[i]; const tp=new THREE.Vector3(); p.group.getWorldPosition(tp);
+    const camTarget=tp.clone().multiplyScalar(0.7); camTarget.y=5;
+    flying={from:camera.position.clone(),to:camTarget,lookFrom:controls.target.clone(),lookTo:new THREE.Vector3(tp.x,4,tp.z),t:0,cb:null};
+  }
+  window.__hubFocus=focusPortal;
+  window.__hubReduced=(on)=>{ controls.autoRotate=!on; };
+  // a light burst for the final monolith choice
+  let burst=0, burstCol=new THREE.Color(0x20f0d0);
+  window.__hubBurst=(hex)=>{ burst=1; burstCol=new THREE.Color(hex); };
+
+  // ============== POST + RESIZE ==============
+  let composer=null;
+  try{
+    composer=new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene,camera));
+    const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), isMobile?0.7:0.95, 0.65, 0.12);
+    composer.addPass(bloom);
+  }catch(e){ composer=null; }
+
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight); if(composer) composer.setSize(innerWidth,innerHeight); });
+
+  // ============== RENDER LOOP ==============
+  const clock=new THREE.Clock();
+  function animate(){
+    const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+    globeMat.uniforms.uTime.value=t;
+    if(!state.reduced){
+      globe.rotation.y+=dt*0.08; core.rotation.y+=dt*0.04;
+      saucer.rotation.y-=dt*0.5; saucer.position.y=Math.sin(t*0.6)*0.4;
+      ring1.rotation.z+=dt*0.2; ring2.rotation.z-=dt*0.15; radarArc.rotation.z+=dt*0.6;
+      saucerRing.rotation.z+=dt*0.8;
+      stars.rotation.y+=dt*0.004;
+      // dust drift
+      const dp=dust.geometry.attributes.position; for(let i=0;i<dp.count;i++){ let y=dp.getY(i)+dsp[i]*dt; if(y>22)y-=22; dp.setY(i,y); } dp.needsUpdate=true;
+    }
+    // portal pulse + hover
+    portals.forEach((p,idx)=>{ const target=(idx===hovered)?1:0; p.hover=lerp(p.hover,target,0.12);
+      const pulse=0.55+0.25*Math.sin(t*1.6+idx)+p.hover*0.6;
+      p.arch.material.opacity=clamp(pulse,0,1); p.door.material.opacity=0.08+p.hover*0.32+0.04*Math.sin(t*2+idx);
+      p.base.material.opacity=0.14+p.hover*0.3; p.arch.scale.setScalar(1+p.hover*0.06);
+    });
+    core1.intensity=50+Math.sin(t*1.3)*12 + burst*120;
+    if(burst>0){ burst=Math.max(0,burst-dt*0.6); core1.color.lerp(burstCol,0.1); amber.color.lerp(burstCol,0.05); }
+    // camera fly
+    if(flying){ flying.t=Math.min(1,flying.t+dt*(state.reduced?3:1.1)); const e=1-Math.pow(1-flying.t,3);
+      camera.position.lerpVectors(flying.from,flying.to,e); controls.target.lerpVectors(flying.lookFrom,flying.lookTo,e);
+      if(flying.t>=1){ const cb=flying.cb; flying=null; if(cb) cb(); } }
+    controls.update();
+    if(composer) composer.render(); else renderer.render(scene,camera);
+  }
+  renderer.setAnimationLoop(animate);
+  state.hubReady=true;
+}
+
+/* ----------------------------------------------------------------------
+   BOOT
+   ---------------------------------------------------------------------- */
+// reflect initial reduced-motion in UI
+setReduced(state.reduced); setAudio(true); setAmbience(true);
+// kick the 3D hub (non-blocking; UI already works)
+initThree();
+</script>
+</body>
+</html>

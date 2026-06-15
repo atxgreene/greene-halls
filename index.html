@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Two Halls</title>
+<title>The Greene Halls</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:#050406;color:#e9dcc0;
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:hidden}
-  .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:auto}
+  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;background:radial-gradient(ellipse at 50% 30%,#15101a 0%,#070608 60%,#000 100%);padding:6vh 20px}
   h1{font-size:clamp(30px,6vw,64px);font-weight:400;letter-spacing:.12em;color:#e9dcc0;
     text-shadow:0 0 40px rgba(217,180,99,.35)}
@@ -21,14 +21,18 @@
   a.door .d{margin-top:12px;font-size:13.5px;font-style:italic;line-height:1.6;color:#a99e82}
   a.fallen .t{color:#e7b0a0;text-shadow:0 0 26px rgba(184,18,26,.5)}
   a.holy .t{color:#ffe6a8;text-shadow:0 0 26px rgba(217,180,99,.55)}
+  a.ufos{border-color:rgba(32,240,208,.32)}
+  a.ufos:hover{border-color:#20f0d0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.18)}
+  a.ufos .t{color:#a8f4e6;text-shadow:0 0 26px rgba(32,240,208,.5)}
+  a.ufos .d{color:#8fb3ad}
   .foot{margin-top:48px;font-size:12px;color:#6b6354;line-height:1.8;max-width:560px}
   .foot code{color:#9a8e72}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>The Two Halls</h1>
-  <div class="sub">Of Heaven and of the Fall</div>
+  <h1>The Greene Halls</h1>
+  <div class="sub">Chambers of the Museum</div>
   <div class="doors">
     <a class="door fallen" href="hall-of-the-watchers.html">
       <div class="t">The Hall of the Watchers</div>
@@ -38,9 +42,14 @@
       <div class="t">The Hall of the Archangels</div>
       <div class="d">The holy ones who stand before the Throne — who beheld the ruin below and were sent to bind the fallen.</div>
     </a>
+    <a class="door ufos" href="hall-of-ufos.html">
+      <div class="t">The Hall of UFOs</div>
+      <div class="d">A classified wing beneath the museum — a record of what humanity has seen, feared, studied, and never fully explained.</div>
+    </a>
   </div>
   <div class="foot">For the 3D models and narration to load, open this from the local server
-    (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
+    (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly. The Hall of UFOs is fully
+    procedural — no model or audio files — so it also runs from any static host.</div>
 </div>
 </body>
 </html>
