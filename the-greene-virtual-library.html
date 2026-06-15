@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#050403" />
+<title>The Greene Virtual Library — A Temple of Living Books</title>
+<style>
+  /* ============================================================
+     THE GREENE VIRTUAL LIBRARY
+     A Temple of Living Books, Hidden Knowledge, Disciplined Study
+     Single-file experience. The full catalog + study tools work
+     even when WebGL is unavailable; the Three.js temple is an
+     optional ambient backdrop (progressive enhancement).
+     ============================================================ */
+  :root{
+    --stone:#D8C6A3; --cedar:#5A351E; --black:#050403; --bronze:#B07A35;
+    --gold:#D6B15F; --amber:#FFB454; --ivory:#F2E7C9; --teal:#20F0D0;
+    --blood:#7A1E1E; --midnight:#07111F;
+    --ink:#0a0807; --parch:#e9dcc0; --muted:#9a8e72; --faint:#6f6552;
+    --panel:linear-gradient(180deg,rgba(14,11,9,.96),rgba(7,6,5,.985));
+    --glass:rgba(10,9,7,.62); --line:rgba(214,177,95,.22);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;background:var(--black);color:var(--parch);
+    font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow:hidden}
+  body{position:fixed;inset:0}
+  h1,h2,h3,h4,.serif{font-family:var(--serif);font-weight:400}
+  button,input,select,textarea{font-family:inherit;color:inherit}
+  ::selection{background:rgba(32,240,208,.25)}
+  a{color:var(--gold);text-decoration:none}
+  /* scrollbars */
+  *::-webkit-scrollbar{width:9px;height:9px}
+  *::-webkit-scrollbar-thumb{background:rgba(214,177,95,.28);border-radius:5px}
+  *::-webkit-scrollbar-track{background:transparent}
+
+  #scene{position:fixed;inset:0;z-index:0;display:block}
+  /* fallback backdrop if no WebGL */
+  body.no3d #scene{display:none}
+  #backdrop{position:fixed;inset:0;z-index:0;display:none;
+    background:radial-gradient(ellipse at 50% 22%,#1a140d 0%,#0b0907 55%,#040302 100%)}
+  body.no3d #backdrop{display:block}
+  .vig{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 48%,rgba(0,0,0,.62) 100%)}
+
+  /* ============================ OPENING / DOOR ============================ */
+  #gate{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:5vh 22px;background:radial-gradient(ellipse at 50% 30%,#15110b 0%,#080605 60%,#000 100%);
+    transition:opacity 1.4s ease}
+  #gate.gone{opacity:0;pointer-events:none}
+  .gatewrap{max-width:780px;width:100%}
+  .door-svg{width:min(360px,72vw);height:auto;margin:0 auto 18px;display:block;filter:drop-shadow(0 12px 40px rgba(0,0,0,.7))}
+  .leaf{transition:transform 2.6s cubic-bezier(.7,0,.2,1)}
+  #gate.opening .leaf-l{transform:translateX(-46%)}
+  #gate.opening .leaf-r{transform:translateX(46%)}
+  #gate h1{font-size:clamp(30px,6vw,62px);letter-spacing:.1em;color:var(--ivory);
+    text-shadow:0 0 44px rgba(214,177,95,.4),0 2px 2px #000}
+  #gate .inscr{margin:18px auto 0;font-family:var(--serif);font-style:italic;font-size:clamp(15px,2.2vw,21px);
+    line-height:1.7;color:var(--gold);letter-spacing:.02em;max-width:560px}
+  #gate .sub{margin-top:10px;font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--muted)}
+  .enter{margin-top:40px;padding:16px 48px;font-size:16px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(180deg,#e7c878,#b9923f);border:none;border-radius:3px;cursor:pointer;
+    box-shadow:0 0 44px rgba(214,177,95,.35);transition:transform .2s,box-shadow .2s}
+  .enter:hover{transform:translateY(-2px);box-shadow:0 0 64px rgba(214,177,95,.6)}
+  .enter:disabled{opacity:.5;cursor:wait}
+  .gate-mini{margin-top:18px;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .gate-mini button{background:none;border:none;color:var(--muted);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;cursor:pointer}
+  .gate-mini button:hover{color:var(--gold)}
+  #gate .note{margin-top:22px;font-size:11.5px;color:var(--faint);letter-spacing:.06em;line-height:1.7;max-width:560px;margin-left:auto;margin-right:auto}
+
+  /* ============================ APP SHELL ============================ */
+  #app{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;opacity:0;transition:opacity 1s ease;pointer-events:none}
+  #app.live{opacity:1;pointer-events:auto}
+
+  /* top bar */
+  #top{display:flex;align-items:center;gap:12px;padding:10px 16px;flex:none;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(6,5,4,.88),rgba(6,5,4,.2));backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);z-index:8}
+  #top .brand{font-family:var(--serif);font-size:18px;letter-spacing:.08em;color:var(--ivory);white-space:nowrap;cursor:pointer}
+  #top .brand b{color:var(--gold);font-weight:400}
+  #top .where{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  #top .grow{flex:1}
+  .search-box{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.4);border:1px solid var(--line);
+    border-radius:24px;padding:8px 14px;min-width:180px;max-width:420px;flex:1 1 320px;transition:border-color .2s}
+  .search-box:focus-within{border-color:var(--teal);box-shadow:0 0 0 1px rgba(32,240,208,.3)}
+  .search-box svg{width:15px;height:15px;flex:none;opacity:.7}
+  .search-box input{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--ivory);min-width:0}
+  .search-box input::placeholder{color:var(--faint)}
+  .search-box kbd{font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .tool{background:rgba(10,9,7,.6);border:1px solid var(--line);color:var(--gold);font-size:12px;letter-spacing:.06em;
+    padding:9px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:.16s;display:inline-flex;align-items:center;gap:6px}
+  .tool:hover{background:rgba(214,177,95,.16);border-color:var(--gold)}
+  .tool.on{background:rgba(32,240,208,.16);border-color:var(--teal);color:var(--teal)}
+  .tool svg{width:15px;height:15px}
+  .tool .lbl{}
+  #top .tools{display:flex;gap:7px;align-items:center}
+
+  /* body split */
+  #mid{flex:1;display:flex;min-height:0;position:relative}
+
+  /* navigation compass / wings */
+  #nav{width:248px;flex:none;overflow-y:auto;padding:14px 12px 30px;
+    background:linear-gradient(180deg,rgba(7,6,5,.72),rgba(5,4,3,.6));border-right:1px solid var(--line);
+    backdrop-filter:blur(6px);z-index:7}
+  #nav .navhead{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.8;padding:6px 10px 8px}
+  .wing{display:flex;gap:11px;align-items:flex-start;padding:11px 10px;border-radius:8px;cursor:pointer;
+    border:1px solid transparent;transition:.16s;margin-bottom:3px}
+  .wing:hover{background:rgba(214,177,95,.07)}
+  .wing.active{background:rgba(214,177,95,.12);border-color:var(--line)}
+  .wing .ico{width:26px;height:26px;flex:none;color:var(--gold);opacity:.92}
+  .wing .ico svg{width:26px;height:26px}
+  .wing .tx .nm{font-family:var(--serif);font-size:15px;color:var(--ivory);line-height:1.15}
+  .wing.active .tx .nm{color:var(--gold)}
+  .wing .tx .ds{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .wing .tx .ct{font-size:10px;color:var(--faint);margin-top:4px;letter-spacing:.08em}
+  #nav .navfoot{margin-top:14px;padding:12px 10px 0;border-top:1px solid var(--line)}
+  #nav .navfoot .epi{font-family:var(--serif);font-style:italic;font-size:12.5px;line-height:1.7;color:var(--faint)}
+
+  /* main content */
+  #main{flex:1;overflow-y:auto;position:relative;scroll-behavior:smooth}
+  .view{padding:26px clamp(16px,3.4vw,42px) 90px;max-width:1500px;margin:0 auto}
+  .wing-head{margin-bottom:18px}
+  .wing-head .eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--teal)}
+  .wing-head h2{font-size:clamp(26px,4vw,40px);color:var(--ivory);margin:6px 0 6px;letter-spacing:.02em}
+  .wing-head .lede{font-size:14.5px;line-height:1.7;color:var(--muted);max-width:760px}
+  .wing-head .lede em{color:var(--parch);font-style:italic}
+
+  /* filters toolbar */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 6px}
+  .filters .fl{display:flex;flex-direction:column;gap:3px}
+  .filters label{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .filters select,.filters .chiprow{background:rgba(0,0,0,.36);border:1px solid var(--line);color:var(--parch);
+    border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;cursor:pointer}
+  .filters select:focus{border-color:var(--teal)}
+  .filters .clearf{margin-left:auto;align-self:flex-end}
+  .countline{font-size:12px;color:var(--faint);letter-spacing:.06em;margin:6px 2px 12px}
+  .countline b{color:var(--gold)}
+
+  /* section grids inside hall */
+  .rail{margin:6px 0 26px}
+  .rail h3{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;
+    display:flex;align-items:center;gap:10px}
+  .rail h3::after{content:"";flex:1;height:1px;background:var(--line)}
+  .scroller{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x proximity}
+  .scroller .book-card{scroll-snap-align:start}
+
+  /* book grid + cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:16px;margin-top:6px}
+  .book-card{position:relative;width:100%;min-width:172px;cursor:pointer;border-radius:8px;overflow:hidden;
+    border:1px solid var(--line);background:linear-gradient(160deg,rgba(20,16,11,.9),rgba(8,7,5,.95));
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s}
+  .scroller .book-card{width:178px;flex:none}
+  .book-card:hover{transform:translateY(-4px);border-color:var(--gold);box-shadow:0 16px 40px rgba(0,0,0,.55)}
+  .book-card:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .cover{height:158px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;
+    background:linear-gradient(150deg,var(--c1,#2a1d12),var(--c2,#120c08));overflow:hidden}
+  .cover::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 1px,transparent 1px 5px);opacity:.5}
+  .cover::after{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:rgba(0,0,0,.34);
+    box-shadow:inset -2px 0 4px rgba(0,0,0,.5)}
+  .cover .ct{font-family:var(--serif);font-size:15px;line-height:1.2;color:var(--ivory);position:relative;z-index:1;
+    text-shadow:0 2px 6px rgba(0,0,0,.7)}
+  .cover .ca{font-size:11px;color:rgba(242,231,201,.72);margin-top:5px;position:relative;z-index:1;font-style:italic}
+  .cover .gild{position:absolute;top:10px;left:14px;right:10px;height:1px;background:linear-gradient(90deg,var(--gold),transparent);opacity:.6}
+  .book-meta{padding:9px 11px 11px}
+  .book-meta .trad{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal)}
+  .book-meta .stat{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10.5px;color:var(--muted)}
+  .badge{display:inline-block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;border-radius:20px;
+    border:1px solid var(--line);color:var(--muted)}
+  .badge.sample{position:absolute;top:8px;right:8px;z-index:2;background:rgba(122,30,30,.5);border-color:rgba(214,177,95,.5);color:var(--ivory)}
+  .badge.fav{color:var(--amber);border-color:rgba(255,180,84,.5)}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}
+  .dot.reading{background:var(--amber)} .dot.read{background:var(--teal)} .dot.unread{background:var(--faint)}
+  .dot.flagged{background:var(--blood)}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px;
+    font-size:14px;line-height:1.7;background:rgba(0,0,0,.2)}
+  .empty b{color:var(--gold);font-weight:400}
+
+  /* generic card / feature blocks */
+  .blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:8px}
+  .block{border:1px solid var(--line);border-radius:10px;padding:18px;background:rgba(8,7,5,.5)}
+  .block h4{font-size:15px;color:var(--gold);margin-bottom:8px;letter-spacing:.02em}
+  .block p{font-size:13px;line-height:1.6;color:var(--muted)}
+  .block .big{font-size:30px;font-family:var(--serif);color:var(--ivory)}
+
+  /* tables (canon / compare) */
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px;background:rgba(6,5,4,.5)}
+  table.matrix{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+  table.matrix th,table.matrix td{padding:11px 13px;text-align:left;border-bottom:1px solid rgba(214,177,95,.12);vertical-align:top}
+  table.matrix thead th{position:sticky;top:0;background:rgba(12,10,7,.96);color:var(--gold);font-weight:400;
+    letter-spacing:.08em;font-size:11px;text-transform:uppercase;z-index:1}
+  table.matrix tbody tr:hover{background:rgba(214,177,95,.05)}
+  table.matrix td.yes{color:var(--teal)} table.matrix td.no{color:var(--blood)} table.matrix td.maybe{color:var(--amber)}
+  table.matrix th[scope=row]{font-family:var(--serif);color:var(--ivory);font-size:14px}
+
+  .pill{display:inline-block;font-size:10px;letter-spacing:.1em;padding:3px 9px;border-radius:20px;margin:2px 3px 0 0;
+    border:1px solid var(--line);color:var(--muted);cursor:default}
+  .pill.ev{border-color:rgba(214,177,95,.4)}
+  .pill.danger{border-color:var(--blood);color:#e7a59a;background:rgba(122,30,30,.18)}
+  .pill.click{cursor:pointer} .pill.click:hover{border-color:var(--gold);color:var(--gold)}
+  .pill.on{background:rgba(32,240,208,.18);border-color:var(--teal);color:var(--teal)}
+
+  /* ============================ RIGHT DETAIL PANEL ============================ */
+  #detail{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);z-index:40;background:var(--panel);
+    border-left:1px solid var(--line);box-shadow:-30px 0 80px rgba(0,0,0,.6);transform:translateX(105%);
+    transition:transform .5s cubic-bezier(.2,.8,.2,1);overflow-y:auto;padding:0 0 60px}
+  #detail.open{transform:translateX(0)}
+  .dt-cover{height:200px;position:relative;display:flex;align-items:flex-end;padding:22px;
+    background:linear-gradient(150deg,var(--c1,#2a1d12),var(--c2,#0c0805))}
+  .dt-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(5,4,3,.85))}
+  .dt-cover .x{position:absolute;top:14px;right:16px;z-index:3;background:rgba(0,0,0,.4);border:1px solid var(--line);
+    color:var(--ivory);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1}
+  .dt-cover .x:hover{border-color:var(--gold);color:var(--gold)}
+  .dt-cover .ti{position:relative;z-index:2}
+  .dt-cover .trad{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal)}
+  .dt-cover h2{font-size:26px;color:var(--ivory);margin:5px 0 2px;line-height:1.15;text-shadow:0 2px 10px #000}
+  .dt-cover .auth{font-size:13.5px;font-style:italic;color:var(--parch)}
+  .dt-body{padding:18px 24px 0}
+  .dt-actions{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
+  .dt-actions button{flex:1 1 calc(50% - 8px);background:rgba(214,177,95,.08);border:1px solid var(--line);color:var(--gold);
+    font-size:12px;letter-spacing:.06em;padding:11px 8px;border-radius:7px;cursor:pointer;transition:.16s}
+  .dt-actions button:hover{background:rgba(214,177,95,.18);border-color:var(--gold)}
+  .dt-actions button.primary{background:linear-gradient(180deg,#e7c878,#b9923f);color:var(--ink);border:none;flex-basis:100%}
+  .dt-actions button.fav.on{background:rgba(255,180,84,.18);border-color:var(--amber);color:var(--amber)}
+  .field{margin:14px 0}
+  .field .label{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);opacity:.85;
+    margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .field .label::after{content:"";flex:1;height:1px;background:rgba(214,177,95,.16)}
+  .field .val{font-size:14px;line-height:1.66;color:#cdbf9f}
+  .field .val.miss{color:var(--faint);font-style:italic}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+  .kv dt{color:var(--faint);letter-spacing:.04em} .kv dd{color:var(--parch)}
+  .stars{display:inline-flex;gap:3px;cursor:pointer}
+  .stars span{font-size:18px;color:var(--faint);transition:.1s} .stars span.on{color:var(--amber)}
+  .statusrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .statusrow button{font-size:11px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);
+    background:rgba(0,0,0,.3);color:var(--muted);cursor:pointer}
+  .statusrow button.on{background:rgba(32,240,208,.16);border-color:var(--teal);color:var(--teal)}
+  .notebox{width:100%;min-height:84px;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:8px;
+    padding:11px;font-size:13.5px;line-height:1.6;color:var(--parch);resize:vertical;outline:none;font-family:var(--serif)}
+  .notebox:focus{border-color:var(--teal)}
+  .relchips{display:flex;flex-wrap:wrap;gap:6px}
+  .toc{font-size:13px;line-height:1.9;color:#cdbf9f;list-style:none}
+  .toc li{padding-left:18px;position:relative} .toc li::before{content:"§";position:absolute;left:0;color:var(--gold);opacity:.6}
+  .src{font-size:11.5px;color:var(--faint);font-style:italic;line-height:1.6;margin-top:8px}
+
+  /* ============================ OVERLAYS / MODALS ============================ */
+  .overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:24px;
+    background:rgba(3,2,2,.78);backdrop-filter:blur(7px)}
+  .overlay.open{display:flex}
+  .modal{width:min(960px,96vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;box-shadow:0 40px 120px rgba(0,0,0,.7);position:relative}
+  .modal.wide{width:min(1200px,97vw)}
+  .modal-head{position:sticky;top:0;display:flex;align-items:center;gap:12px;padding:18px 22px;
+    background:linear-gradient(180deg,rgba(12,10,7,.98),rgba(12,10,7,.86));border-bottom:1px solid var(--line);z-index:2}
+  .modal-head h3{font-size:20px;color:var(--ivory);letter-spacing:.02em}
+  .modal-head .sub{font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+  .modal-head .x{margin-left:auto;background:rgba(0,0,0,.4);border:1px solid var(--line);color:var(--ivory);
+    width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px}
+  .modal-head .x:hover{border-color:var(--gold);color:var(--gold)}
+  .modal-body{padding:20px 22px 26px}
+
+  /* forms */
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .form-grid.full{grid-template-columns:1fr}
+  .fld label{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:5px}
+  .fld input,.fld select,.fld textarea{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:7px;
+    padding:10px 12px;font-size:14px;color:var(--ivory);outline:none}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--teal)}
+  .fld textarea{min-height:80px;resize:vertical;font-family:var(--serif);line-height:1.6}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .btn{padding:12px 22px;border-radius:8px;border:1px solid var(--line);background:rgba(214,177,95,.08);color:var(--gold);
+    font-size:13px;letter-spacing:.08em;cursor:pointer;transition:.16s}
+  .btn:hover{background:rgba(214,177,95,.18);border-color:var(--gold)}
+  .btn.primary{background:linear-gradient(180deg,#e7c878,#b9923f);color:var(--ink);border:none}
+  .btn.ghost{background:none}
+  .btn.danger{border-color:var(--blood);color:#e7a59a}
+  .btn.danger:hover{background:rgba(122,30,30,.2)}
+
+  /* dropzone */
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:28px;text-align:center;cursor:pointer;
+    transition:.18s;background:rgba(0,0,0,.25)}
+  .drop:hover,.drop.hot{border-color:var(--teal);background:rgba(32,240,208,.06)}
+  .drop .glyph{font-size:34px;color:var(--gold)}
+  .drop .ds{font-size:13px;color:var(--muted);margin-top:8px}
+  .drop .types{margin-top:10px}
+  .filetag{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+    border:1px solid var(--line);border-radius:5px;padding:3px 8px;margin:2px}
+
+  /* graph + atlas canvases */
+  #graphCanvas,#cosmosCanvas{width:100%;display:block;border:1px solid var(--line);border-radius:12px;
+    background:radial-gradient(ellipse at 50% 30%,#0b1018 0%,#050708 70%);cursor:grab}
+  #graphCanvas:active{cursor:grabbing}
+  .graph-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--muted)}
+  .graph-legend .lg{display:flex;align-items:center;gap:6px}
+  .graph-legend .sw{width:11px;height:11px;border-radius:50%}
+
+  /* atlas symbol grid */
+  .atlas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;margin-top:14px}
+  .glyph-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:.18s;
+    background:radial-gradient(ellipse at 50% 35%,rgba(32,240,208,.05),rgba(8,7,5,.6))}
+  .glyph-cell:hover{border-color:var(--teal);transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .glyph-cell .gy{font-size:32px;color:var(--gold);line-height:1}
+  .glyph-cell .gn{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+  /* alchemy wall */
+  .alc-wall{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:14px}
+  .alc-stage{border-radius:12px;padding:18px;cursor:pointer;border:1px solid var(--line);transition:.18s;min-height:150px;
+    display:flex;flex-direction:column;justify-content:space-between}
+  .alc-stage:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+  .alc-stage h4{font-size:18px;color:var(--ivory)} .alc-stage .lat{font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:.8}
+  .alc-stage p{font-size:12px;line-height:1.5;color:rgba(242,231,201,.8);margin-top:8px}
+
+  /* archivist */
+  #archivist{position:fixed;top:0;right:0;height:100%;width:min(440px,95vw);z-index:45;background:var(--panel);
+    border-left:1px solid var(--teal);box-shadow:-30px 0 90px rgba(0,0,0,.7);transform:translateX(106%);
+    transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+  #archivist.open{transform:translateX(0)}
+  .arc-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex:none}
+  .arc-orb{width:38px;height:38px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#7ffbe9,#20F0D0 45%,#0a3c36);
+    box-shadow:0 0 22px rgba(32,240,208,.6);animation:pulse 3.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 18px rgba(32,240,208,.45)}50%{box-shadow:0 0 30px rgba(32,240,208,.8)}}
+  .arc-head .t{font-family:var(--serif);font-size:18px;color:var(--teal)}
+  .arc-head .s{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .arc-head .x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer}
+  .arc-head .x:hover{color:var(--gold)}
+  .arc-log{flex:1;overflow-y:auto;padding:18px 18px 8px;display:flex;flex-direction:column;gap:14px}
+  .arc-msg{font-size:13.5px;line-height:1.65;max-width:92%}
+  .arc-msg.user{align-self:flex-end;background:rgba(214,177,95,.12);border:1px solid var(--line);
+    padding:9px 13px;border-radius:14px 14px 4px 14px;color:var(--parch)}
+  .arc-msg.bot{align-self:flex-start;color:#cdbf9f}
+  .arc-msg.bot .who{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:5px}
+  .arc-msg.bot .care{margin-top:8px;font-size:11.5px;font-style:italic;color:var(--faint);
+    border-left:2px solid rgba(214,177,95,.4);padding-left:9px}
+  .arc-msg.bot a.bref{color:var(--gold);border-bottom:1px dotted var(--gold);cursor:pointer}
+  .arc-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 8px}
+  .arc-chips button{font-size:11.5px;padding:7px 12px;border-radius:18px;border:1px solid var(--line);
+    background:rgba(32,240,208,.07);color:var(--teal);cursor:pointer}
+  .arc-chips button:hover{background:rgba(32,240,208,.16)}
+  .arc-input{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);flex:none}
+  .arc-input input{flex:1;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:22px;
+    padding:11px 16px;font-size:14px;color:var(--ivory);outline:none}
+  .arc-input input:focus{border-color:var(--teal)}
+  .arc-input button{background:var(--teal);color:#04201c;border:none;border-radius:50%;width:42px;height:42px;
+    cursor:pointer;font-size:17px;flex:none}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:70;
+    background:rgba(8,7,5,.92);border:1px solid var(--line);border-radius:9px;padding:12px 22px;font-size:14px;
+    color:var(--parch);opacity:0;pointer-events:none;transition:.3s;max-width:90vw;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast b{color:var(--gold);font-weight:400}
+
+  /* footer copy line */
+  #foot{flex:none;padding:8px 18px;font-size:11px;letter-spacing:.04em;color:var(--faint);text-align:center;
+    border-top:1px solid var(--line);background:rgba(5,4,3,.6);font-family:var(--serif);font-style:italic}
+
+  /* reader modal */
+  .reader{font-family:var(--serif);line-height:1.85;font-size:16px;color:#d8cba8;max-width:680px;margin:0 auto}
+  .reader h2{font-size:30px;color:var(--ivory);margin-bottom:4px}
+  .reader .ra{font-style:italic;color:var(--muted);margin-bottom:20px}
+  .reader .placeholder{border:1px solid var(--line);border-radius:10px;padding:24px;background:rgba(0,0,0,.3);
+    color:var(--muted);font-style:italic}
+
+  /* final screen */
+  #final{position:fixed;inset:0;z-index:85;display:none;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:6vh 24px;background:radial-gradient(ellipse at 50% 38%,#171109 0%,#080605 60%,#000 100%);
+    opacity:0;transition:opacity 1.2s ease}
+  #final.show{display:flex} #final.vis{opacity:1}
+  #final h1{font-size:clamp(30px,6.4vw,68px);letter-spacing:.12em;color:var(--ivory);text-shadow:0 0 50px rgba(214,177,95,.5)}
+  #final .s{margin-top:18px;font-family:var(--serif);font-style:italic;font-size:clamp(15px,2.4vw,22px);color:var(--gold);max-width:600px;line-height:1.7}
+  #final .back{margin-top:42px}
+
+  /* error / webgl note (non-blocking) */
+  #wglnote{position:fixed;bottom:46px;left:50%;transform:translateX(-50%);z-index:6;font-size:11px;color:var(--faint);
+    background:rgba(6,5,4,.7);border:1px solid var(--line);border-radius:20px;padding:6px 14px;display:none}
+
+  /* ============================ RESPONSIVE / MOBILE ============================ */
+  #navToggle,#menuScrim{display:none}
+  @media (max-width:860px){
+    #top .where{display:none}
+    #top .grow{display:none}
+    .search-box kbd{display:none}
+    .search-box{order:6;flex-basis:100%;max-width:none}
+    .tool .lbl{display:none}
+    .tool{padding:9px 10px}
+    #top .tools{margin-left:auto}
+    #navToggle{display:inline-flex}
+    #nav{position:fixed;top:0;bottom:0;left:0;width:min(300px,86vw);z-index:30;transform:translateX(-104%);
+      transition:transform .35s ease;border-right:1px solid var(--gold)}
+    body.nav-open #nav{transform:translateX(0)}
+    #menuScrim{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:.3s}
+    body.nav-open #menuScrim{display:block;opacity:1;pointer-events:auto}
+    .view{padding:18px 14px 90px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px}
+    .dt-actions button{flex-basis:100%}
+    #foot{font-size:10px}
+  }
+  @media (max-width:560px){
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px}
+    .cover{height:128px}
+    #top .brand{font-size:15px}
+    .search-box{flex-basis:140px;min-width:120px}
+    .wing-head h2{font-size:24px}
+  }
+
+  /* reduced motion */
+  body.reduce *{animation-duration:.001ms !important;transition-duration:.08s !important;scroll-behavior:auto !important}
+  @media (prefers-reduced-motion:reduce){
+    .leaf{transition-duration:.4s}
+  }
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="backdrop" aria-hidden="true"></div>
+<div class="vig" aria-hidden="true"></div>
+<div id="wglnote">Ambient temple rendering unavailable — the archive remains fully usable.</div>
+
+<!-- ===================== OPENING GATE ===================== -->
+<div id="gate" role="dialog" aria-label="Entrance to The Greene Virtual Library">
+  <div class="gatewrap">
+    <svg class="door-svg" viewBox="0 0 240 320" aria-hidden="true">
+      <defs>
+        <linearGradient id="brz" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#caa05a"/><stop offset=".5" stop-color="#9a6c2e"/><stop offset="1" stop-color="#5c3f18"/>
+        </linearGradient>
+        <linearGradient id="brz2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#b0833f"/><stop offset="1" stop-color="#4a3014"/>
+        </linearGradient>
+      </defs>
+      <!-- arch frame -->
+      <path d="M18 300 V120 a102 102 0 0 1 204 0 V300" fill="none" stroke="url(#brz)" stroke-width="7"/>
+      <!-- two pillars (Jachin & Boaz) -->
+      <rect x="6" y="120" width="14" height="184" fill="url(#brz2)"/>
+      <rect x="220" y="120" width="14" height="184" fill="url(#brz2)"/>
+      <circle cx="13" cy="116" r="11" fill="url(#brz)"/><circle cx="227" cy="116" r="11" fill="url(#brz)"/>
+      <!-- door leaves -->
+      <g class="leaf leaf-l">
+        <rect x="28" y="124" width="84" height="176" rx="2" fill="#120b06" stroke="url(#brz2)" stroke-width="2"/>
+        <!-- engravings: star, wheel, ladder, wings, flame, eye, palm, pomegranate -->
+        <circle cx="70" cy="150" r="9" fill="none" stroke="#caa05a" stroke-width="1.4"/>
+        <path d="M70 142 l2.4 6 6.3.3 -5 4 1.8 6.1 -5.5-3.6 -5.5 3.6 1.8-6.1 -5-4 6.3-.3z" fill="#caa05a"/>
+        <circle cx="70" cy="190" r="13" fill="none" stroke="#a87f3c" stroke-width="1.2"/>
+        <path d="M70 177v26 M57 190h26 M61 181l18 18 M61 199l18-18" stroke="#a87f3c" stroke-width="1"/>
+        <path d="M58 228 h24 M58 234 h24 M58 240 h24 M64 222 v24 M76 222 v24" stroke="#8a6630" stroke-width="1"/>
+        <path d="M70 262 q-7 8 0 18 q7-10 0-18z" fill="#a87f3c"/>
+      </g>
+      <g class="leaf leaf-r">
+        <rect x="128" y="124" width="84" height="176" rx="2" fill="#120b06" stroke="url(#brz2)" stroke-width="2"/>
+        <path d="M150 150 q20-12 40 0 q-20 6-40 0z" fill="none" stroke="#caa05a" stroke-width="1.3"/>
+        <ellipse cx="170" cy="190" rx="13" ry="8" fill="none" stroke="#a87f3c" stroke-width="1.3"/>
+        <circle cx="170" cy="190" r="3.4" fill="#caa05a"/>
+        <path d="M170 218 v22 M162 224 q8 6 16 0 M160 232 q10 7 20 0" stroke="#8a6630" stroke-width="1" fill="none"/>
+        <circle cx="170" cy="266" r="7" fill="none" stroke="#a87f3c" stroke-width="1.2"/><circle cx="170" cy="263" r="1.6" fill="#a87f3c"/>
+      </g>
+    </svg>
+    <h1>THE GREENE VIRTUAL LIBRARY</h1>
+    <p class="sub">A Temple of Living Books</p>
+    <p class="inscr">Enter with curiosity. Study with discipline. Leave with wisdom.</p>
+    <button class="enter" id="enterBtn">Open the Doors</button>
+    <div class="gate-mini">
+      <button id="gateAudio">Enable Audio</button>
+      <button id="gateMotion">Reduced Motion</button>
+      <button id="gateSkip">Skip to the Archive</button>
+    </div>
+    <p class="note">A sacred archive beneath the Greene Museum, where ancient wisdom and modern research tools coexist.
+      Sample books are included for demonstration and are clearly labeled — replace them with your own collection.</p>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <header id="top">
+    <button class="tool" id="navToggle" aria-label="Open navigation">☰</button>
+    <div class="brand" id="brandHome" tabindex="0" role="button" aria-label="Return to the Grand Reading Hall">The Greene <b>Virtual Library</b></div>
+    <div class="where" id="whereLabel">Grand Reading Hall</div>
+    <div class="grow"></div>
+    <label class="search-box" aria-label="Search the archive">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="searchInput" type="search" placeholder="Search the archive — titles, authors, themes, symbols…" autocomplete="off" />
+      <kbd>/</kbd>
+    </label>
+    <div class="grow"></div>
+    <div class="tools">
+      <button class="tool" id="btnGraph" title="Knowledge Graph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.7 7.2l4.3 9M17.3 7.2l-4.3 9M7 6h10"/></svg><span class="lbl">Graph</span></button>
+      <button class="tool" id="btnCompare" title="Compare Books"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg><span class="lbl">Compare</span></button>
+      <button class="tool" id="btnPaths" title="Study Paths"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19c4 0 4-6 8-6s4 6 8 6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg><span class="lbl">Paths</span></button>
+      <button class="tool" id="btnImport" title="Add Books"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Add</span></button>
+      <button class="tool" id="btnArchivist" title="Ask the Archivist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span class="lbl">Archivist</span></button>
+      <button class="tool" id="btnAudio" title="Toggle audio" aria-pressed="false">♪</button>
+      <button class="tool" id="btnMotion" title="Reduced motion" aria-pressed="false">◐</button>
+      <button class="tool" id="btnHelp" title="Help & about">?</button>
+    </div>
+  </header>
+
+  <div id="mid">
+    <nav id="nav" aria-label="Library wings"></nav>
+    <div id="menuScrim"></div>
+    <main id="main"><div class="view" id="view"></div></main>
+  </div>
+
+  <footer id="foot" aria-live="polite"></footer>
+</div>
+
+<!-- detail panel -->
+<aside id="detail" role="dialog" aria-label="Book details" aria-hidden="true"></aside>
+
+<!-- archivist -->
+<aside id="archivist" role="dialog" aria-label="The Archivist">
+  <div class="arc-head">
+    <div class="arc-orb" aria-hidden="true"></div>
+    <div><div class="t">The Archivist</div><div class="s">Disciplined research interface</div></div>
+    <button class="x" id="arcClose" aria-label="Close the Archivist">×</button>
+  </div>
+  <div class="arc-log" id="arcLog"></div>
+  <div class="arc-chips" id="arcChips"></div>
+  <form class="arc-input" id="arcForm">
+    <input id="arcInput" type="text" placeholder="Ask the Archivist…" autocomplete="off" aria-label="Message the Archivist"/>
+    <button type="submit" aria-label="Send">↑</button>
+  </form>
+</aside>
+
+<!-- generic overlays -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true"><div class="modal" id="modal"></div></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- final screen -->
+<div id="final">
+  <h1>ORDER THE BOOKS. ORDER THE MIND.</h1>
+  <p class="s">The archive opens when curiosity submits to discipline.</p>
+  <div class="back"><button class="btn primary" id="finalBack">Return to the Grand Reading Hall</button></div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+/* ============================================================
+   THE GREENE VIRTUAL LIBRARY — application logic
+   Sections: DATA · STATE · TEMPLE(3D) · RENDER · WINGS ·
+   DETAIL · STUDY TOOLS · ARCHIVIST · IMPORT · AUDIO · WIRING
+   ============================================================ */
+
+/* ---------------- WINGS (zones of the temple) ---------------- */
+const WINGS = [
+  { id:'grand', name:'Grand Reading Hall', tint:0xD6B15F,
+    ds:'The central sanctuary & command center', icon:'hall',
+    lede:'The heart of the temple. <em>Search the archive, open a shelf, or begin a study path.</em>' },
+  { id:'theology', name:'Theology Wing', tint:0xF2E7C9,
+    ds:'Scripture, doctrine, commentary, sacred history', icon:'cross',
+    cats:['Canonical Scripture','Early Church','Comparative Religion','Prophecy','Mysticism'],
+    lede:'The most reverent and orderly hall — illuminated manuscripts, monastic desks, choir-soft light.' },
+  { id:'apocrypha', name:'Apocrypha & Enochic Archive', tint:0xB07A35,
+    ds:'The hidden corridors of ancient memory', icon:'wheel',
+    cats:['Apocrypha','Pseudepigrapha','Prophecy'],
+    lede:'Deeper, dimmer corridors — Watcher reliefs, sealed scroll cases, dust-filled shafts of light.' },
+  { id:'hermetic', name:'Hermetic & Alchemical Laboratory', tint:0xD6B15F,
+    ds:'Correspondence & the hidden order of nature', icon:'sun',
+    cats:['Hermeticism','Alchemy','Symbolism','Sacred Geometry'],
+    lede:'A Renaissance laboratory inside the temple — alembics, star charts, the four stages of the work.' },
+  { id:'occult', name:'Occult History Archive', tint:0x7A1E1E,
+    ds:'The record of hidden traditions', icon:'seal',
+    cats:['Occult History','Kabbalah','Gnosticism'],
+    lede:'A secure chamber. <em>The study of symbolic systems and humanity’s recurring search for unseen order.</em>' },
+  { id:'atlas', name:'Symbolic Atlas Room', tint:0x20F0D0,
+    ds:'A living index of signs & archetypes', icon:'star',
+    lede:'A circular chamber of floating symbols. Each glyph opens its meanings across traditions.' },
+  { id:'sanctum', name:'Personal Research Sanctum', tint:0x20F0D0,
+    ds:'Your active study chamber', icon:'desk',
+    lede:'A disciplined scholar’s command center — projects, notes, study paths, and the Archivist.' },
+  { id:'lower', name:'The Lower Archive', tint:0x5A351E,
+    ds:'Unsorted, obscure, or difficult texts', icon:'gate',
+    lede:'<em>Not every hidden thing is wisdom. Some books must be handled with discernment.</em>' },
+];
+
+/* category → tradition accent colour for spines */
+const TRAD_COLOR = {
+  'Canonical Scripture':['#3a2d4f','#140d1f'], 'Apocrypha':['#3a2a14','#140d05'],
+  'Pseudepigrapha':['#332414','#120b05'], 'Early Church':['#243a44','#0a1418'],
+  'Gnosticism':['#143a33','#06140f'], 'Hermeticism':['#3a3414','#14110a'],
+  'Alchemy':['#3a1414','#140707'], 'Kabbalah':['#1a2240','#070b18'],
+  'Occult History':['#241420','#0c0710'], 'Comparative Religion':['#2a3320','#0d1208'],
+  'Mythology':['#33260f','#120d05'], 'Prophecy':['#2a1430','#0e0714'],
+  'Mysticism':['#1c3340','#08141a'], 'Symbolism':['#143040','#06141c'],
+  'Sacred Geometry':['#0f3a36','#04140f'], 'Personal Research':['#2c2c2c','#0a0a0a'],
+  'Unsorted Archive':['#202020','#080808'], 'Ancient Civilizations':['#33280f','#120e05'],
+  'Philosophy':['#243024','#0a120a'],
+};
+const colorFor = c => TRAD_COLOR[c] || ['#2a211a','#0c0906'];
+
+const CATEGORIES = ['Canonical Scripture','Apocrypha','Pseudepigrapha','Early Church','Gnosticism','Hermeticism',
+  'Alchemy','Kabbalah','Occult History','Comparative Religion','Ancient Civilizations','Philosophy','Mythology',
+  'Prophecy','Mysticism','Symbolism','Sacred Geometry','Personal Research','Unsorted Archive'];
+
+const EVIDENCE_LABELS = ['Historical','Devotional','Symbolic','Mythic','Ritual','Literary','Philosophical','Contested','Dangerous / Handle Critically','Personal Research'];
+
+/* ---------------- SAMPLE BOOKS ----------------
+   All public-domain or tradition-level. Every entry is sample data and
+   labeled as such; no full text is claimed. Replace with your own files. */
+const SAMPLE_NOTE = 'Sample placeholder — replace with your own book file and metadata.';
+const SAMPLE_BOOKS = [
+  { id:'enoch1', title:'1 Enoch (The Book of Enoch)', author:'Attributed to Enoch · trans. R.H. Charles', category:'Pseudepigrapha',
+    tradition:'Second Temple Judaism', period:'c. 3rd–1st c. BCE', sourceType:'Pseudepigraphon', fileType:'PDF', status:'reading',
+    rating:5, importance:'High', wing:'apocrypha', evidence:['Historical','Mythic','Symbolic'],
+    themes:['Watchers','Nephilim','Astronomy','Final Judgment','Heavenly Ascent'], symbols:['Wheel','Star','Mountain','Wings'],
+    related:['giants','jubilees','enoch2','enoch3'], tags:['enochic','watchers','1enoch','apocalyptic'],
+    summary:'A composite Second Temple apocalypse preserved fully in Geʿez (Ethiopic). Its Book of the Watchers recounts the descent of angelic "watchers," forbidden teachings, the birth of the giants, and a coming judgment; later sections add astronomical, dream, and epistolary material. Quoted in the Epistle of Jude.',
+    toc:['Book of the Watchers (1–36)','Book of Parables (37–71)','Astronomical Book (72–82)','Book of Dreams (83–90)','Epistle of Enoch (91–108)'],
+    passages:['"And the whole earth was filled with blood and unrighteousness." (9:9)'] },
+  { id:'enoch2', title:'2 Enoch (Slavonic Enoch)', author:'Anonymous', category:'Pseudepigrapha', tradition:'Hellenistic Judaism',
+    period:'c. 1st c. CE', sourceType:'Pseudepigraphon', fileType:'EPUB', status:'unread', rating:0, importance:'Medium',
+    wing:'apocrypha', evidence:['Historical','Mythic','Contested'], themes:['Heavenly Ascent','Cosmology','Melchizedek'],
+    symbols:['Ladder','Star','Wheel'], related:['enoch1','enoch3'], tags:['enochic','2enoch','ascent'],
+    summary:'Surviving in Old Church Slavonic, it narrates Enoch’s ascent through the heavens and his instruction by angels before the Flood. Dating and provenance are debated.', toc:[], passages:[] },
+  { id:'enoch3', title:'3 Enoch (Sefer Hekhalot)', author:'Attributed to R. Ishmael', category:'Kabbalah',
+    tradition:'Merkavah / Hekhalot mysticism', period:'c. 5th–6th c. CE', sourceType:'Mystical text', fileType:'PDF', status:'unread',
+    rating:0, importance:'Medium', wing:'occult', evidence:['Mystic','Symbolic','Contested'],
+    themes:['Metatron','Throne Mysticism','Angelic Hierarchy'], symbols:['Throne','Wings','Wheel'],
+    related:['enoch1','zohar'], tags:['enochic','merkavah','metatron','hekhalot'],
+    summary:'A Hekhalot text describing R. Ishmael’s heavenly ascent and the angel Metatron, "the lesser YHWH," identified with the transformed Enoch. A complex tradition that requires historical and religious context.', toc:[], passages:[] },
+  { id:'giants', title:'The Book of Giants', author:'Anonymous (Qumran fragments)', category:'Apocrypha',
+    tradition:'Second Temple Judaism', period:'c. 2nd c. BCE', sourceType:'Fragmentary scroll', fileType:'PDF', status:'unread',
+    rating:0, importance:'Medium', wing:'apocrypha', evidence:['Historical','Mythic','Contested'],
+    themes:['Nephilim','Watchers','Dreams of Doom'], symbols:['Mountain','Giant','Tablet'], related:['enoch1','jubilees'],
+    tags:['giants','qumran','dead-sea-scrolls','watchers'],
+    summary:'Known from Dead Sea Scroll fragments (and later Manichaean reworkings), it expands the Watchers narrative through the giants Ohyah and Hahyah and their foreboding dreams. Highly fragmentary.', toc:[], passages:[] },
+  { id:'jubilees', title:'The Book of Jubilees', author:'Anonymous', category:'Pseudepigrapha', tradition:'Second Temple Judaism',
+    period:'c. 2nd c. BCE', sourceType:'Rewritten scripture', fileType:'EPUB', status:'unread', rating:4, importance:'High',
+    wing:'apocrypha', evidence:['Historical','Devotional','Symbolic'], themes:['Sacred Calendar','Covenant','Watchers','Law'],
+    symbols:['Tablet','Star','Mountain'], related:['enoch1','giants'], tags:['jubilees','calendar','second-temple'],
+    summary:'A retelling of Genesis–Exodus framed as revelation to Moses, organizing history into jubilee periods and emphasizing a solar calendar. Canonical in the Ethiopian Orthodox tradition.', toc:[], passages:[] },
+  { id:'corpus', title:'The Corpus Hermeticum', author:'Attributed to Hermes Trismegistus', category:'Hermeticism',
+    tradition:'Greco-Egyptian Hermetism', period:'c. 2nd–3rd c. CE', sourceType:'Philosophical dialogues', fileType:'PDF',
+    status:'reading', rating:5, importance:'High', wing:'hermetic', evidence:['Philosophical','Symbolic','Historical'],
+    themes:['Nous / Divine Mind','Rebirth','Correspondence','Ascent'], symbols:['Sun','Circle','Serpent'],
+    related:['emerald','kybalion'], tags:['hermetic','hermetica','poimandres'],
+    summary:'A collection of Greek philosophical-religious dialogues (notably the Poimandres) on the divine Mind, the soul’s origin and ascent, and regeneration. Rediscovered in the Renaissance, it shaped Western esotericism.',
+    toc:['I. Poimandres','IV. The Cup or Monad','XI. Mind to Hermes','XIII. On Rebirth'], passages:[] },
+  { id:'emerald', title:'The Emerald Tablet', author:'Attributed to Hermes Trismegistus', category:'Alchemy',
+    tradition:'Hermetic alchemy', period:'text attested by c. 8th c. CE', sourceType:'Aphoristic fragment', fileType:'TXT',
+    status:'read', rating:4, importance:'Medium', wing:'hermetic', evidence:['Symbolic','Philosophical','Historical'],
+    themes:['As Above So Below','Transmutation','Unity'], symbols:['Sun','Circle','Triangle'], related:['corpus','kybalion'],
+    tags:['alchemy','emerald-tablet','correspondence'],
+    summary:'A short, enormously influential alchemical text. Its maxim "as above, so below" became a touchstone of correspondence thinking. The work is symbolic, not a literal chemical procedure.',
+    toc:[], passages:['"That which is below is like that which is above…" (Newton’s translation)'] },
+  { id:'kybalion', title:'The Kybalion', author:'"Three Initiates" (likely William W. Atkinson)', category:'Hermeticism',
+    tradition:'Modern New-Thought Hermeticism', period:'1908', sourceType:'Modern occult treatise', fileType:'EPUB',
+    status:'unread', rating:3, importance:'Low', wing:'hermetic', evidence:['Philosophical','Contested','Modern'],
+    themes:['Seven Principles','Mentalism','Polarity'], symbols:['Circle','Spiral'], related:['corpus','emerald'],
+    tags:['kybalion','new-thought','modern-hermetic'],
+    summary:'A 1908 American work presenting "seven Hermetic principles." Clearly a modern, Hermetic-influenced composition rather than an ancient text — useful as a historical document of New Thought, not as a primary source.',
+    toc:['The Seven Hermetic Principles','Mentalism','Correspondence','Vibration','Polarity','Rhythm','Cause & Effect','Gender'], passages:[] },
+  { id:'nag', title:'The Nag Hammadi Library', author:'Various (4th-c. Coptic codices)', category:'Gnosticism',
+    tradition:'Gnostic Christianity', period:'codices c. 4th c. CE', sourceType:'Manuscript collection', fileType:'PDF',
+    status:'reading', rating:5, importance:'High', wing:'occult', evidence:['Historical','Mythic','Symbolic'],
+    themes:['Gnosis','Sophia','Demiurge','Pleroma'], symbols:['Serpent','Eye','Circle'], related:['pistis','corpus'],
+    tags:['gnosticism','nag-hammadi','coptic'],
+    summary:'A collection of thirteen Coptic codices discovered near Nag Hammadi (1945) — including the Gospel of Thomas, the Apocryphon of John, and the Gospel of Truth. A library of many distinct works, not a single book.',
+    toc:['Gospel of Thomas','Apocryphon of John','Gospel of Philip','Gospel of Truth','On the Origin of the World'], passages:[] },
+  { id:'pistis', title:'Pistis Sophia', author:'Anonymous', category:'Gnosticism', tradition:'Gnostic Christianity',
+    period:'c. 3rd–4th c. CE', sourceType:'Gnostic dialogue', fileType:'PDF', status:'unread', rating:0, importance:'Medium',
+    wing:'occult', evidence:['Mythic','Symbolic','Contested'], themes:['Fall & Repentance of Sophia','Aeons','Mysteries'],
+    symbols:['Circle','Serpent','Crown'], related:['nag'], tags:['gnosticism','pistis-sophia','sophia'],
+    summary:'A Coptic Gnostic text in which the risen Christ instructs disciples on the repentance and restoration of the aeon Sophia. Dense and allusive; benefits from scholarly commentary.', toc:[], passages:[] },
+  { id:'augustine', title:'Confessions', author:'Augustine of Hippo', category:'Early Church', tradition:'Latin Christianity',
+    period:'c. 397–400 CE', sourceType:'Spiritual autobiography', fileType:'EPUB', status:'read', rating:5, importance:'High',
+    wing:'theology', evidence:['Historical','Devotional','Philosophical'], themes:['Conversion','Memory','Time','Grace'],
+    symbols:['Heart','Light'], related:['cityofgod','cloud'], tags:['augustine','patristics','confessions'],
+    summary:'Augustine’s autobiographical address to God, tracing his restless search and conversion, then turning to memory, time, and creation. A foundational text of Western Christianity and philosophy.',
+    toc:['Books I–IX: the life','Book X: memory','Books XI–XIII: time & Genesis'], passages:['"Our heart is restless until it rests in you." (I.1)'] },
+  { id:'cityofgod', title:'The City of God', author:'Augustine of Hippo', category:'Early Church', tradition:'Latin Christianity',
+    period:'c. 413–426 CE', sourceType:'Theological treatise', fileType:'PDF', status:'unread', rating:4, importance:'Medium',
+    wing:'theology', evidence:['Historical','Philosophical','Devotional'], themes:['Two Cities','Providence','History','Rome'],
+    symbols:['City','Cross'], related:['augustine'], tags:['augustine','city-of-god','theology-of-history'],
+    summary:'Written after the sack of Rome (410), it contrasts the earthly city and the City of God across sacred history, defending Christianity against accusations of causing Rome’s fall.', toc:[], passages:[] },
+  { id:'cloud', title:'The Cloud of Unknowing', author:'Anonymous (14th-c. English)', category:'Mysticism',
+    tradition:'Christian apophatic mysticism', period:'c. late 14th c.', sourceType:'Mystical manual', fileType:'EPUB',
+    status:'reading', rating:5, importance:'High', wing:'theology', evidence:['Devotional','Mystic','Philosophical'],
+    themes:['Apophatic Prayer','Contemplation','Love beyond Knowledge'], symbols:['Cloud','Heart'], related:['augustine'],
+    tags:['mysticism','contemplation','apophatic'],
+    summary:'A Middle English guide to contemplative prayer, counseling the seeker to place all thought beneath a "cloud of forgetting" and reach toward God through love rather than intellect.', toc:[], passages:['"By love he may be gotten and holden; but by thought never."'] },
+  { id:'divine', title:'The Divine Comedy', author:'Dante Alighieri', category:'Mythology', tradition:'Medieval Christian allegory',
+    period:'c. 1308–1321', sourceType:'Epic poem', fileType:'EPUB', status:'read', rating:5, importance:'High', wing:'theology',
+    evidence:['Literary','Symbolic','Devotional'], themes:['Afterlife','Justice','Ascent','Love'],
+    symbols:['Star','Mountain','Circle','Light'], related:['augustine'], tags:['dante','allegory','cosmology'],
+    summary:'Dante’s journey through Hell, Purgatory, and Paradise — a vast allegory of sin, purification, and the soul’s ascent to the divine, structured by medieval cosmology and theology.',
+    toc:['Inferno','Purgatorio','Paradiso'], passages:['"The Love that moves the sun and the other stars." (Par. XXXIII)'] },
+  { id:'zohar', title:'The Zohar (Sefer ha-Zohar)', author:'Attributed to R. Shimon bar Yochai; assoc. Moses de León',
+    category:'Kabbalah', tradition:'Jewish mysticism', period:'compiled c. 13th c. CE', sourceType:'Mystical commentary',
+    fileType:'PDF', status:'unread', rating:0, importance:'High', wing:'occult', evidence:['Mystic','Symbolic','Contested'],
+    themes:['Sefirot','Ein Sof','Divine Names','Soul'], symbols:['Tree','Crown','Light'], related:['enoch3'],
+    tags:['kabbalah','zohar','sefirot'],
+    summary:'The central work of Kabbalah — a sprawling Aramaic mystical commentary on the Torah. A complex Jewish mystical text that requires significant context; not to be read flatly or out of tradition.', toc:[], passages:[] },
+  { id:'solomon', title:'The Testament of Solomon', author:'Anonymous', category:'Pseudepigrapha', tradition:'Late-antique Judeo-Christian',
+    period:'c. 1st–3rd c. CE', sourceType:'Pseudepigraphon', fileType:'PDF', status:'unread', rating:0, importance:'Low',
+    wing:'lower', evidence:['Mythic','Ritual','Contested','Dangerous / Handle Critically'],
+    themes:['Demonology','Temple Building','Binding of Spirits'], symbols:['Seal','Crown','Temple'], related:['nag'],
+    tags:['demonology','solomon','testament'], lowerStatus:['Needs historical context','Potentially unreliable'],
+    summary:'A late-antique legend in which Solomon controls demons by a magical seal to build the Temple. Important for the history of demonology and amulet lore; presented here as historical/literary material, not ritual instruction.', toc:[], passages:[] },
+  { id:'kjv', title:'The Holy Bible (King James Version)', author:'Various · KJV translators (1611)', category:'Canonical Scripture',
+    tradition:'Protestant Christianity', period:'texts ancient; KJV 1611', sourceType:'Scripture', fileType:'EPUB',
+    status:'reading', rating:5, importance:'High', wing:'theology', evidence:['Historical','Devotional','Literary'],
+    themes:['Creation','Covenant','Redemption','Apocalypse'], symbols:['Cross','Lamb','Tree','City'], related:['augustine','divine'],
+    tags:['bible','scripture','kjv','canon'],
+    summary:'The canonical Christian scriptures in the 1611 English translation. Use the Canon Comparison Table (Theology Wing) to see how the boundaries of "canon" differ across traditions.',
+    toc:['Old Testament','New Testament'], passages:[] },
+  { id:'unsorted1', title:'Untitled Manuscript Scan', author:'Unknown', category:'Unsorted Archive', tradition:'—',
+    period:'Unknown', sourceType:'Image scan', fileType:'Image scan', status:'unread', rating:0, importance:'Unrated',
+    wing:'lower', evidence:['Personal Research'], themes:[], symbols:[], related:[], tags:['unsorted'],
+    lowerStatus:['Needs metadata','Needs reading','Needs source check'],
+    summary:'', toc:[], passages:[] },
+];
+
+/* ---------------- SYMBOLS (Atlas) ---------------- */
+const SYMBOLS = [
+  {g:'🜂',n:'Fire',k:['Transformation','Purification','Spirit'],t:'Often associated with purification and divine presence; in alchemy, the agent of transformation.',books:['corpus','emerald'],care:'In some traditions fire is judgment; in others, illumination. Context decides.'},
+  {g:'☉',n:'Sun',k:['Source','Gold','Christ-light'],t:'Commonly interpreted as the source of life and, in Hermetic texts, of intelligible light; in alchemy, gold and the perfected work.',books:['corpus','emerald','divine'],care:'Solar imagery appears across many religions and should not be flattened into one meaning.'},
+  {g:'☽',n:'Moon',k:['Reflection','Silver','Cycles'],t:'Historically connected to cycles, reflection, and the receptive principle; silver in alchemy.',books:['corpus'],care:''},
+  {g:'🜔',n:'Salt',k:['Body','Stability'],t:'In alchemy, one of the three principles — the fixed, bodily aspect of matter.',books:['emerald'],care:'Alchemical "salt" is symbolic, not the table substance.'},
+  {g:'🐍',n:'Serpent',k:['Wisdom','Healing','Temptation','Renewal'],t:'In some traditions a tempter; in others a healer (the bronze serpent), or the ouroboros of eternal return.',books:['nag','pistis','enoch1'],care:'The serpent carries opposite meanings across traditions — do not assume one.'},
+  {g:'🪜',n:'Ladder',k:['Ascent','Mediation'],t:'Commonly interpreted as ascent between earth and heaven (Jacob’s ladder; the soul’s rungs).',books:['enoch2','cloud'],care:''},
+  {g:'☉',n:'Eye',k:['Providence','Knowledge','Watchfulness'],t:'Often associated with divine watchfulness and providence; in Gnostic texts, with knowing (gnosis).',books:['nag'],care:'Modern conspiracy uses of "the eye" are recent and historically thin.'},
+  {g:'☸',n:'Wheel',k:['Cosmos','Time','Thrones'],t:'In Enochic and merkavah imagery, wheels (ophanim) belong to the throne-chariot; elsewhere, fortune and time.',books:['enoch1','enoch3'],care:''},
+  {g:'🜃',n:'Stone',k:['Foundation','The Work'],t:'The "philosophers’ stone" is a symbol of completion and integration, not a literal mineral.',books:['emerald'],care:'Read as symbol of inner transformation, not chemistry.'},
+  {g:'🌳',n:'Tree',k:['Life','Sefirot','Knowledge'],t:'The Tree of Life appears as cosmic axis (Eden), as the Kabbalistic sefirot, and as the cross in Christian reading.',books:['zohar','kjv'],care:'The Kabbalistic "Tree" is a specific diagram within a living tradition.'},
+  {g:'⛰',n:'Mountain',k:['Encounter','Threshold'],t:'Historically the place of divine encounter and revelation (Sinai, Hermon, Zion).',books:['enoch1','jubilees','divine'],care:''},
+  {g:'⌂',n:'Temple',k:['Order','Presence','Microcosm'],t:'Often read as a microcosm of ordered creation and a meeting place of heaven and earth.',books:['kjv','solomon'],care:''},
+  {g:'✦',n:'Star',k:['Guidance','Angels','Destiny'],t:'Stars are linked to angelic beings in Enochic literature and to guidance and providence elsewhere.',books:['enoch1','divine'],care:'Astrological claims are historical symbolism here, not endorsed prediction.'},
+  {g:'♔',n:'Crown',k:['Sovereignty','Keter'],t:'Sovereignty and consummation; in Kabbalah, Keter, the highest sefirah.',books:['zohar','pistis'],care:''},
+  {g:'🕊',n:'Wings',k:['Spirit','Messengers','Ascent'],t:'Associated with spirit, swift messengers (angels), and transcendence.',books:['enoch1','enoch3'],care:''},
+  {g:'✝',n:'Cross',k:['Sacrifice','Axis','Redemption'],t:'In Christianity, redemptive sacrifice; more broadly, the meeting of vertical and horizontal axes.',books:['augustine','kjv','divine'],care:''},
+  {g:'◯',n:'Circle',k:['Eternity','Wholeness'],t:'Commonly interpreted as eternity, unity, and the without-beginning.',books:['corpus','emerald'],care:''},
+  {g:'△',n:'Triangle',k:['Trinity','Fire','Aspiration'],t:'Trinity in Christian symbolism; the alchemical sign of fire; aspiration upward.',books:['emerald'],care:''},
+  {g:'☖',n:'Square',k:['Earth','Order','Matter'],t:'The fourfold and stable — earth, the elements, ordered matter.',books:[],care:''},
+  {g:'🌀',n:'Spiral',k:['Growth','Return'],t:'Growth, cyclical return, and the unfolding of pattern.',books:['kybalion'],care:''},
+  {g:'🦁',n:'Lion',k:['Strength','Mark/Gold','Judah'],t:'Strength and sovereignty; an evangelist symbol (Mark); the Lion of Judah; "green lion" in alchemy.',books:['divine','kjv'],care:''},
+  {g:'🦅',n:'Eagle',k:['Vision','John','Ascent'],t:'Far sight and ascent; the evangelist symbol of John; distillation in alchemy.',books:['divine'],care:''},
+  {g:'🜚',n:'Phoenix',k:['Rebirth','Rubedo'],t:'Death-and-rebirth; in alchemy, the final reddening (rubedo) and renewal.',books:['emerald'],care:''},
+  {g:'🍷',n:'Cup',k:['Receptivity','Grace'],t:'The vessel of receptivity and grace; the Hermetic "krater" of mind to be immersed in.',books:['corpus'],care:''},
+];
+
+/* ---------------- CANON COMPARISON ---------------- */
+const CANON_TRADITIONS = ['Protestant','Catholic','Eastern Orthodox','Ethiopian Orthodox'];
+const CANON_BOOKS = [
+  ['Tobit','no','yes','yes','yes'], ['Judith','no','yes','yes','yes'],
+  ['Wisdom of Solomon','no','yes','yes','yes'], ['Sirach (Ecclesiasticus)','no','yes','yes','yes'],
+  ['Baruch','no','yes','yes','yes'], ['1 & 2 Maccabees','no','yes','yes','yes'],
+  ['3 Maccabees','no','no','yes','no'], ['4 Maccabees','no','no','maybe','no'],
+  ['1 Esdras','no','no','yes','no'], ['Prayer of Manasseh','no','maybe','yes','no'],
+  ['Psalm 151','no','no','yes','no'], ['1 Enoch','no','no','no','yes'],
+  ['Jubilees','no','no','no','yes'], ['Additions to Daniel & Esther','no','yes','yes','yes'],
+];
+const CANON_NOTE = 'A simplified overview of how the Old Testament / "deuterocanonical" boundary differs by tradition. "Maybe" marks appendix or disputed status. Verify specifics against authoritative sources for serious study.';
+
+/* ---------------- STUDY PATHS (seed) ---------------- */
+const SEED_PATHS = [
+  { id:'p_enoch', name:'Enochic Literature', difficulty:'Intermediate', depth:'Deep',
+    why:'Trace the Watchers tradition from its earliest layer through its expansions.',
+    books:['enoch1','giants','jubilees','enoch2','enoch3'],
+    questions:['What is the relationship between the Watchers and the giants?','How does the calendar in Jubilees frame history?'] },
+  { id:'p_hermetic', name:'Hermetic Foundations', difficulty:'Beginner', depth:'Moderate',
+    why:'The core of Hermetic thought before its modern reinterpretations.',
+    books:['emerald','corpus','kybalion'],
+    questions:['What does "as above, so below" actually claim?','Where does the modern Kybalion diverge from ancient Hermetica?'] },
+  { id:'p_mystic', name:'Christian Mysticism', difficulty:'Intermediate', depth:'Moderate',
+    why:'From conversion narrative to apophatic contemplation.',
+    books:['augustine','cloud','divine'],
+    questions:['How do affective and intellectual paths to God differ?'] },
+];
+
+/* ---------------- ARCHIVIST knowledge base ---------------- */
+const ARC_TERMS = {
+  'apocrypha':'Texts outside a given canon. What counts as "apocryphal" depends on the tradition — see the Canon Comparison Table in the Theology Wing.',
+  'pseudepigrapha':'Works attributed to a figure who did not write them (e.g., "Enoch"). The attribution is a literary convention of the period, not necessarily deception.',
+  'gnosticism':'A diverse family of late-antique movements emphasizing saving knowledge (gnosis), often with a distinction between a lower creator (demiurge) and a higher godhead. The label groups many distinct groups.',
+  'watchers':'In 1 Enoch, angelic beings who descend, teach forbidden arts, and father the giants. A tradition rooted in a reading of Genesis 6:1–4.',
+  'nephilim':'The "giants"/"fallen ones" of Genesis 6:4; elaborated in 1 Enoch and the Book of Giants. Interpretations vary widely.',
+  'sefirot':'In Kabbalah, ten emanations through which the infinite (Ein Sof) is said to act and be known. A technical concept within a living Jewish tradition.',
+  'alchemy':'A pre-modern art of transformation, read here primarily as symbolic and philosophical (inner transformation, correspondence) rather than as chemical instruction.',
+  'hermeticism':'A tradition rooted in Greco-Egyptian texts attributed to Hermes Trismegistus, concerned with the divine Mind, correspondence, and the soul’s ascent.',
+};
+const ARC_GREETING = 'I am the Archivist. I work only from the metadata in your catalog and from cautious, general scholarship — I do not invent book contents, and I will tell you when something is interpretation, tradition, or speculation rather than established fact. How shall we order the books today?';
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const LS_KEY = 'greene-virtual-library-v1';
+const state = {
+  books: [], paths: [], projects: [],
+  view: 'grand', filters: {}, search: '',
+  compare: [], openBook: null,
+  settings: { audio:false, motion:false },
+  arcHistory: [],
+};
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      state.books = d.books && d.books.length ? d.books : structuredCloneSafe(SAMPLE_BOOKS);
+      state.paths = d.paths || structuredCloneSafe(SEED_PATHS);
+      state.projects = d.projects || [];
+      state.settings = Object.assign({audio:false,motion:false}, d.settings||{});
+      return;
+    }
+  }catch(e){ console.warn('load failed', e); }
+  state.books = structuredCloneSafe(SAMPLE_BOOKS);
+  state.paths = structuredCloneSafe(SEED_PATHS);
+  state.projects = [];
+}
+function save(){
+  try{
+    // never persist transient object URLs from uploads
+    const books = state.books.map(b=>{ const c={...b}; delete c._fileURL; return c; });
+    localStorage.setItem(LS_KEY, JSON.stringify({books, paths:state.paths, projects:state.projects, settings:state.settings}));
+  }catch(e){ console.warn('save failed', e); }
+}
+function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
+function resetLibrary(){
+  localStorage.removeItem(LS_KEY);
+  state.books = structuredCloneSafe(SAMPLE_BOOKS);
+  state.paths = structuredCloneSafe(SEED_PATHS);
+  state.projects = [];
+  save(); closeOverlay(); render(); toast('The archive has been restored to its sample collection.');
+}
+
+/* ---------------- helpers ---------------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byId = id => state.books.find(b=>b.id===id);
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function uid(p='b'){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3); }
+let toastTimer;
+function toast(msg){
+  const t=$('#toast'); t.innerHTML=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+const STATUS_LABELS = {unread:'Unread', reading:'Reading', read:'Read', flagged:'Flagged'};
+function statusKind(b){
+  if(b.fav) return b.status||'unread';
+  return b.status||'unread';
+}
+
+/* ============================================================
+   TEMPLE — Three.js ambient backdrop (progressive enhancement)
+   The whole library works without this. If WebGL or the CDN
+   fails, we drop to a CSS gradient and carry on.
+   ============================================================ */
+let THREE=null, renderer, scene, camera, clock, holo, dust, stars, lampLights=[];
+let camTarget={pos:null,look:null}, frame=0, temple3d=false;
+async function initTemple(){
+  try{
+    const canvas = $('#scene');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if(!gl){ throw new Error('no webgl'); }
+    THREE = await import('three');
+    renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false, powerPreference:'high-performance'});
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050403);
+    scene.fog = new THREE.FogExp2(0x070504, 0.018);
+    camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 400);
+    clock = new THREE.Clock();
+    buildTemple();
+    camera.position.set(0, 6.5, 46); // start outside, looking toward the doors
+    camTarget.pos = new THREE.Vector3(0,5.4,30);
+    camTarget.look = new THREE.Vector3(0,4.5,0);
+    temple3d = true;
+    addEventListener('resize', onResize);
+    renderLoop();
+  }catch(e){
+    console.warn('Temple unavailable:', e && e.message);
+    document.body.classList.add('no3d');
+    $('#wglnote').style.display='block';
+    setTimeout(()=>{ $('#wglnote').style.display='none'; }, 6000);
+  }
+}
+function onResize(){
+  if(!temple3d) return;
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+function buildTemple(){
+  const T=THREE;
+  // ---- lighting ----
+  scene.add(new T.AmbientLight(0x3a2c1c, 0.55));
+  const hemi = new T.HemisphereLight(0x40341f, 0x0a0705, 0.5); scene.add(hemi);
+  // golden ray from a ceiling aperture
+  const ray = new T.SpotLight(0xFFE2A6, 2.4, 120, Math.PI/7, 0.5, 1.2);
+  ray.position.set(0, 40, 4); ray.target.position.set(0,0,0); scene.add(ray); scene.add(ray.target);
+
+  // ---- floor (polished stone disc + sacred-geometry rings) ----
+  const floorMat = new T.MeshStandardMaterial({color:0x16110b, roughness:0.42, metalness:0.35});
+  const floor = new T.Mesh(new T.CircleGeometry(60,64), floorMat);
+  floor.rotation.x = -Math.PI/2; floor.position.y=0; scene.add(floor);
+  const ringMat = new T.MeshStandardMaterial({color:0x000000, emissive:0xD6B15F, emissiveIntensity:0.5, roughness:.5, metalness:.6});
+  [6,11,17,24].forEach((r,i)=>{
+    const ring = new T.Mesh(new T.TorusGeometry(r,0.06,8,90), ringMat);
+    ring.rotation.x=-Math.PI/2; ring.position.y=0.02; scene.add(ring);
+  });
+  // interlaced triangles — a sacred-geometry inlay set into the floor
+  const inlayMat = new T.LineBasicMaterial({color:0xB07A35, transparent:true, opacity:0.55});
+  function triangle(offset){
+    const v=[]; for(let k=0;k<3;k++){ const a=offset + k*2*Math.PI/3; v.push(new T.Vector3(Math.cos(a)*20,0.03,Math.sin(a)*20)); }
+    const g=new T.BufferGeometry().setFromPoints(v);
+    scene.add(new T.LineLoop(g, inlayMat));
+  }
+  triangle(-Math.PI/2); triangle(Math.PI/2);
+
+  // ---- two pillars: Jachin & Boaz, flanking the entrance (+z) ----
+  const bronze = new T.MeshStandardMaterial({color:0x8a5e28, roughness:0.35, metalness:0.85, emissive:0x2a1a08, emissiveIntensity:0.3});
+  function pillar(x){
+    const g = new T.Group();
+    const shaft = new T.Mesh(new T.CylinderGeometry(1.4,1.6,18,24), bronze); shaft.position.y=9; g.add(shaft);
+    const base = new T.Mesh(new T.CylinderGeometry(2.0,2.4,1.4,24), bronze); base.position.y=0.7; g.add(base);
+    const cap = new T.Mesh(new T.CylinderGeometry(2.2,1.5,2.2,24), bronze); cap.position.y=19; g.add(cap);
+    const ball = new T.Mesh(new T.SphereGeometry(1.8,24,18), bronze); ball.position.y=21; g.add(ball);
+    g.position.set(x,0,26); scene.add(g); return g;
+  }
+  pillar(-9); pillar(9);
+
+  // ---- ring of cedar columns ----
+  const cedar = new T.MeshStandardMaterial({color:0x4a2d18, roughness:0.8, metalness:0.05});
+  for(let i=0;i<14;i++){
+    const a = i/14*Math.PI*2;
+    const col = new T.Mesh(new T.CylinderGeometry(1.0,1.1,26,18), cedar);
+    col.position.set(Math.cos(a)*30, 13, Math.sin(a)*30); scene.add(col);
+    const cap = new T.Mesh(new T.BoxGeometry(3,1.2,3), bronze); cap.position.set(Math.cos(a)*30,26.4,Math.sin(a)*30); scene.add(cap);
+  }
+  // shelves (boxes) between columns
+  const shelfMat = new T.MeshStandardMaterial({color:0x2a1a0e, roughness:0.9});
+  for(let i=0;i<14;i++){
+    const a=(i+0.5)/14*Math.PI*2;
+    const sh = new T.Mesh(new T.BoxGeometry(8,12,1.4), shelfMat);
+    sh.position.set(Math.cos(a)*33, 7, Math.sin(a)*33); sh.lookAt(0,7,0); scene.add(sh);
+  }
+
+  // ---- central round reading table ----
+  const tableTop = new T.Mesh(new T.CylinderGeometry(7,7,0.4,48),
+    new T.MeshStandardMaterial({color:0x3a2412, roughness:0.5, metalness:0.2}));
+  tableTop.position.y=2.4; scene.add(tableTop);
+  const tableBase = new T.Mesh(new T.CylinderGeometry(2.4,3.4,2.4,32), cedar); tableBase.position.y=1.2; scene.add(tableBase);
+
+  // ---- floating holographic catalog above the table ----
+  holo = new T.Group(); holo.position.set(0,7.5,0); scene.add(holo);
+  const holoMat = new T.MeshBasicMaterial({color:0x20F0D0, wireframe:true, transparent:true, opacity:0.55});
+  holo.add(new T.Mesh(new T.IcosahedronGeometry(2.4,1), holoMat));
+  const hr = new T.Mesh(new T.TorusGeometry(3.4,0.04,8,80), new T.MeshBasicMaterial({color:0x20F0D0,transparent:true,opacity:0.6}));
+  hr.rotation.x=Math.PI/2; holo.add(hr);
+  // holo particle motes
+  const hp = new Float32Array(200*3);
+  for(let i=0;i<200;i++){ const a=Math.random()*Math.PI*2, r=2+Math.random()*2.4, y=(Math.random()-0.5)*4;
+    hp[i*3]=Math.cos(a)*r; hp[i*3+1]=y; hp[i*3+2]=Math.sin(a)*r; }
+  const hg=new T.BufferGeometry(); hg.setAttribute('position',new T.BufferAttribute(hp,3));
+  holo.add(new T.Points(hg, new T.PointsMaterial({color:0x9ffbe9,size:0.07,transparent:true,opacity:0.7})));
+
+  // ---- hanging bronze lamps (warm point lights + glow) ----
+  const lampGlow = new T.MeshBasicMaterial({color:0xFFB454});
+  for(let i=0;i<6;i++){
+    const a=i/6*Math.PI*2;
+    const x=Math.cos(a)*16, z=Math.sin(a)*16;
+    const L=new T.PointLight(0xFFB454, 6, 26, 2); L.position.set(x,10,z); scene.add(L); lampLights.push(L);
+    const bulb=new T.Mesh(new T.SphereGeometry(0.4,12,10),lampGlow); bulb.position.set(x,10,z); scene.add(bulb);
+  }
+
+  // ---- star-map ceiling ----
+  const sc = 1400; const sp=new Float32Array(sc*3);
+  for(let i=0;i<sc;i++){ const a=Math.random()*Math.PI*2, r=Math.random()*58, h=34+Math.random()*8;
+    sp[i*3]=Math.cos(a)*r; sp[i*3+1]=h; sp[i*3+2]=Math.sin(a)*r; }
+  const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.BufferAttribute(sp,3));
+  stars=new T.Points(sg, new T.PointsMaterial({color:0xF2E7C9,size:0.18,transparent:true,opacity:0.85}));
+  scene.add(stars);
+
+  // ---- volumetric dust motes ----
+  const dc=600; const dp=new Float32Array(dc*3);
+  for(let i=0;i<dc;i++){ dp[i*3]=(Math.random()-0.5)*60; dp[i*3+1]=Math.random()*24; dp[i*3+2]=(Math.random()-0.5)*60; }
+  const dg=new T.BufferGeometry(); dg.setAttribute('position',new T.BufferAttribute(dp,3));
+  dust=new T.Points(dg, new T.PointsMaterial({color:0xFFE2A6,size:0.06,transparent:true,opacity:0.4}));
+  scene.add(dust);
+}
+function renderLoop(){
+  if(!temple3d) return;
+  requestAnimationFrame(renderLoop);
+  frame++;
+  const t = clock.getElapsedTime();
+  const reduce = state.settings.motion;
+  // ease camera toward target
+  if(camTarget.pos){
+    camera.position.lerp(camTarget.pos, reduce?0.06:0.022);
+    const lk = camTarget.look;
+    if(!reduce){ // gentle drift
+      camera.position.x += Math.sin(t*0.16)*0.015;
+      camera.position.y += Math.sin(t*0.22)*0.01;
+    }
+    camera.lookAt(lk.x, lk.y, lk.z);
+  }
+  if(holo && !reduce){ holo.rotation.y += 0.0035; holo.children[0].rotation.x += 0.002; holo.children[1].rotation.z += 0.004; }
+  if(dust && !reduce){ const p=dust.geometry.attributes.position; for(let i=0;i<p.count;i++){ let y=p.getY(i)+0.004; if(y>24)y=0; p.setY(i,y);} p.needsUpdate=true; }
+  if(stars){ stars.material.opacity = 0.65 + Math.sin(t*0.6)*0.2; }
+  // lamp flicker
+  if(!reduce){ for(let i=0;i<lampLights.length;i++){ lampLights[i].intensity = 5.4 + Math.sin(t*3+i*1.7)*0.9 + Math.random()*0.3; } }
+  renderer.render(scene, camera);
+}
+/* move the camera + retint fog/holo when entering a wing */
+function flyTo(wingId){
+  if(!temple3d) return;
+  const T=THREE;
+  const presets = {
+    grand:   [[0,5.4,30],[0,4.5,0]],
+    theology:[[-18,5,14],[0,5,0]],
+    apocrypha:[[14,4,-16],[0,3.5,0]],
+    hermetic:[[20,5,8],[0,4.5,0]],
+    occult:  [[-16,3.6,-16],[0,3,0]],
+    atlas:   [[0,9,18],[0,6,0]],
+    sanctum: [[8,4.5,22],[0,4,0]],
+    lower:   [[0,2.2,12],[0,1.5,0]],
+  };
+  const p = presets[wingId]||presets.grand;
+  camTarget.pos = new T.Vector3(...p[0]);
+  camTarget.look = new T.Vector3(...p[1]);
+  const w = WINGS.find(x=>x.id===wingId);
+  if(w && scene.fog){ scene.fog.color.setHex(wingId==='occult'||wingId==='lower'?0x0a0604:0x070504); }
+  if(holo){ holo.children.forEach(c=>{ if(c.material&&c.material.color) c.material.color.setHex(w?w.tint:0x20F0D0); }); }
+}
+/* ============================================================
+   RENDER
+   ============================================================ */
+const ICONS = {
+  hall:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 9l9-5 9 5"/><path d="M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18"/></svg>',
+  cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3v18M7 8h10"/></svg>',
+  wheel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
+  seal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="10" r="6"/><path d="M9 15l-1 6 4-2 4 2-1-6"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 3l2.5 6.5L21 11l-5 4 1.6 6.5L12 18l-5.6 3.5L8 15 3 11l6.5-1.5z"/></svg>',
+  desk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 7h16v4H4zM6 11v8M18 11v8M4 15h16"/></svg>',
+  gate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 21V7a7 7 0 0114 0v14M5 14h14M12 7v14"/></svg>',
+};
+function renderNav(){
+  const counts = {}; state.books.forEach(b=>{ const w=wingOf(b); counts[w]=(counts[w]||0)+1; });
+  const nav = $('#nav');
+  nav.innerHTML = '<div class="navhead">The Temple — Wings</div>' + WINGS.map(w=>{
+    const c = w.id==='grand' ? state.books.length : (counts[w.id]||0);
+    const ct = w.id==='atlas' ? SYMBOLS.length+' symbols' : (c+' '+(c===1?'volume':'volumes'));
+    return `<div class="wing ${state.view===w.id?'active':''}" data-wing="${w.id}" role="button" tabindex="0" aria-label="${esc(w.name)}">
+      <div class="ico">${ICONS[w.icon]||''}</div>
+      <div class="tx"><div class="nm">${esc(w.name)}</div><div class="ds">${esc(w.ds)}</div><div class="ct">${ct}</div></div></div>`;
+  }).join('') +
+  `<div class="navfoot"><div class="epi">“A library is not a pile of books. It is a map of the soul’s questions.”</div></div>`;
+}
+function wingOf(b){
+  if(b.wing) return b.wing;
+  const w = WINGS.find(x=>x.cats && x.cats.includes(b.category));
+  return w ? w.id : 'lower';
+}
+
+/* ---- book card ---- */
+function cardHTML(b){
+  const [c1,c2] = colorFor(b.category);
+  const st = b.status||'unread';
+  const fav = b.fav ? '<span class="badge fav">★ Favorite</span>' : '';
+  const sample = b.isSample!==false && SAMPLE_BOOKS.some(s=>s.id===b.id) ? '<span class="badge sample">Sample</span>' : (b._userSample?'<span class="badge sample">Sample</span>':'');
+  return `<article class="book-card" data-id="${b.id}" tabindex="0" role="button" aria-label="${esc(b.title)} by ${esc(b.author)}" style="--c1:${c1};--c2:${c2}">
+    ${sample}
+    <div class="cover"><div class="gild"></div>
+      <div class="ct">${esc(b.title)}</div><div class="ca">${esc(b.author||'Unknown')}</div></div>
+    <div class="book-meta">
+      <div class="trad">${esc(b.category||'Unsorted')}</div>
+      <div class="stat"><span class="dot ${st}"></span>${STATUS_LABELS[st]||'Unread'}${b.importance&&b.importance!=='Unrated'?' · '+esc(b.importance)+' importance':''} ${fav}</div>
+    </div></article>`;
+}
+function gridHTML(list){
+  if(!list.length) return `<div class="empty"><b>This shelf awaits books.</b><br>Use <b>Add</b> to bring in your own volumes, or adjust the filters above. Sample books are clearly labeled and meant to be replaced.</div>`;
+  return `<div class="grid">${list.map(cardHTML).join('')}</div>`;
+}
+
+/* ---- search + filter ---- */
+function matchesSearch(b,q){
+  if(!q) return true; q=q.toLowerCase();
+  const hay = [b.title,b.author,b.category,b.tradition,b.summary,b.period,b.sourceType,
+    (b.themes||[]).join(' '),(b.symbols||[]).join(' '),(b.tags||[]).join(' '),(b.notes||''),
+    (b.passages||[]).join(' ')].join(' ').toLowerCase();
+  return q.split(/\s+/).every(tok=>hay.includes(tok));
+}
+function applyFilters(list){
+  const f=state.filters;
+  return list.filter(b=>{
+    if(f.category && b.category!==f.category) return false;
+    if(f.tradition && b.tradition!==f.tradition) return false;
+    if(f.status && (b.status||'unread')!==f.status) return false;
+    if(f.importance && b.importance!==f.importance) return false;
+    if(f.fileType && b.fileType!==f.fileType) return false;
+    if(f.theme && !(b.themes||[]).includes(f.theme)) return false;
+    if(f.tag && !(b.tags||[]).includes(f.tag)) return false;
+    return true;
+  });
+}
+function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
+function filterBar(scope){
+  const f=state.filters;
+  const cats = uniq(scope.map(b=>b.category));
+  const trads = uniq(scope.map(b=>b.tradition).filter(t=>t&&t!=='—'));
+  const themes = uniq(scope.flatMap(b=>b.themes||[]));
+  const files = uniq(scope.map(b=>b.fileType));
+  const opt=(arr,sel)=>arr.map(v=>`<option ${sel===v?'selected':''}>${esc(v)}</option>`).join('');
+  const sel=(key,label,arr)=>`<div class="fl"><label>${label}</label><select data-filter="${key}"><option value="">All</option>${opt(arr,f[key]||'')}</select></div>`;
+  return `<div class="filters">
+    ${sel('category','Category',cats)}
+    ${sel('tradition','Tradition',trads)}
+    ${sel('theme','Theme',themes)}
+    <div class="fl"><label>Status</label><select data-filter="status"><option value="">All</option>${['unread','reading','read','flagged'].map(v=>`<option value="${v}" ${f.status===v?'selected':''}>${STATUS_LABELS[v]}</option>`).join('')}</select></div>
+    <div class="fl"><label>Importance</label><select data-filter="importance"><option value="">All</option>${['High','Medium','Low','Unrated'].map(v=>`<option ${f.importance===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    ${sel('fileType','File type',files)}
+    <div class="fl clearf"><label>&nbsp;</label><button class="btn ghost" id="clearFilters">Clear filters</button></div>
+  </div>`;
+}
+
+/* ---- view router ---- */
+function setView(id){
+  state.view = id;
+  $('#whereLabel').textContent = (WINGS.find(w=>w.id===id)||{}).name || 'The Archive';
+  document.body.classList.remove('nav-open');
+  flyTo(id);
+  render();
+  $('#main').scrollTop = 0;
+  playCue('move');
+}
+function render(){
+  renderNav();
+  const v = $('#view');
+  if(state.search){ v.innerHTML = viewSearch(); afterRender(); return; }
+  switch(state.view){
+    case 'grand': v.innerHTML = viewGrand(); break;
+    case 'theology': v.innerHTML = viewWing('theology', viewCanon()); break;
+    case 'apocrypha': v.innerHTML = viewWing('apocrypha', viewCosmology()); break;
+    case 'hermetic': v.innerHTML = viewWing('hermetic', viewAlchemy()); break;
+    case 'occult': v.innerHTML = viewWing('occult', viewOccultLabels()); break;
+    case 'atlas': v.innerHTML = viewAtlas(); break;
+    case 'sanctum': v.innerHTML = viewSanctum(); break;
+    case 'lower': v.innerHTML = viewLower(); break;
+    default: v.innerHTML = viewGrand();
+  }
+  afterRender();
+}
+function wingHead(id){
+  const w=WINGS.find(x=>x.id===id);
+  return `<div class="wing-head"><div class="eyebrow">${esc(w.ds)}</div><h2>${esc(w.name)}</h2><div class="lede">${w.lede}</div></div>`;
+}
+
+/* ---- Grand Reading Hall ---- */
+function viewGrand(){
+  const books = state.books;
+  const recent = [...books].filter(b=>b.lastOpened).sort((a,b)=>b.lastOpened-a.lastOpened).slice(0,8);
+  const reading = books.filter(b=>b.status==='reading').slice(0,8);
+  const favs = books.filter(b=>b.fav).slice(0,8);
+  const fresh = [...books].sort((a,b)=>(b.added||0)-(a.added||0)).filter(b=>b.added).slice(0,8);
+  const unsorted = books.filter(b=>b.category==='Unsorted Archive'||wingOf(b)==='lower').slice(0,8);
+  const scope = books;
+  const filtered = applyFilters(scope);
+  const rail=(title,list)=> list.length?`<div class="rail"><h3>${title}</h3><div class="scroller">${list.map(cardHTML).join('')}</div></div>`:'';
+  return wingHead('grand') + `
+    <div class="blocks">
+      <div class="block"><h4>Continue reading</h4><p>${reading.length} ${reading.length===1?'volume is':'volumes are'} open. The temple remembers where you paused.</p></div>
+      <div class="block"><h4>The collection</h4><div class="big">${books.length}</div><p>volumes across ${uniq(books.map(b=>b.category)).length} categories.</p></div>
+      <div class="block"><h4>Current research</h4><div class="big">${state.projects.length}</div><p>active ${state.projects.length===1?'project':'projects'} in the Sanctum.</p></div>
+      <div class="block"><h4>Study paths</h4><div class="big">${state.paths.length}</div><p>guided ${state.paths.length===1?'path':'paths'} ready to walk.</p></div>
+    </div>
+    ${rail('Continue reading',reading)}
+    ${rail('Recently opened',recent)}
+    ${rail('New additions',fresh)}
+    ${rail('Favorites',favs)}
+    ${rail('Unsorted &amp; awaiting review',unsorted)}
+    <div class="rail"><h3>The full catalog</h3></div>
+    ${filterBar(scope)}
+    <div class="countline">Showing <b>${filtered.length}</b> of ${scope.length} volumes</div>
+    ${gridHTML(filtered)}`;
+}
+
+/* ---- generic wing (catalog + special feature block) ---- */
+function viewWing(id, special){
+  const scope = state.books.filter(b=>wingOf(b)===id);
+  const filtered = applyFilters(scope);
+  return wingHead(id) + (special||'') + filterBar(scope) +
+    `<div class="countline">Showing <b>${filtered.length}</b> of ${scope.length} volumes in this wing</div>` +
+    gridHTML(filtered);
+}
+
+/* ---- search results ---- */
+function viewSearch(){
+  const q=state.search;
+  const list = state.books.filter(b=>matchesSearch(b,q));
+  const symHits = SYMBOLS.filter(s=> (s.n+' '+s.k.join(' ')+' '+s.t).toLowerCase().includes(q.toLowerCase()));
+  return `<div class="wing-head"><div class="eyebrow">Search the archive</div><h2>“${esc(q)}”</h2>
+    <div class="lede">${list.length} ${list.length===1?'volume':'volumes'} and ${symHits.length} ${symHits.length===1?'symbol':'symbols'} match.</div></div>
+    ${symHits.length?`<div class="rail"><h3>Symbols</h3></div><div class="atlas-grid">${symHits.map(symCellHTML).join('')}</div>`:''}
+    <div class="rail"><h3>Volumes</h3></div>
+    ${gridHTML(list)}`;
+}
+/* ---- Theology: Canon Comparison Table ---- */
+function viewCanon(){
+  const head = CANON_TRADITIONS.map(t=>`<th scope="col">${t}</th>`).join('');
+  const cell = v => v==='yes'?'<td class="yes">In canon</td>':v==='no'?'<td class="no">Not in canon</td>':'<td class="maybe">Appendix / disputed</td>';
+  const rows = CANON_BOOKS.map(r=>`<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(cell).join('')}</tr>`).join('');
+  return `<div class="rail"><h3>Canon Comparison Table</h3></div>
+    <p class="lede" style="margin-bottom:6px">${CANON_NOTE}</p>
+    <div class="tbl-wrap"><table class="matrix"><thead><tr><th scope="col">Book</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="src">Every tradition is a door. Every door requires discernment.</p>`;
+}
+
+/* ---- Apocrypha: Enochic Cosmology Map (interpretive SVG) ---- */
+function viewCosmology(){
+  return `<div class="rail"><h3>Enochic Cosmology Map</h3></div>
+  <p class="lede" style="margin-bottom:8px"><em>An interpretive visualization</em> of the cosmos described in 1 Enoch — not a literal map. Hover or tap the regions.</p>
+  <div class="tbl-wrap" style="background:radial-gradient(ellipse at 50% 18%,#0b1018,#050708)">
+  <svg id="cosmosSVG" viewBox="0 0 760 460" style="width:100%;height:auto;display:block" role="img" aria-label="Interpretive Enochic cosmology">
+    <defs><radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFE2A6" stop-opacity=".9"/><stop offset="1" stop-color="#FFE2A6" stop-opacity="0"/></radialGradient></defs>
+    ${[ ['Throne of Glory & the Heavens',380,60,'The highest heaven; the watchers behold the Great Glory.'],
+        ['The Storehouses of the Stars',150,120,'Chambers governing winds, snow, and the courses of the luminaries (Astronomical Book).'],
+        ['The Portals of the Sun & Moon',610,120,'Gates through which the luminaries rise and set across the year.'],
+        ['Mount Hermon — the Watchers’ Descent',380,210,'Where the two hundred swear the oath and descend (1 Enoch 6).'],
+        ['The Mountains of the Dead',150,300,'Hollow places where the spirits of the dead await judgment (ch. 22).'],
+        ['The Abyss / Prison of the Stars',610,300,'A chaotic deep where disobedient stars and watchers are bound (ch. 18–21).'],
+        ['The Tree of Life & the Garden',380,360,'A fragrant tree reserved for the righteous after judgment (ch. 24–25).'] ]
+      .map((r,i)=>`<g class="cos-node" data-tip="${esc(r[3])}" style="cursor:pointer">
+        <circle cx="${r[1]}" cy="${r[2]}" r="30" fill="url(#halo)"/>
+        <circle cx="${r[1]}" cy="${r[2]}" r="9" fill="#20F0D0"/>
+        <text x="${r[1]}" y="${r[2]+ (r[2]>230?44:-22)}" fill="#e9dcc0" font-size="12" text-anchor="middle" font-family="Georgia,serif">${esc(r[0])}</text>
+      </g>`).join('')}
+    <path d="M380 70 V200 M380 220 V350 M170 130 L360 200 M590 130 L400 200 M170 290 L360 220 M590 290 L400 220" stroke="#B07A35" stroke-width="1" opacity=".4" fill="none"/>
+  </svg></div>
+  <div id="cosTip" class="src" style="min-height:20px;margin-top:8px">Heavens above, storehouses and portals at the horizons, the abyss and the mountains of the dead below — and at the center, the descent on Hermon.</div>
+  <p class="src">Labeled interpretive diagram. Traditions and translations differ; consult 1 Enoch directly for specifics.</p>`;
+}
+
+/* ---- Hermetic: Alchemical Process Wall ---- */
+const ALCHEMY = [
+  {n:'Nigredo',lat:'The Blackening',c1:'#1a1a1a',c2:'#000',d:'Putrefaction and dissolution — the breaking-down of the old form. Read symbolically as confronting the shadow.',books:['emerald','corpus']},
+  {n:'Albedo',lat:'The Whitening',c1:'#cfc7b4',c2:'#7d7563',d:'Purification and washing — the emergence of clarity after dissolution. The "white work."',books:['emerald']},
+  {n:'Citrinitas',lat:'The Yellowing',c1:'#caa23a',c2:'#7a5e16',d:'The dawning of solar consciousness; often folded into the other stages in later texts.',books:['corpus']},
+  {n:'Rubedo',lat:'The Reddening',c1:'#7a1e1e',c2:'#2a0808',d:'Completion and union — the "red work," the philosophers’ stone as integration, not literal gold.',books:['emerald','corpus']},
+];
+function viewAlchemy(){
+  return `<div class="rail"><h3>Alchemical Process Wall</h3></div>
+  <p class="lede" style="margin-bottom:6px">The stages of the Great Work, read as <em>symbolic and inner</em> transformation — never as chemical instruction.</p>
+  <div class="alc-wall">${ALCHEMY.map((s,i)=>`<div class="alc-stage" data-alc="${i}" tabindex="0" role="button"
+     style="background:linear-gradient(160deg,${s.c1},${s.c2});border-color:rgba(214,177,95,.3)">
+     <div><div class="lat" style="color:var(--gold)">${s.lat}</div><h4>${s.n}</h4></div>
+     <p>${esc(s.d)}</p></div>`).join('')}</div>
+  <p class="src">Click a stage to see connected books, symbols, and a space for personal reflection.</p>`;
+}
+
+/* ---- Occult History: Evidence & Tradition Labels ---- */
+function viewOccultLabels(){
+  return `<div class="rail"><h3>Evidence &amp; Tradition Labels</h3></div>
+  <p class="lede" style="margin-bottom:6px">Each text in this wing carries one or more labels, so the kind of claim it makes stays clear.
+  <em>Hidden knowledge is not automatically wisdom. Wisdom begins when knowledge is ordered.</em></p>
+  <div class="blocks">${EVIDENCE_LABELS.map(l=>`<div class="block"><h4>${esc(l)}</h4><p>${esc(EV_DESC[l]||'')}</p></div>`).join('')}</div>`;
+}
+const EV_DESC = {
+  'Historical':'Treated as evidence about the past, to be weighed with normal historical method.',
+  'Devotional':'Written for worship and the formation of the soul, not as argument.',
+  'Symbolic':'Communicates through image and correspondence rather than literal statement.',
+  'Mythic':'Carries meaning through narrative; truth here is not the same as chronicle.',
+  'Ritual':'Describes practice; presented for study, never as instruction to perform.',
+  'Literary':'Read as art and craft, attentive to form and intention.',
+  'Philosophical':'Advances reasoned claims open to examination and counter-argument.',
+  'Contested':'Disputed in dating, authorship, or meaning — hold conclusions loosely.',
+  'Dangerous / Handle Critically':'Easily misused or sensationalized; approach with discernment and context.',
+  'Personal Research':'Your own working material — drafts, notes, and questions.',
+};
+
+/* ---- Symbolic Atlas ---- */
+function symCellHTML(s,i){ const idx=SYMBOLS.indexOf(s);
+  return `<div class="glyph-cell" data-sym="${idx}" tabindex="0" role="button" aria-label="${esc(s.n)}"><div class="gy">${s.g}</div><div class="gn">${esc(s.n)}</div></div>`; }
+function viewAtlas(){
+  return wingHead('atlas') +
+    `<p class="lede" style="margin:-6px 0 8px">Each glyph opens its meanings across traditions, related books, and study questions.
+     <em>Where traditions disagree, the Atlas says so.</em></p>
+     <div class="atlas-grid">${SYMBOLS.map(symCellHTML).join('')}</div>`;
+}
+
+/* ---- Personal Research Sanctum ---- */
+function viewSanctum(){
+  const highlights = state.books.filter(b=>b.fav).slice(0,12);
+  const projHTML = state.projects.length ? state.projects.map(p=>`
+    <div class="block"><h4>${esc(p.name)}</h4><p>${esc(p.thesis||'No thesis yet.')}</p>
+      ${(p.questions||[]).length?'<div style="margin-top:8px">'+(p.questions||[]).map(q=>`<span class="pill">? ${esc(q)}</span>`).join('')+'</div>':''}
+      <div style="margin-top:10px"><button class="btn ghost" data-delproj="${p.id}">Archive project</button></div></div>`).join('')
+    : `<div class="empty"><b>No active projects yet.</b><br>Begin one to gather books, questions, and drafts into a single line of inquiry.</div>`;
+  return wingHead('sanctum') + `
+    <div class="rail"><h3>Active research projects</h3></div>
+    <div class="blocks">${projHTML}</div>
+    <div class="btnrow"><button class="btn primary" id="newProject">+ New research project</button>
+      <button class="btn" id="askLibrary">Ask the Library</button></div>
+    <div class="rail"><h3>Reading goals &amp; status</h3></div>
+    <div class="blocks">
+      <div class="block"><h4>Reading now</h4><div class="big">${state.books.filter(b=>b.status==='reading').length}</div><p>volumes in progress</p></div>
+      <div class="block"><h4>Completed</h4><div class="big">${state.books.filter(b=>b.status==='read').length}</div><p>volumes read</p></div>
+      <div class="block"><h4>Flagged for discernment</h4><div class="big">${state.books.filter(b=>b.status==='flagged'||wingOf(b)==='lower').length}</div><p>need review</p></div>
+    </div>
+    <div class="rail"><h3>Favorite passages &amp; highlights</h3></div>
+    ${highlights.length? gridHTML(highlights) : `<div class="empty">Mark a book as a <b>favorite</b> from its detail panel and it will gather here.</div>`}
+    <div class="rail"><h3>Your study paths</h3></div>
+    ${pathsListHTML()}`;
+}
+
+/* ---- Lower Archive ---- */
+const LOWER_STATUSES = ['Needs metadata','Needs reading','Needs verification','Needs theological review','Needs historical context','Needs source check','Potentially unreliable','High-value but difficult','Personal curiosity'];
+function viewLower(){
+  const scope = state.books.filter(b=>wingOf(b)==='lower');
+  const list = applyFilters(scope);
+  const rows = list.map(b=>`<tr data-id="${b.id}" style="cursor:pointer">
+    <th scope="row">${esc(b.title)}</th><td>${esc(b.author||'Unknown')}</td>
+    <td>${(b.lowerStatus||['Needs metadata']).map(s=>`<span class="pill ${/(unreliable|dangerous)/i.test(s)?'danger':''}">${esc(s)}</span>`).join('')}</td>
+    <td>${esc(b.fileType||'—')}</td></tr>`).join('');
+  return wingHead('lower') + `
+    <p class="lede" style="margin:-4px 0 10px"><em>“Not every hidden thing is wisdom. Some books must be handled with discernment.”</em>
+    This is where uncategorized, controversial, obscure, or potentially misleading books rest until reviewed.</p>
+    ${filterBar(scope)}
+    ${ list.length ? `<div class="tbl-wrap"><table class="matrix"><thead><tr><th scope="col">Title</th><th scope="col">Author</th><th scope="col">Review status</th><th scope="col">File</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="empty"><b>The lower archive is quiet.</b><br>Books land here when they need metadata, verification, or theological/historical review.</div>` }
+    <p class="src" style="margin-top:14px">Review statuses available: ${LOWER_STATUSES.map(s=>esc(s)).join(' · ')}.</p>`;
+}
+/* ============================================================
+   DETAIL PANEL
+   ============================================================ */
+function openDetail(id){
+  const b = byId(id); if(!b) return;
+  state.openBook = id;
+  b.lastOpened = Date.now();
+  save();
+  const [c1,c2]=colorFor(b.category);
+  const miss = v => v && String(v).trim() && v!=='—' ? esc(v) : '<span class="val miss">Metadata not yet provided.</span>';
+  const field = (label,val) => `<div class="field"><div class="label">${label}</div><div class="val">${val}</div></div>`;
+  const relBooks = (b.related||[]).map(byId).filter(Boolean);
+  const sampleMark = SAMPLE_BOOKS.some(s=>s.id===b.id) || b._userSample
+    ? `<div class="field"><div class="val miss">${SAMPLE_NOTE}</div></div>` : '';
+  const chips = (arr,cls='') => (arr&&arr.length) ? arr.map(x=>`<span class="pill ${cls}">${esc(x)}</span>`).join('') : '<span class="val miss">Metadata not yet provided.</span>';
+  const ev = (b.evidence||[]).map(x=>`<span class="pill ev ${/(dangerous)/i.test(x)?'danger':''}">${esc(x)}</span>`).join(' ');
+  const d=$('#detail');
+  d.innerHTML = `
+    <div class="dt-cover" style="--c1:${c1};--c2:${c2}">
+      <button class="x" id="dtClose" aria-label="Close">×</button>
+      <div class="ti"><div class="trad">${esc(b.category||'Unsorted')}${b.tradition&&b.tradition!=='—'?' · '+esc(b.tradition):''}</div>
+        <h2>${esc(b.title)}</h2><div class="auth">${esc(b.author||'Unknown author')}</div></div>
+    </div>
+    <div class="dt-body">
+      ${ev?`<div style="margin:2px 0 12px">${ev}</div>`:''}
+      <div class="dt-actions">
+        <button class="primary" data-act="open">📖 Open Book</button>
+        <button data-act="note">✎ Add / Edit Note</button>
+        <button data-act="path">＋ Add to Study Path</button>
+        <button data-act="compare">⇄ Compare</button>
+        <button class="fav ${b.fav?'on':''}" data-act="fav">${b.fav?'★ Favorited':'☆ Favorite'}</button>
+        <button data-act="edit">⚙ Edit metadata</button>
+      </div>
+      <div class="field"><div class="label">Reading status</div>
+        <div class="statusrow">${['unread','reading','read','flagged'].map(s=>`<button data-status="${s}" class="${(b.status||'unread')===s?'on':''}">${STATUS_LABELS[s]}</button>`).join('')}</div></div>
+      <div class="field"><div class="label">Your rating</div>
+        <div class="stars" id="starRow">${[1,2,3,4,5].map(n=>`<span data-star="${n}" class="${(b.rating||0)>=n?'on':''}">★</span>`).join('')}</div></div>
+      <div class="field"><div class="label">Summary</div><div class="val">${b.summary&&b.summary.trim()?esc(b.summary):'<span class="val miss">Metadata not yet provided.</span>'}</div></div>
+      ${b.toc&&b.toc.length?`<div class="field"><div class="label">Table of contents</div><ul class="toc">${b.toc.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
+      <div class="field"><div class="label">Personal notes</div>
+        <textarea class="notebox" id="noteBox" placeholder="Your notes, questions, and cross-references…">${esc(b.notes||'')}</textarea></div>
+      ${b.passages&&b.passages.length?`<div class="field"><div class="label">Key passages</div><div class="val">${b.passages.map(p=>`“${esc(p)}”`).join('<br>')}</div></div>`:''}
+      <dl class="kv field" style="margin-top:6px">
+        <dt>Time period</dt><dd>${miss(b.period)}</dd>
+        <dt>Source type</dt><dd>${miss(b.sourceType)}</dd>
+        <dt>File type</dt><dd>${miss(b.fileType)}</dd>
+        <dt>Importance</dt><dd>${miss(b.importance)}</dd>
+      </dl>
+      <div class="field"><div class="label">Key themes</div><div class="relchips">${chips(b.themes)}</div></div>
+      <div class="field"><div class="label">Related symbols</div><div class="relchips">${(b.symbols||[]).length?b.symbols.map(s=>`<span class="pill click" data-gotosym="${esc(s)}">${esc(s)}</span>`).join(''):'<span class="val miss">Metadata not yet provided.</span>'}</div></div>
+      <div class="field"><div class="label">Research tags</div><div class="relchips">${(b.tags||[]).length?b.tags.map(t=>`<span class="pill click" data-tag="${esc(t)}">#${esc(t)}</span>`).join(''):'<span class="val miss">None yet.</span>'}</div></div>
+      <div class="field"><div class="label">Related books · recommended next reads</div>
+        <div class="relchips">${relBooks.length?relBooks.map(r=>`<span class="pill click" data-goto="${r.id}">${esc(r.title)}</span>`).join(''):'<span class="val miss">No related works linked yet.</span>'}</div></div>
+      ${sampleMark}
+    </div>`;
+  d.classList.add('open'); d.setAttribute('aria-hidden','false');
+  // wire detail interactions
+  $('#dtClose').onclick = closeDetail;
+  $$('#detail [data-status]').forEach(btn=> btn.onclick=()=>{ b.status=btn.dataset.status; save(); openDetail(id); render(); playCue('page'); });
+  $$('#detail [data-star]').forEach(s=> s.onclick=()=>{ const n=+s.dataset.star; b.rating = (b.rating===n)?0:n; save(); openDetail(id); });
+  $('#noteBox').addEventListener('input', e=>{ b.notes=e.target.value; b.notesAvailable=!!e.target.value.trim(); save(); });
+  $$('#detail .dt-actions [data-act]').forEach(btn=> btn.onclick=()=>detailAction(btn.dataset.act, b));
+  $$('#detail [data-goto]').forEach(p=> p.onclick=()=>openDetail(p.dataset.goto));
+  $$('#detail [data-gotosym]').forEach(p=> p.onclick=()=>{ const s=SYMBOLS.find(x=>x.n===p.dataset.gotosym); if(s){ closeDetail(); setView('atlas'); openSymbol(SYMBOLS.indexOf(s)); }});
+  $$('#detail [data-tag]').forEach(p=> p.onclick=()=>{ closeDetail(); state.filters={tag:p.dataset.tag}; state.search=''; $('#searchInput').value=''; setView('grand'); });
+  playCue('page');
+}
+function closeDetail(){ $('#detail').classList.remove('open'); $('#detail').setAttribute('aria-hidden','true'); state.openBook=null; }
+function detailAction(act,b){
+  switch(act){
+    case 'open': openReader(b); break;
+    case 'note': $('#noteBox').focus(); $('#noteBox').scrollIntoView({block:'center'}); break;
+    case 'fav': b.fav=!b.fav; save(); openDetail(b.id); render(); toast(b.fav?'Added to favorites.':'Removed from favorites.'); break;
+    case 'path': openAddToPath(b); break;
+    case 'compare': addToCompare(b.id); toast(`<b>${esc(b.title)}</b> added to comparison (${state.compare.length}).`); break;
+    case 'edit': openImport(b); break;
+  }
+}
+function openReader(b){
+  if(b._fileURL){ window.open(b._fileURL,'_blank'); return; }
+  const hasText = b.passages && b.passages.length;
+  openModal(`<div class="modal-head"><div><div class="sub">Reading room</div><h3>${esc(b.title)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body"><div class="reader">
+      <h2>${esc(b.title)}</h2><div class="ra">${esc(b.author||'Unknown')}</div>
+      ${b.summary?`<p>${esc(b.summary)}</p>`:''}
+      ${b.toc&&b.toc.length?`<p style="margin-top:14px"><b style="color:var(--gold);font-weight:400">Contents:</b></p><ul class="toc">${b.toc.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
+      ${hasText?`<p style="margin-top:16px;color:var(--gold)">Recorded passages</p>${b.passages.map(p=>`<blockquote style="border-left:2px solid var(--gold);padding-left:14px;margin:10px 0;font-style:italic">“${esc(p)}”</blockquote>`).join('')}`:''}
+      <div class="placeholder" style="margin-top:18px">Full text is not loaded. The temple does not invent the contents of a book.
+      Add your own file for this title (<b>Edit metadata → upload</b>) and “Open Book” will open it directly.</div>
+    </div></div>`);
+}
+/* ============================================================
+   MODAL helpers
+   ============================================================ */
+function openModal(html, wide){
+  const m=$('#modal'); m.className = 'modal'+(wide?' wide':''); m.innerHTML=html;
+  $('#overlay').classList.add('open');
+  m.querySelectorAll('[data-close]').forEach(x=>x.onclick=closeOverlay);
+  const f=m.querySelector('input,textarea,button'); if(f) try{f.focus();}catch(e){}
+}
+function closeOverlay(){ $('#overlay').classList.remove('open'); }
+
+/* ============================================================
+   STUDY PATHS
+   ============================================================ */
+function pathsListHTML(){
+  if(!state.paths.length) return `<div class="empty"><b>No study paths yet.</b><br>Create a guided reading path to walk a tradition in order.</div>`;
+  return `<div class="blocks">${state.paths.map(p=>{
+    const books = p.books.map(byId).filter(Boolean);
+    return `<div class="block"><h4>${esc(p.name)}</h4>
+      <p>${esc(p.why||'')}</p>
+      <div style="margin:8px 0"><span class="pill">${esc(p.difficulty||'—')}</span><span class="pill">Depth: ${esc(p.depth||'—')}</span><span class="pill">${books.length} books</span></div>
+      <div style="margin-top:8px">${books.slice(0,6).map((b,i)=>`<span class="pill click" data-goto="${b.id}">${i+1}. ${esc(b.title)}</span>`).join('')||'<span class="val miss">No books yet.</span>'}</div>
+      <div class="btnrow" style="margin-top:12px"><button class="btn ghost" data-openpath="${p.id}">Open path</button></div></div>`;
+  }).join('')}</div>`;
+}
+function openPaths(){
+  openModal(`<div class="modal-head"><div><div class="sub">Guided reading</div><h3>Study Paths</h3></div>
+    <button class="btn primary" id="addPath" style="margin-left:auto">+ New path</button><button class="x" data-close>×</button></div>
+    <div class="modal-body" id="pathsBody">${pathsListHTML()}</div>`, true);
+  $('#addPath').onclick = ()=>openPathEditor();
+  wirePathsBody();
+}
+function wirePathsBody(){
+  $$('#modal [data-goto]').forEach(p=>p.onclick=()=>{ closeOverlay(); openDetail(p.dataset.goto); });
+  $$('#modal [data-openpath]').forEach(p=>p.onclick=()=>openPathDetail(p.dataset.openpath));
+}
+function openPathDetail(pid){
+  const p=state.paths.find(x=>x.id===pid); if(!p) return;
+  const books=p.books.map(byId).filter(Boolean);
+  openModal(`<div class="modal-head"><div><div class="sub">${esc(p.difficulty||'')} · Depth: ${esc(p.depth||'—')}</div><h3>${esc(p.name)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="lede" style="margin-bottom:14px">${esc(p.why||'')}</p>
+      <div class="rail"><h3>Reading order</h3></div>
+      ${books.length?books.map((b,i)=>`<div class="block" style="margin-bottom:10px"><h4>${i+1}. ${esc(b.title)}</h4>
+        <p>${esc(b.summary||'').slice(0,180)}${(b.summary||'').length>180?'…':''}</p>
+        <div class="btnrow" style="margin-top:8px"><button class="btn ghost" data-goto="${b.id}">Open detail</button>
+        <button class="btn ghost danger" data-removebook="${b.id}">Remove from path</button></div></div>`).join('')
+        :`<div class="empty">No books yet. Open any book and choose <b>Add to Study Path</b>.</div>`}
+      ${(p.questions||[]).length?`<div class="rail"><h3>Questions to consider</h3></div>${p.questions.map(q=>`<p class="lede" style="margin-bottom:6px">— ${esc(q)}</p>`).join('')}`:''}
+      <div class="btnrow"><button class="btn" data-editpath="${p.id}">Edit path</button><button class="btn ghost danger" data-delpath="${p.id}">Delete path</button></div>
+    </div>`, true);
+  $$('#modal [data-goto]').forEach(x=>x.onclick=()=>{ closeOverlay(); openDetail(x.dataset.goto); });
+  $$('#modal [data-removebook]').forEach(x=>x.onclick=()=>{ p.books=p.books.filter(id=>id!==x.dataset.removebook); save(); openPathDetail(pid); });
+  $('#modal [data-editpath]').onclick=()=>openPathEditor(p);
+  $('#modal [data-delpath]').onclick=()=>{ if(confirm('Delete this study path?')){ state.paths=state.paths.filter(x=>x.id!==pid); save(); openPaths(); render(); } };
+}
+function openPathEditor(p){
+  const isNew=!p; p=p||{id:uid('p'),name:'',difficulty:'Beginner',depth:'Moderate',why:'',books:[],questions:[]};
+  openModal(`<div class="modal-head"><div><div class="sub">${isNew?'Create':'Edit'} study path</div><h3>${isNew?'New Study Path':esc(p.name)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="fld"><label>Name</label><input id="p_name" value="${esc(p.name)}" placeholder="e.g. Angels and Watchers"></div>
+      <div class="fld"><label>Difficulty</label><select id="p_diff">${['Beginner','Intermediate','Advanced'].map(d=>`<option ${p.difficulty===d?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div class="fld"><label>Reading depth</label><select id="p_depth">${['Light','Moderate','Deep'].map(d=>`<option ${p.depth===d?'selected':''}>${d}</option>`).join('')}</select></div>
+    </div>
+    <div class="fld" style="margin-top:12px"><label>Why this path matters</label><textarea id="p_why" placeholder="What this sequence reveals…">${esc(p.why||'')}</textarea></div>
+    <div class="fld" style="margin-top:12px"><label>Questions to consider (one per line)</label><textarea id="p_q">${esc((p.questions||[]).join('\n'))}</textarea></div>
+    <div class="btnrow"><button class="btn primary" id="savePath">Save path</button><button class="btn ghost" data-close>Cancel</button></div>
+    </div>`, true);
+  $('#savePath').onclick=()=>{
+    p.name=$('#p_name').value.trim()||'Untitled Path'; p.difficulty=$('#p_diff').value; p.depth=$('#p_depth').value;
+    p.why=$('#p_why').value.trim(); p.questions=$('#p_q').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    if(isNew) state.paths.push(p); save(); openPathDetail(p.id); render();
+  };
+}
+function openAddToPath(b){
+  const opts = state.paths.map(p=>`<button class="btn ghost" style="width:100%;text-align:left;margin-bottom:8px" data-addto="${p.id}">
+    ${p.books.includes(b.id)?'✓ ':''}${esc(p.name)} <span class="src">(${p.books.length} books)</span></button>`).join('');
+  openModal(`<div class="modal-head"><div><div class="sub">Add to study path</div><h3>${esc(b.title)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">${opts||'<div class="empty">No paths yet.</div>'}
+    <div class="btnrow"><button class="btn primary" id="newPathHere">+ New path with this book</button></div></div>`);
+  $$('#modal [data-addto]').forEach(x=>x.onclick=()=>{
+    const p=state.paths.find(pp=>pp.id===x.dataset.addto);
+    if(p.books.includes(b.id)){ p.books=p.books.filter(id=>id!==b.id); toast('Removed from '+p.name+'.'); }
+    else { p.books.push(b.id); toast(`<b>${esc(b.title)}</b> added to ${esc(p.name)}.`); }
+    save(); openAddToPath(b); render();
+  });
+  $('#newPathHere').onclick=()=>{ const p={id:uid('p'),name:b.title+' — path',difficulty:'Beginner',depth:'Moderate',why:'',books:[b.id],questions:[]}; state.paths.push(p); save(); openPathEditor(p); };
+}
+
+/* ============================================================
+   COMPARE BOOKS
+   ============================================================ */
+function addToCompare(id){ if(!state.compare.includes(id)) state.compare.push(id); if(state.compare.length>4) state.compare.shift(); }
+const COMPARE_ROWS = [
+  ['Category','category'],['Tradition','tradition'],['Time period','period'],['Source type','sourceType'],
+  ['View · key themes',b=>(b.themes||[]).join(', ')],['Symbols',b=>(b.symbols||[]).join(', ')],
+  ['Evidence labels',b=>(b.evidence||[]).join(', ')],['Reading status',b=>STATUS_LABELS[b.status||'unread']],
+  ['Your rating',b=>b.rating?'★'.repeat(b.rating):'—'],['Importance','importance'],
+];
+function openCompare(){
+  const picked = state.compare.map(byId).filter(Boolean);
+  const pickerBooks = [...state.books].sort((a,b)=>a.title.localeCompare(b.title));
+  const picker = `<div class="fld" style="margin-bottom:14px"><label>Add a volume to compare (up to 4)</label>
+    <select id="cmpAdd"><option value="">Choose a book…</option>${pickerBooks.map(b=>`<option value="${b.id}" ${state.compare.includes(b.id)?'disabled':''}>${esc(b.title)}</option>`).join('')}</select></div>`;
+  let body;
+  if(picked.length<1){ body = `<div class="empty"><b>Choose books to compare.</b><br>Open any book and press <b>Compare</b>, or add them here. Compare by theme, tradition, period, symbols, and more.</div>`; }
+  else {
+    const cols = picked.map(b=>`<th scope="col">${esc(b.title)}<br><span class="src">${esc(b.author||'')}</span> <button class="pill click" data-rmcmp="${b.id}">remove</button></th>`).join('');
+    const rows = COMPARE_ROWS.map(([label,key])=>{
+      const cells = picked.map(b=>{ const v = typeof key==='function'?key(b):b[key]; return `<td>${v&&String(v).trim()&&v!=='—'?esc(v):'<span class="val miss">—</span>'}</td>`; }).join('');
+      return `<tr><th scope="row">${label}</th>${cells}</tr>`;
+    }).join('');
+    body = `<div class="tbl-wrap"><table class="matrix"><thead><tr><th scope="col">Dimension</th>${cols}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  openModal(`<div class="modal-head"><div><div class="sub">Side by side</div><h3>Compare Books</h3></div>
+    <button class="btn ghost" id="cmpClear" style="margin-left:auto">Clear</button><button class="x" data-close>×</button></div>
+    <div class="modal-body">${picker}${body}</div>`, true);
+  $('#cmpAdd').onchange=e=>{ if(e.target.value){ addToCompare(e.target.value); openCompare(); } };
+  $('#cmpClear').onclick=()=>{ state.compare=[]; openCompare(); };
+  $$('#modal [data-rmcmp]').forEach(x=>x.onclick=()=>{ state.compare=state.compare.filter(id=>id!==x.dataset.rmcmp); openCompare(); });
+}
+/* ============================================================
+   KNOWLEDGE GRAPH — constellation under the dome
+   ============================================================ */
+let graphAnim=null;
+function openGraph(){
+  openModal(`<div class="modal-head"><div><div class="sub">A living map of books, ideas, and symbols</div><h3>Knowledge Graph</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <canvas id="graphCanvas" height="520"></canvas>
+      <div class="graph-legend">
+        <div class="lg"><span class="sw" style="background:#D6B15F"></span>Books</div>
+        <div class="lg"><span class="sw" style="background:#F2E7C9"></span>Authors</div>
+        <div class="lg"><span class="sw" style="background:#20F0D0"></span>Traditions</div>
+        <div class="lg"><span class="sw" style="background:#FFB454"></span>Symbols</div>
+        <div class="lg" style="color:var(--faint)">Drag to pan · click a node to open</div>
+      </div>
+    </div>`, true);
+  setTimeout(buildGraph, 60);
+}
+function buildGraph(){
+  const cv=$('#graphCanvas'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  function size(){ cv.width = cv.clientWidth*devicePixelRatio; cv.height=520*devicePixelRatio; }
+  size();
+  const W=()=>cv.width, H=()=>cv.height;
+  const nodes=[], links=[], index={};
+  function node(id,label,type,r){ if(index[id])return index[id]; const n={id,label,type,r,
+    x:W()/2+(Math.random()-.5)*W()*0.6, y:H()/2+(Math.random()-.5)*H()*0.6, vx:0,vy:0}; nodes.push(n); index[id]=n; return n; }
+  state.books.forEach(b=>{
+    const bn=node('b:'+b.id, b.title, 'book', 7*devicePixelRatio); bn.ref=b;
+    if(b.author){ const a=node('a:'+slug(b.author.split('·')[0]), b.author.split('·')[0].trim(),'author',5*devicePixelRatio); links.push([bn,a]); }
+    if(b.tradition&&b.tradition!=='—'){ const t=node('t:'+slug(b.tradition), b.tradition,'tradition',6*devicePixelRatio); links.push([bn,t]); }
+    (b.symbols||[]).forEach(s=>{ const sn=node('s:'+slug(s), s,'symbol',4.5*devicePixelRatio); links.push([bn,sn]); });
+  });
+  // colours
+  const COL={book:'#D6B15F',author:'#F2E7C9',tradition:'#20F0D0',symbol:'#FFB454'};
+  let panX=0,panY=0,drag=false,lx=0,ly=0,moved=0;
+  const reduce=state.settings.motion;
+  function step(){
+    // simple repulsion + link spring
+    for(let i=0;i<nodes.length;i++){ const a=nodes[i];
+      for(let j=i+1;j<nodes.length;j++){ const b=nodes[j];
+        let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||1, d=Math.sqrt(d2);
+        const f=(2600*devicePixelRatio)/d2; dx/=d; dy/=d; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f; }
+    }
+    links.forEach(([a,b])=>{ let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1; const target=90*devicePixelRatio; const f=(d-target)*0.012;
+      dx/=d; dy/=d; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f; });
+    nodes.forEach(n=>{ // gravity to centre
+      n.vx+=(W()/2-n.x)*0.0009; n.vy+=(H()/2-n.y)*0.0009;
+      n.vx*=0.86; n.vy*=0.86; n.x+=n.vx; n.y+=n.vy; });
+  }
+  function draw(){
+    ctx.clearRect(0,0,W(),H());
+    ctx.save(); ctx.translate(panX,panY);
+    ctx.strokeStyle='rgba(214,177,95,.18)'; ctx.lineWidth=1*devicePixelRatio;
+    links.forEach(([a,b])=>{ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); });
+    nodes.forEach(n=>{ ctx.beginPath(); ctx.fillStyle=COL[n.type];
+      ctx.shadowColor=COL[n.type]; ctx.shadowBlur=8*devicePixelRatio;
+      ctx.arc(n.x,n.y,n.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+      if(n.type==='book'||n.r>5*devicePixelRatio){ ctx.fillStyle='rgba(233,220,192,.82)'; ctx.font=(11*devicePixelRatio)+'px Georgia';
+        ctx.fillText(n.label.slice(0,22), n.x+n.r+3*devicePixelRatio, n.y+3*devicePixelRatio); }});
+    ctx.restore();
+  }
+  let ticks=0;
+  function loop(){ if(!$('#graphCanvas')){ cancelAnimationFrame(graphAnim); return; }
+    if(ticks<240 || !reduce){ step(); ticks++; } draw();
+    graphAnim=requestAnimationFrame(loop); }
+  if(reduce){ for(let i=0;i<160;i++) step(); }
+  loop();
+  // interaction
+  function pos(e){ const r=cv.getBoundingClientRect(); const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x:cx*devicePixelRatio-panX, y:cy*devicePixelRatio-panY}; }
+  cv.onpointerdown=e=>{ drag=true; moved=0; lx=e.clientX; ly=e.clientY; };
+  cv.onpointermove=e=>{ if(!drag)return; const dx=e.clientX-lx, dy=e.clientY-ly; panX+=dx*devicePixelRatio; panY+=dy*devicePixelRatio; lx=e.clientX; ly=e.clientY; moved+=Math.abs(dx)+Math.abs(dy); };
+  cv.onpointerup=e=>{ drag=false; if(moved>6) return; const p=pos(e);
+    let hit=null,best=1e9; nodes.forEach(n=>{ const d=Math.hypot(n.x-p.x,n.y-p.y); if(d<n.r+10*devicePixelRatio&&d<best){best=d;hit=n;} });
+    if(hit){ if(hit.type==='book'){ closeOverlay(); openDetail(hit.ref.id); }
+      else if(hit.type==='symbol'){ const idx=SYMBOLS.findIndex(s=>slug(s.n)===hit.id.slice(2)); if(idx>=0){ closeOverlay(); setView('atlas'); openSymbol(idx);} else toast(hit.label); }
+      else toast(hit.label); } };
+  addEventListener('resize', ()=>{ if($('#graphCanvas')) size(); }, {once:true});
+}
+
+/* ============================================================
+   SYMBOL / ALCHEMY / COSMOLOGY panels
+   ============================================================ */
+function openSymbol(i){
+  const s=SYMBOLS[i]; if(!s) return;
+  const books = s.books.map(byId).filter(Boolean);
+  openModal(`<div class="modal-head"><div><div class="sub">Symbolic Atlas</div><h3>${s.g} &nbsp; ${esc(s.n)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <div class="field"><div class="label">Associations</div><div class="relchips">${s.k.map(k=>`<span class="pill">${esc(k)}</span>`).join('')}</div></div>
+      <div class="field"><div class="label">Meaning across traditions</div><div class="val">${esc(s.t)}</div></div>
+      ${s.care?`<div class="field"><div class="label">A note of caution</div><div class="val" style="font-style:italic;color:#cdbf9f">${esc(s.care)}</div></div>`:''}
+      <div class="field"><div class="label">Related books</div><div class="relchips">${books.length?books.map(b=>`<span class="pill click" data-goto="${b.id}">${esc(b.title)}</span>`).join(''):'<span class="val miss">No linked volumes yet.</span>'}</div></div>
+      <div class="field"><div class="label">Study questions</div><div class="val">— What does this image do in each tradition that uses it?<br>— Where might a single meaning be a flattening of several?</div></div>
+      <p class="src">Where traditions disagree, the Atlas does not decide for you.</p>
+    </div>`);
+  $$('#modal [data-goto]').forEach(x=>x.onclick=()=>{ closeOverlay(); openDetail(x.dataset.goto); });
+}
+function openAlchemy(i){
+  const s=ALCHEMY[i]; if(!s) return; const books=s.books.map(byId).filter(Boolean);
+  openModal(`<div class="modal-head"><div><div class="sub">${esc(s.lat)}</div><h3>${esc(s.n)}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <div class="field"><div class="val">${esc(s.d)}</div></div>
+      <div class="field"><div class="label">Connected books</div><div class="relchips">${books.length?books.map(b=>`<span class="pill click" data-goto="${b.id}">${esc(b.title)}</span>`).join(''):'<span class="val miss">No linked volumes yet.</span>'}</div></div>
+      <div class="field"><div class="label">Personal reflection</div><textarea class="notebox" id="alcNote" placeholder="What does this stage mean for your own work?">${esc(localStorage.getItem('alc_'+i)||'')}</textarea></div>
+      <p class="src">Symbolic and philosophical — never read as chemical instruction.</p>
+    </div>`);
+  $$('#modal [data-goto]').forEach(x=>x.onclick=()=>{ closeOverlay(); openDetail(x.dataset.goto); });
+  $('#alcNote').addEventListener('input', e=>{ try{localStorage.setItem('alc_'+i,e.target.value);}catch(_){} });
+}
+
+/* ============================================================
+   PROJECTS (Sanctum)
+   ============================================================ */
+function openProjectEditor(){
+  openModal(`<div class="modal-head"><div><div class="sub">Personal Research Sanctum</div><h3>New research project</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <div class="fld"><label>Project name</label><input id="pr_name" placeholder="e.g. The Watchers across traditions"></div>
+      <div class="fld" style="margin-top:12px"><label>Working thesis</label><textarea id="pr_thesis" placeholder="What are you trying to understand or argue?"></textarea></div>
+      <div class="fld" style="margin-top:12px"><label>Open questions (one per line)</label><textarea id="pr_q"></textarea></div>
+      <div class="btnrow"><button class="btn primary" id="pr_save">Begin project</button><button class="btn ghost" data-close>Cancel</button></div>
+    </div>`);
+  $('#pr_save').onclick=()=>{ const name=$('#pr_name').value.trim(); if(!name){ toast('Give the project a name.'); return; }
+    state.projects.push({id:uid('pr'),name,thesis:$('#pr_thesis').value.trim(),questions:$('#pr_q').value.split('\n').map(s=>s.trim()).filter(Boolean)});
+    save(); closeOverlay(); render(); toast('Project begun.'); };
+}
+/* ============================================================
+   IMPORT — the intake ritual (also edits existing books)
+   ============================================================ */
+function openImport(existing){
+  const b = existing || {};
+  const isEdit = !!existing;
+  const opt=(arr,sel)=>['',...arr].map(v=>`<option ${sel===v?'selected':''}>${v||'—'}</option>`).join('');
+  const catOpts = CATEGORIES.map(c=>`<option ${b.category===c?'selected':''}>${c}</option>`).join('');
+  const wingOpts = WINGS.map(w=>`<option value="${w.id}" ${(b.wing||'')===w.id?'selected':''}>${esc(w.name)}</option>`).join('');
+  openModal(`<div class="modal-head"><div><div class="sub">${isEdit?'Edit metadata':'The intake ritual'}</div><h3>${isEdit?esc(b.title):'Add a Book to the Archive'}</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      ${isEdit?'':`<div class="drop" id="drop"><div class="glyph">✶</div>
+        <div class="ds" id="dropLabel">Drop a file here, or click to choose — it appears as a glowing unbound manuscript.</div>
+        <div class="types"><span class="filetag">PDF</span><span class="filetag">EPUB</span><span class="filetag">TXT</span><span class="filetag">DOCX</span><span class="filetag">HTML</span><span class="filetag">Markdown</span><span class="filetag">Image scan</span></div>
+        <input type="file" id="fileInput" style="display:none" accept=".pdf,.epub,.txt,.docx,.html,.htm,.md,.markdown,image/*">
+        <p class="src" style="margin-top:8px">If a file is provided, “Open Book” will open it. Without one, you can still record full metadata.</p></div>`}
+      <div class="form-grid" style="margin-top:14px">
+        <div class="fld"><label>Title</label><input id="i_title" value="${esc(b.title||'')}" placeholder="Required"></div>
+        <div class="fld"><label>Author</label><input id="i_author" value="${esc(b.author||'')}"></div>
+        <div class="fld"><label>Category</label><select id="i_category"><option value="">— choose —</option>${catOpts}</select></div>
+        <div class="fld"><label>Tradition</label><input id="i_tradition" value="${esc(b.tradition||'')}"></div>
+        <div class="fld"><label>Time period</label><input id="i_period" value="${esc(b.period||'')}" placeholder="e.g. 2nd c. CE"></div>
+        <div class="fld"><label>File type</label><select id="i_fileType">${opt(['PDF','EPUB','TXT','DOCX','HTML','Markdown','Image scan'],b.fileType)}</select></div>
+        <div class="fld"><label>Reading status</label><select id="i_status">${['unread','reading','read','flagged'].map(s=>`<option value="${s}" ${(b.status||'unread')===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select></div>
+        <div class="fld"><label>Importance</label><select id="i_importance">${opt(['High','Medium','Low','Unrated'],b.importance)}</select></div>
+        <div class="fld"><label>Shelf / wing</label><select id="i_wing"><option value="">Auto (by category)</option>${wingOpts}</select></div>
+      </div>
+      <div class="fld" style="margin-top:12px"><label>Key themes (comma separated)</label><input id="i_themes" value="${esc((b.themes||[]).join(', '))}"></div>
+      <div class="fld" style="margin-top:12px"><label>Research tags (comma separated)</label><input id="i_tags" value="${esc((b.tags||[]).join(', '))}"></div>
+      <div class="fld" style="margin-top:12px"><label>Related symbols (comma separated)</label><input id="i_symbols" value="${esc((b.symbols||[]).join(', '))}"></div>
+      <div class="fld" style="margin-top:12px"><label>Evidence &amp; tradition labels</label>
+        <div class="relchips" id="i_ev">${EVIDENCE_LABELS.map(l=>`<span class="pill click ${(b.evidence||[]).includes(l)?'on':''}" data-ev="${esc(l)}">${esc(l)}</span>`).join('')}</div></div>
+      <div class="fld" style="margin-top:12px"><label>Summary</label><textarea id="i_summary" placeholder="A factual summary. Do not invent contents.">${esc(b.summary||'')}</textarea></div>
+      <div class="fld" style="margin-top:12px"><label>Personal notes</label><textarea id="i_notes">${esc(b.notes||'')}</textarea></div>
+      <div class="btnrow">
+        <button class="btn primary" id="i_save">${isEdit?'Save changes':'Scan & shelve the book'}</button>
+        ${isEdit?'<button class="btn ghost danger" id="i_delete">Remove from archive</button>':''}
+        <button class="btn ghost" data-close>Cancel</button>
+      </div>
+      <p class="src" style="margin-top:6px">The Archivist assigns a temporary category, you confirm the details, and the book flies to its proper shelf — updating the knowledge graph.</p>
+    </div>`, true);
+
+  let chosen = {fileType:b.fileType, _fileURL:b._fileURL, name:null};
+  const evSel = new Set(b.evidence||[]);
+  $$('#modal [data-ev]').forEach(p=>p.onclick=()=>{ const l=p.dataset.ev; if(evSel.has(l)){evSel.delete(l);p.classList.remove('on');}else{evSel.add(l);p.classList.add('on');} });
+  if(!isEdit){
+    const drop=$('#drop'), fi=$('#fileInput');
+    drop.onclick=()=>fi.click();
+    drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot');};
+    drop.ondragleave=()=>drop.classList.remove('hot');
+    drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot'); if(e.dataTransfer.files[0]) takeFile(e.dataTransfer.files[0]);};
+    fi.onchange=e=>{ if(e.target.files[0]) takeFile(e.target.files[0]); };
+    function takeFile(f){
+      chosen.name=f.name;
+      const ext=(f.name.split('.').pop()||'').toLowerCase();
+      const map={pdf:'PDF',epub:'EPUB',txt:'TXT',docx:'DOCX',doc:'DOCX',html:'HTML',htm:'HTML',md:'Markdown',markdown:'Markdown'};
+      chosen.fileType = map[ext] || (f.type.startsWith('image')?'Image scan':'TXT');
+      try{ chosen._fileURL = URL.createObjectURL(f); }catch(_){}
+      $('#i_fileType').value = chosen.fileType;
+      if(!$('#i_title').value) $('#i_title').value = f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ');
+      $('#dropLabel').innerHTML = `✓ <b style="color:var(--teal)">${esc(f.name)}</b> received as a glowing manuscript.`;
+      playCue('shimmer');
+    }
+  }
+  $('#i_save').onclick=()=>{
+    const title=$('#i_title').value.trim(); if(!title){ toast('A book needs a title.'); $('#i_title').focus(); return; }
+    const data={
+      title, author:$('#i_author').value.trim(), category:$('#i_category').value||'Unsorted Archive',
+      tradition:$('#i_tradition').value.trim(), period:$('#i_period').value.trim(),
+      fileType:$('#i_fileType').value, status:$('#i_status').value, importance:$('#i_importance').value||'Unrated',
+      wing:$('#i_wing').value||undefined,
+      themes:splitList($('#i_themes').value), tags:splitList($('#i_tags').value), symbols:splitList($('#i_symbols').value),
+      evidence:[...evSel], summary:$('#i_summary').value.trim(), notes:$('#i_notes').value.trim(),
+    };
+    if(isEdit){ Object.assign(b, data); save(); closeOverlay(); openDetail(b.id); render(); toast('Metadata updated.'); }
+    else {
+      const nb = Object.assign({id:uid(), added:Date.now(), rating:0, related:[], passages:[], toc:[], _userSample:false}, data);
+      if(chosen._fileURL) nb._fileURL=chosen._fileURL;
+      if(chosen.name) nb.sourceType=nb.sourceType||'User upload';
+      state.books.push(nb); save();
+      closeOverlay(); render(); flyTo(state.view); playCue('shimmer');
+      toast(`<b>${esc(title)}</b> has flown to the ${esc((WINGS.find(w=>w.id===wingOf(nb))||{}).name||'shelf')}.`);
+      setTimeout(()=>openDetail(nb.id), 400);
+    }
+  };
+  if(isEdit){ $('#i_delete').onclick=()=>{ if(confirm('Remove this book from the archive?')){ state.books=state.books.filter(x=>x.id!==b.id); save(); closeOverlay(); closeDetail(); render(); toast('Removed from the archive.'); } }; }
+}
+function splitList(s){ return s.split(',').map(x=>x.trim()).filter(Boolean); }
+
+/* ============================================================
+   AUDIO — procedural temple ambience (no assets) + cues
+   ============================================================ */
+const Audio_ = { ctx:null, master:null, drone:null, started:false };
+function audioInit(){
+  if(Audio_.ctx) return;
+  try{
+    const AC = window.AudioContext||window.webkitAudioContext;
+    Audio_.ctx = new AC();
+    Audio_.master = Audio_.ctx.createGain();
+    Audio_.master.gain.value = 0.0; Audio_.master.connect(Audio_.ctx.destination);
+  }catch(e){ console.warn('audio unavailable',e); }
+}
+function startDrone(){
+  const c=Audio_.ctx; if(!c||Audio_.drone) return;
+  const g=c.createGain(); g.gain.value=0.5; g.connect(Audio_.master);
+  // low temple resonance: two detuned oscillators + slow LFO + filtered noise pad
+  const filt=c.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=420; filt.connect(g);
+  [55,55.4,82.5].forEach((f,i)=>{ const o=c.createOscillator(); o.type=i===2?'sine':'triangle'; o.frequency.value=f;
+    const og=c.createGain(); og.gain.value=i===2?0.12:0.2; o.connect(og); og.connect(filt); o.start(); });
+  // airy "choir" pad via slow-modulated sine cluster
+  [220,277.2,329.6].forEach((f,i)=>{ const o=c.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const og=c.createGain(); og.gain.value=0.0; o.connect(og); og.connect(filt);
+    const lfo=c.createOscillator(); lfo.frequency.value=0.05+i*0.02; const lg=c.createGain(); lg.gain.value=0.03;
+    lfo.connect(lg); lg.connect(og.gain); o.start(); lfo.start(); });
+  Audio_.drone=g;
+}
+function setAudio(on){
+  state.settings.audio=on; save();
+  $('#btnAudio').classList.toggle('on',on); $('#btnAudio').setAttribute('aria-pressed',on);
+  if(on){ audioInit(); if(Audio_.ctx && Audio_.ctx.state==='suspended') Audio_.ctx.resume();
+    startDrone();
+    if(Audio_.master) Audio_.master.gain.setTargetAtTime(0.16, Audio_.ctx.currentTime, 1.2);
+    Audio_.started=true; }
+  else if(Audio_.master && Audio_.ctx){ Audio_.master.gain.setTargetAtTime(0.0, Audio_.ctx.currentTime, 0.6); }
+}
+function playCue(kind){
+  if(!state.settings.audio || !Audio_.ctx) return;
+  const c=Audio_.ctx, t=c.currentTime;
+  const g=c.createGain(); g.connect(Audio_.master);
+  if(kind==='page'){ // soft page turn (filtered noise burst)
+    const b=c.createBuffer(1,c.sampleRate*0.25,c.sampleRate); const d=b.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+    const s=c.createBufferSource(); s.buffer=b; const f=c.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800;
+    s.connect(f); f.connect(g); g.gain.value=0.5; s.start(); }
+  else if(kind==='move'){ const o=c.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(90,t+0.4);
+    g.gain.setValueAtTime(0.18,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5); o.connect(g); o.start(); o.stop(t+0.55); }
+  else if(kind==='shimmer'){ [880,1320,1760].forEach((f,i)=>{ const o=c.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const og=c.createGain(); og.gain.setValueAtTime(0.0001,t+i*0.04); og.gain.linearRampToValueAtTime(0.12,t+i*0.04+0.02); og.gain.exponentialRampToValueAtTime(0.0001,t+0.8);
+    o.connect(og); og.connect(Audio_.master); o.start(t+i*0.04); o.stop(t+0.85); }); }
+  else if(kind==='door'){ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(60,t); o.frequency.linearRampToValueAtTime(40,t+2.4);
+    const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=200; g.gain.setValueAtTime(0.25,t); g.gain.exponentialRampToValueAtTime(0.0001,t+2.6);
+    o.connect(f); f.connect(g); o.start(); o.stop(t+2.7); }
+}
+/* ============================================================
+   THE ARCHIVIST — disciplined, catalog-grounded assistant
+   Rule-based: works from your metadata + cautious general
+   scholarship. Never invents book contents; always flags
+   interpretation, tradition, and speculation.
+   ============================================================ */
+const ARC_CHIPS = ['Where do I start?','Explain a symbol','Find books on the Watchers','Compare two books','Build a study path','What is Gnosticism?'];
+function arcRender(){
+  const log=$('#arcLog');
+  log.innerHTML = state.arcHistory.map(m=> m.role==='user'
+    ? `<div class="arc-msg user">${esc(m.text)}</div>`
+    : `<div class="arc-msg bot"><div class="who">The Archivist</div>${m.html}${m.care?`<div class="care">${m.care}</div>`:''}</div>`).join('');
+  log.scrollTop=log.scrollHeight;
+  $('#arcChips').innerHTML = ARC_CHIPS.map(c=>`<button data-chip="${esc(c)}">${esc(c)}</button>`).join('');
+  $$('#arcChips [data-chip]').forEach(b=>b.onclick=()=>arcSend(b.dataset.chip));
+  $$('#arcLog .bref').forEach(a=>a.onclick=()=>{ openDetail(a.dataset.bref); });
+}
+function arcSay(html, care){ state.arcHistory.push({role:'bot',html,care}); arcRender(); }
+function bref(b){ return `<a class="bref" data-bref="${b.id}">${esc(b.title)}</a>`; }
+function arcSend(text){
+  text=(text||'').trim(); if(!text) return;
+  state.arcHistory.push({role:'user',text}); arcRender();
+  setTimeout(()=>{ const r=archivistRespond(text); arcSay(r.html, r.care); }, 160);
+}
+function archivistRespond(q){
+  const t=q.toLowerCase();
+  const wantsFind = /\b(find|show|recommend|suggest|list)\b|books? (on|about)|what books|which books|read(ing)? (on|about)/.test(t);
+  // 1) define a term (unless the reader explicitly asked to find books)
+  if(!wantsFind) for(const term in ARC_TERMS){ if(t.includes(term)) {
+    return {html:`<b style="color:var(--gold);font-weight:400">${term}</b> — ${esc(ARC_TERMS[term])}`,
+      care:'This is a general orientation, not a substitute for reading the primary sources in your catalog.'}; }
+  }
+  // 2) explain a symbol
+  if(/symbol|glyph|mean(ing)?\b/.test(t)){
+    const sym = SYMBOLS.find(s=>t.includes(s.n.toLowerCase()));
+    if(sym){ return {html:`<b>${sym.g} ${esc(sym.n)}</b> — ${esc(sym.t)}`, care: sym.care||'Where traditions disagree, hold the meaning loosely.'}; }
+    return {html:`The Symbolic Atlas holds ${SYMBOLS.length} signs. Name one — for example “serpent”, “ladder”, or “tree” — and I will give its meanings across traditions. Or open the <a class="bref" data-bref="">Atlas</a> directly.`,
+      care:'I describe how symbols have been used; I do not claim a single true meaning where traditions differ.'};
+  }
+  // 3) compare
+  if(/compare|versus|\bvs\b|difference between/.test(t)){
+    const hits = matchBooks(t,2);
+    if(hits.length>=2){ state.compare=hits.slice(0,4).map(b=>b.id);
+      return {html:`I’ve placed ${hits.slice(0,4).map(bref).join(', ')} side by side. <a class="bref" data-bref="" data-open="compare">Open the comparison ↗</a> to weigh them by theme, tradition, period, and symbols.`,
+        care:'Comparison surfaces differences in claim and genre — it does not rank traditions as more or less true.'}; }
+    return {html:'Tell me two titles to compare (e.g. “compare the Corpus Hermeticum and the Kybalion”), or open <b>Compare</b> from the toolbar and pick them.', care:''};
+  }
+  // 4) build a path / where to start
+  if(/study path|reading plan|where (do|should) i start|begin|getting started|roadmap/.test(t)){
+    const topic = pickTopic(t);
+    const seed = state.paths.find(p=>p.name.toLowerCase().includes(topic)) || state.paths[0];
+    const cand = matchBooks(t,4);
+    let html = `A path is curiosity given an order. `;
+    if(seed){ html += `You already have the <b>${esc(seed.name)}</b> path (${seed.books.length} books). `; }
+    if(cand.length){ html += `For “${esc(topic||'this')}”, a disciplined sequence might begin with ${cand.slice(0,3).map(bref).join(' → ')}. `; }
+    html += `Open <a class="bref" data-bref="" data-open="paths">Study Paths ↗</a> to build or walk one.`;
+    return {html, care:'Begin with primary sources before secondary interpretation, and read the easiest reliable text first.'};
+  }
+  // 5) find / recommend books
+  if(/find|show|recommend|suggest|read(ing)?|book|text|on |about /.test(t) || true){
+    const hits = matchBooks(t,6);
+    if(hits.length){
+      return {html:`From your catalog I found ${hits.length} relevant ${hits.length===1?'volume':'volumes'}: ${hits.map(bref).join(', ')}.`,
+        care: hits.some(b=>/Contested|Dangerous/.test((b.evidence||[]).join(' ')))
+          ? 'Some of these are labeled Contested or Handle Critically — read them with context, not as settled fact.' : ''};
+    }
+    return {html:`I find nothing matching that in your catalog yet. You can <a class="bref" data-bref="" data-open="import">add the book ↗</a> with full metadata, and I’ll never invent its contents — only help you order and study it.`,
+      care:'I answer from your metadata and cautious general scholarship, and I’ll always say when something is interpretation or speculation.'};
+  }
+}
+function matchBooks(t,limit){
+  const toks = t.replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>2 &&
+    !['the','and','book','books','find','show','compare','with','about','what','which','between','versus','read','reading','recommend','suggest','study','path'].includes(w));
+  const scored = state.books.map(b=>{
+    const hay=[b.title,b.author,b.category,b.tradition,b.summary,(b.themes||[]).join(' '),(b.symbols||[]).join(' '),(b.tags||[]).join(' ')].join(' ').toLowerCase();
+    let s=0; toks.forEach(w=>{ if(hay.includes(w)) s+= b.title.toLowerCase().includes(w)?3:1; });
+    return {b,s};
+  }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  return scored.slice(0,limit||6).map(x=>x.b);
+}
+function pickTopic(t){
+  const topics=['enoch','watcher','hermetic','alchemy','gnostic','mystic','kabbalah','angel','apocalypse','cosmology','occult'];
+  return topics.find(x=>t.includes(x))||'';
+}
+function openArchivist(){
+  $('#archivist').classList.add('open');
+  if(!state.arcHistory.length){ arcSay(esc(ARC_GREETING)); }
+  setTimeout(()=>$('#arcInput').focus(),300);
+}
+function closeArchivist(){ $('#archivist').classList.remove('open'); }
+
+/* ============================================================
+   HELP / ABOUT
+   ============================================================ */
+function openHelp(){
+  openModal(`<div class="modal-head"><div><div class="sub">About & guidance</div><h3>The Greene Virtual Library</h3></div><button class="x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="lede">A sacred archive beneath the Greene Museum — a research command center for theology, apocrypha, Hermetica, occult history, symbolism, and your own study.</p>
+      <div class="rail"><h3>How to use it</h3></div>
+      <div class="blocks">
+        <div class="block"><h4>Wings</h4><p>Move between the temple’s wings from the left. Each gathers a kind of book and offers a special tool.</p></div>
+        <div class="block"><h4>Books</h4><p>Click any volume for its detail panel — notes, rating, status, related works, and “Open Book”.</p></div>
+        <div class="block"><h4>Search</h4><p>Press <kbd style="border:1px solid var(--line);border-radius:4px;padding:0 5px">/</kbd> to search titles, authors, themes, symbols, and notes.</p></div>
+        <div class="block"><h4>The Archivist</h4><p>A disciplined assistant that works only from your catalog and cautious scholarship. It never invents book contents.</p></div>
+      </div>
+      <div class="rail"><h3>Keyboard</h3></div>
+      <p class="lede"><kbd>/</kbd> search · <kbd>g</kbd> graph · <kbd>a</kbd> Archivist · <kbd>i</kbd> add book · <kbd>Esc</kbd> close panels</p>
+      <div class="rail"><h3>Your data</h3></div>
+      <p class="lede">Everything you add is stored privately in your browser (localStorage). Sample books are clearly labeled and meant to be replaced with your own collection.</p>
+      <div class="btnrow"><button class="btn" id="sealArchive">Seal the archive</button><button class="btn danger" id="resetLib">Restore sample collection</button><button class="btn ghost" data-close>Close</button></div>
+      <p class="src" style="margin-top:14px">“The temple does not worship the books. It disciplines the reader.”</p>
+    </div>`, true);
+  $('#resetLib').onclick=()=>{ if(confirm('This will erase your added books, notes, paths, and projects, restoring the sample collection. Continue?')) resetLibrary(); };
+  $('#sealArchive').onclick=()=>{ closeOverlay(); closeDetail(); closeArchivist(); window.__showFinal(); };
+}
+
+/* ============================================================
+   AFTER-RENDER WIRING (event delegation for dynamic content)
+   ============================================================ */
+function afterRender(){
+  // book cards
+  $$('#view .book-card').forEach(c=>{
+    c.onclick=()=>openDetail(c.dataset.id);
+    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openDetail(c.dataset.id); } };
+  });
+  // nav wings
+  $$('#nav .wing').forEach(w=>{
+    w.onclick=()=>{ state.search=''; $('#searchInput').value=''; if(!w.classList.contains('active')) state.filters={}; setView(w.dataset.wing); };
+    w.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); w.click(); } };
+  });
+  // filters
+  $$('#view [data-filter]').forEach(sel=> sel.onchange=()=>{ const k=sel.dataset.filter; const v=sel.value; if(v) state.filters[k]=v; else delete state.filters[k]; render(); });
+  const cf=$('#clearFilters'); if(cf) cf.onclick=()=>{ state.filters={}; render(); };
+  // generic pill / goto inside views
+  $$('#view [data-goto]').forEach(p=>p.onclick=()=>openDetail(p.dataset.goto));
+  $$('#view [data-openpath]').forEach(p=>p.onclick=()=>{ openPaths(); setTimeout(()=>openPathDetail(p.dataset.openpath),50); });
+  // atlas
+  $$('#view [data-sym]').forEach(c=>{ c.onclick=()=>openSymbol(+c.dataset.sym); c.onkeydown=e=>{ if(e.key==='Enter'){openSymbol(+c.dataset.sym);} }; });
+  // alchemy
+  $$('#view [data-alc]').forEach(c=>{ c.onclick=()=>openAlchemy(+c.dataset.alc); c.onkeydown=e=>{ if(e.key==='Enter'){openAlchemy(+c.dataset.alc);} }; });
+  // lower archive rows
+  $$('#view table.matrix tbody tr[data-id]').forEach(r=>r.onclick=()=>openDetail(r.dataset.id));
+  // sanctum
+  const np=$('#newProject'); if(np) np.onclick=openProjectEditor;
+  const al=$('#askLibrary'); if(al) al.onclick=openArchivist;
+  $$('#view [data-delproj]').forEach(b=>b.onclick=()=>{ state.projects=state.projects.filter(p=>p.id!==b.dataset.delproj); save(); render(); });
+  // cosmology tips
+  $$('#view .cos-node').forEach(n=>{ const tip=$('#cosTip');
+    n.onmouseenter=()=>{ if(tip) tip.textContent=n.dataset.tip; };
+    n.onclick=()=>{ if(tip) tip.textContent=n.dataset.tip; };
+  });
+  // footer rotating copy
+  rotateFoot();
+}
+const FOOT_LINES = [
+  '“A library is not a pile of books. It is a map of the soul’s questions.”',
+  '“Hidden knowledge is not automatically wisdom. Wisdom begins when knowledge is ordered.”',
+  '“The temple does not worship the books. It disciplines the reader.”',
+  '“Every tradition is a door. Every door requires discernment.”',
+];
+let footIdx=0;
+function rotateFoot(){ $('#foot').textContent = FOOT_LINES[footIdx % FOOT_LINES.length]; footIdx++; }
+
+/* ============================================================
+   GLOBAL WIRING + BOOT
+   ============================================================ */
+function setMotion(on){
+  state.settings.motion=on; save();
+  document.body.classList.toggle('reduce',on);
+  $('#btnMotion').classList.toggle('on',on); $('#btnMotion').setAttribute('aria-pressed',on);
+}
+function wireGlobal(){
+  // top bar
+  $('#brandHome').onclick=()=>{ state.search=''; $('#searchInput').value=''; state.filters={}; setView('grand'); };
+  $('#brandHome').onkeydown=e=>{ if(e.key==='Enter'){ $('#brandHome').click(); } };
+  $('#navToggle').onclick=()=>document.body.classList.toggle('nav-open');
+  $('#menuScrim').onclick=()=>document.body.classList.remove('nav-open');
+  $('#btnGraph').onclick=openGraph;
+  $('#btnCompare').onclick=openCompare;
+  $('#btnPaths').onclick=openPaths;
+  $('#btnImport').onclick=()=>openImport();
+  $('#btnArchivist').onclick=()=>{ $('#archivist').classList.contains('open')?closeArchivist():openArchivist(); };
+  $('#btnHelp').onclick=openHelp;
+  $('#btnAudio').onclick=()=>setAudio(!state.settings.audio);
+  $('#btnMotion').onclick=()=>setMotion(!state.settings.motion);
+  // search (debounced)
+  let st; $('#searchInput').addEventListener('input',e=>{ clearTimeout(st); st=setTimeout(()=>{ state.search=e.target.value.trim(); render(); },140); });
+  // archivist
+  $('#arcClose').onclick=closeArchivist;
+  $('#arcForm').addEventListener('submit',e=>{ e.preventDefault(); const v=$('#arcInput').value; $('#arcInput').value=''; arcSend(v); });
+  // overlay backdrop close
+  $('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeOverlay(); });
+  // archivist links that open tools
+  document.addEventListener('click',e=>{ const a=e.target.closest('[data-open]'); if(a){ const k=a.dataset.open;
+    closeOverlay(); if(k==='compare')openCompare(); else if(k==='paths')openPaths(); else if(k==='import')openImport(); } });
+  // keyboard
+  document.addEventListener('keydown',e=>{
+    if(e.target.matches('input,textarea,select')){ if(e.key==='Escape') e.target.blur(); return; }
+    if(e.key==='/'){ e.preventDefault(); $('#searchInput').focus(); }
+    else if(e.key==='Escape'){ closeOverlay(); closeDetail(); closeArchivist(); document.body.classList.remove('nav-open'); }
+    else if(e.key.toLowerCase()==='g'){ openGraph(); }
+    else if(e.key.toLowerCase()==='a'){ openArchivist(); }
+    else if(e.key.toLowerCase()==='i'){ openImport(); }
+    else if(e.key.toLowerCase()==='c'){ openCompare(); }
+  });
+  // final screen
+  $('#finalBack').onclick=()=>{ $('#final').classList.remove('vis'); setTimeout(()=>$('#final').classList.remove('show'),900); setView('grand'); };
+}
+
+/* opening sequence */
+function enterLibrary(){
+  const btn=$('#enterBtn'); btn.disabled=true; btn.textContent='The doors are opening…';
+  $('#gate').classList.add('opening');
+  playCue('door');
+  flyTo('grand');
+  setTimeout(()=>{
+    $('#gate').classList.add('gone');
+    $('#app').classList.add('live');
+    render();
+    setTimeout(()=>$('#gate').remove(),1500);
+  }, 2400);
+}
+function boot(){
+  load();
+  if(state.settings.motion) setMotion(true);
+  renderNav();
+  wireGlobal();
+  initTemple();
+  // gate buttons
+  $('#enterBtn').onclick=enterLibrary;
+  $('#gateSkip').onclick=enterLibrary;
+  $('#gateAudio').onclick=()=>{ setAudio(true); $('#gateAudio').textContent='Audio Enabled ✓'; };
+  $('#gateMotion').onclick=()=>{ setMotion(!state.settings.motion); $('#gateMotion').textContent=state.settings.motion?'Reduced Motion ✓':'Reduced Motion'; };
+  // expose a tiny hook for the final screen (reachable via konami-free button in help? we trigger on reading completion)
+  window.__showFinal=()=>{ const f=$('#final'); f.classList.add('show'); requestAnimationFrame(()=>f.classList.add('vis')); };
+}
+boot();
+</script>
+
+</body>
+</html>

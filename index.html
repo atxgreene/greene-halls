@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Two Halls</title>
+<title>The Greene Halls</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:#050406;color:#e9dcc0;
@@ -21,15 +21,22 @@
   a.door .d{margin-top:12px;font-size:13.5px;font-style:italic;line-height:1.6;color:#a99e82}
   a.fallen .t{color:#e7b0a0;text-shadow:0 0 26px rgba(184,18,26,.5)}
   a.holy .t{color:#ffe6a8;text-shadow:0 0 26px rgba(217,180,99,.55)}
+  a.library{width:min(708px,86vw);border-color:rgba(32,240,208,.32)}
+  a.library:hover{border-color:#20F0D0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.15)}
+  a.library .t{color:#cdeee6;text-shadow:0 0 26px rgba(32,240,208,.4)}
   .foot{margin-top:48px;font-size:12px;color:#6b6354;line-height:1.8;max-width:560px}
   .foot code{color:#9a8e72}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>The Two Halls</h1>
-  <div class="sub">Of Heaven and of the Fall</div>
+  <h1>The Greene Halls</h1>
+  <div class="sub">Of Heaven, of the Fall, and of the Living Book</div>
   <div class="doors">
+    <a class="door library" href="the-greene-virtual-library.html">
+      <div class="t">The Greene Virtual Library</div>
+      <div class="d">A temple of living books, hidden knowledge, and disciplined study — theology, apocrypha, Hermetica, and your own research, ordered beneath one dome.</div>
+    </a>
     <a class="door fallen" href="hall-of-the-watchers.html">
       <div class="t">The Hall of the Watchers</div>
       <div class="d">The two hundred who swore the oath on Hermon and fell — their forbidden arts, their offspring, their doom.</div>
@@ -39,7 +46,8 @@
       <div class="d">The holy ones who stand before the Throne — who beheld the ruin below and were sent to bind the fallen.</div>
     </a>
   </div>
-  <div class="foot">For the 3D models and narration to load, open this from the local server
+  <div class="foot">The Virtual Library is self-contained and works on its own (it falls back gracefully without WebGL).
+    For the two halls' 3D models and narration to load, open them from a local server
     (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
 </div>
 </body>
