@@ -35,8 +35,27 @@
     padding:12px 34px;cursor:pointer;letter-spacing:.04em;transition:transform .15s,box-shadow .2s;}
   #enter:hover{transform:translateY(-2px);box-shadow:0 0 26px rgba(231,207,143,.4);}
   #intro .hint{margin-top:22px;font-size:.78rem;color:#9fb4ff;opacity:.6;letter-spacing:.04em;}
-  #fallback{display:none;position:fixed;inset:0;z-index:20;align-items:center;justify-content:center;padding:32px;text-align:center;
-    background:#070a0e;color:#dfe2d6;font-size:15px;line-height:1.6;}
+  #intro .lab-link{margin-top:26px;font-size:.82rem;letter-spacing:.06em;color:#a8f4e6;text-decoration:none;
+    border:1px solid rgba(32,240,208,.4);border-radius:4px;padding:9px 18px;transition:.25s;}
+  #intro .lab-link:hover{border-color:#20f0d0;box-shadow:0 0 26px rgba(32,240,208,.25);color:#cffaf2;}
+  #fallback{display:none;position:fixed;inset:0;z-index:20;overflow:auto;padding:40px 22px;
+    background:radial-gradient(ellipse at 50% 0%,#10151c,#070a0e 70%);color:#dfe2d6;}
+  #fallback .wrap{max-width:680px;margin:0 auto;font-size:15px;line-height:1.62;}
+  #fallback h1{color:var(--gold);font-weight:400;font-size:1.9rem;margin:0 0 4px;}
+  #fallback h2{color:#9fb4ff;font-weight:500;font-size:1.12rem;margin:26px 0 2px;}
+  #fallback .yr{color:#cdd2c4;opacity:.7;font-size:.86rem;margin-bottom:6px;}
+  #fallback .ex{color:var(--gold);font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;margin-top:8px;}
+  #fallback p{margin:4px 0;}
+  #fallback .foot{margin-top:30px;opacity:.55;font-size:.82rem;}
+  /* touch controls */
+  #stick{display:none;position:fixed;left:26px;bottom:30px;width:118px;height:118px;border-radius:50%;
+    border:1.5px solid rgba(159,180,255,.4);background:rgba(8,12,18,.4);z-index:7;touch-action:none;}
+  #knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;
+    background:rgba(231,207,143,.5);border:1px solid var(--gold);}
+  #rm{position:fixed;right:14px;top:14px;z-index:8;font-family:var(--serif);font-size:12px;color:var(--ivory);
+    background:rgba(8,12,18,.6);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;}
+  #rm.on{color:#07120f;background:var(--gold);}
+  body.touch #stick{display:block;}
 </style>
 </head>
 <body>
@@ -49,8 +68,29 @@
     <p>Pythagoras, Newton, and Tesla — their lives, their works, and one experiment each you can reproduce. At the far end, the Pythagorean Music of the Spheres.</p>
     <button id="enter">Enter the Hall</button>
     <div class="hint">Move: WASD / arrows · Look: mouse (click to capture) · Interact: <b>E</b> or click</div>
+    <a class="lab-link" href="https://atxgreene.github.io/sturdy-system/" target="_blank" rel="noopener">Continue to the Laboratory of Fields &amp; Resonance →</a>
   </div>
-  <div id="fallback">Your browser could not start WebGL. The Lyceum needs a WebGL-capable browser.</div>
+  <button id="rm" title="Toggle reduced motion">Reduced motion</button>
+  <div id="stick"><div id="knob"></div></div>
+  <div id="fallback"><div class="wrap">
+    <h1>The Lyceum — Hall of Natural Philosophy</h1>
+    <p style="color:#9fb4ff">Your device couldn’t start the 3-D hall, so here are the exhibits in full.</p>
+    <h2>Pythagoras of Samos</h2><div class="yr">c. 570 – c. 495 BCE · Harmonics &amp; Geometry</div>
+    <p>Greek philosopher who founded a school at Croton. His circle is credited with the theorem a²+b²=c² and the discovery that musical consonances follow simple whole-number ratios — octave 2:1, fifth 3:2, fourth 4:3 — binding number, sound, and cosmos.</p>
+    <div class="ex">The experiment — the monochord</div>
+    <p>Stop a vibrating string at half its length and it sounds an octave higher; at two-thirds, a fifth; at three-quarters, a fourth. (The blacksmith-hammer tale is later legend; the string ratios are real and reproducible.)</p>
+    <h2>Isaac Newton</h2><div class="yr">1643 – 1727 · Light, Motion &amp; Gravity</div>
+    <p>English physicist and mathematician. In the Principia (1687) he set out three laws of motion and universal gravitation; in Opticks (1704) he showed white light is a mixture of colours. He also co-invented the calculus and built the first reflecting telescope.</p>
+    <div class="ex">The experiment — the experimentum crucis</div>
+    <p>A glass prism spreads sunlight into a spectrum, and a second prism recombines it to white. Colour is a property of the light itself, not of the glass.</p>
+    <h2>Nikola Tesla</h2><div class="yr">1856 – 1943 · Electricity, Fields &amp; Resonance</div>
+    <p>Serbian-American electrical engineer. He devised the alternating-current (AC) induction motor and the polyphase system that powers the modern grid, plus the resonant “Tesla coil.” He held roughly 300 patents and contributed to early radio and wireless.</p>
+    <div class="ex">The experiment — the rotating magnetic field</div>
+    <p>Two AC currents a quarter-cycle apart make a field that rotates, spinning a rotor with no contact. The coil is a resonant transformer producing high-voltage, high-frequency discharges.</p>
+    <h2>The Music of the Spheres</h2><div class="yr">Pythagorean musica universalis</div>
+    <p>The Pythagoreans held the heavens are ordered by number: each planetary sphere moves through the aether at a speed set by simple ratios, sounding a cosmic harmony. <em>Honest note:</em> a sound-bearing aether and an audible “music of the spheres” are philosophy and metaphor, not measured physics — space carries no acoustic medium. The true kernel endures: orbital and vibrational systems really do lock to whole-number resonances.</p>
+    <div class="foot">part of The Greene Paleogenomic Museum</div>
+  </div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script>
@@ -61,6 +101,8 @@
 let renderer, scene, camera, player, clock, raycaster;
 let yaw=0, pitch=0, locked=false, focused=null;
 const keys={}, interactables=[], pickMeshes=[];
+const touchMove={f:0,s:0}; let reduced=false;
+const isTouch = matchMedia('(pointer:coarse)').matches || ('ontouchstart' in window);
 const COL={ gold:0xE8C679, amber:0xE0A24A, blue:0x9FB4FF };
 let actx=null, masterGain=null, audioOn=false;
 
@@ -93,10 +135,28 @@ function init(){
   addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='KeyE'||e.code==='Enter') interact(); });
   addEventListener('keyup',e=>{ keys[e.code]=false; });
   const cv=renderer.domElement;
-  cv.addEventListener('click',()=>{ if(!locked) cv.requestPointerLock(); else interact(); });
+  cv.addEventListener('click',()=>{ if(isTouch) return; if(!locked) cv.requestPointerLock(); else interact(); });
   document.addEventListener('pointerlockchange',()=>{ locked=(document.pointerLockElement===cv); });
   document.addEventListener('mousemove',e=>{ if(!locked) return; yaw-=e.movementX*0.0022; pitch-=e.movementY*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch)); });
+  setupTouch();
+  document.getElementById('rm').addEventListener('click',()=>{ reduced=!reduced; document.getElementById('rm').classList.toggle('on',reduced); note(reduced?'Reduced motion on':'Reduced motion off'); });
   renderer.setAnimationLoop(loop);
+}
+function setupTouch(){
+  const stick=document.getElementById('stick'), knob=document.getElementById('knob');
+  let stickId=null, lookId=null, last=null, tap=null;
+  function upd(t){ const r=stick.getBoundingClientRect(); let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2); const max=r.width/2; const d=Math.hypot(dx,dy); if(d>max){ dx*=max/d; dy*=max/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; touchMove.f=-dy/max; touchMove.s=dx/max; }
+  addEventListener('touchstart',e=>{ for(const t of e.changedTouches){ const onStick=(t.target===stick||t.target===knob);
+    if(onStick && stickId===null){ stickId=t.identifier; upd(t); }
+    else if(lookId===null){ lookId=t.identifier; last={x:t.clientX,y:t.clientY}; tap={x:t.clientX,y:t.clientY,t:performance.now()}; } } },{passive:false});
+  addEventListener('touchmove',e=>{ for(const t of e.changedTouches){
+    if(t.identifier===stickId) upd(t);
+    else if(t.identifier===lookId){ yaw-=(t.clientX-last.x)*0.005; pitch-=(t.clientY-last.y)*0.005; pitch=Math.max(-1.2,Math.min(1.2,pitch)); last={x:t.clientX,y:t.clientY}; if(tap && Math.hypot(t.clientX-tap.x,t.clientY-tap.y)>12) tap=null; } }
+    if(e.cancelable) e.preventDefault(); },{passive:false});
+  function end(e){ for(const t of e.changedTouches){
+    if(t.identifier===stickId){ stickId=null; touchMove.f=0; touchMove.s=0; knob.style.transform='translate(0,0)'; }
+    else if(t.identifier===lookId){ lookId=null; if(tap && performance.now()-tap.t<320) interact(); tap=null; } } }
+  addEventListener('touchend',end); addEventListener('touchcancel',end);
 }
 function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
 
@@ -212,16 +272,21 @@ function updateFocus(){
 function loop(){
   const dt=Math.min(clock.getDelta(),0.05);
   player.rotation.y=yaw; camera.rotation.x=pitch;
-  const sp=3.4*dt; const fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0); const str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+  const sp=3.4*dt;
+  let fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)+touchMove.f;
+  let str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+touchMove.s;
+  fwd=Math.max(-1,Math.min(1,fwd)); str=Math.max(-1,Math.min(1,str));
   if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
   player.position.x=Math.max(-8.4,Math.min(8.4,player.position.x)); player.position.z=Math.max(-15.2,Math.min(15.2,player.position.z));
-  interactables.forEach(g=>{ if(g.userData.type==='sci'&&g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; });
+  if(!reduced) interactables.forEach(g=>{ if(g.userData.type==='sci'&&g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; });
   updateFocus();
   renderer.render(scene,camera);
 }
 
 function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=0.5; masterGain.connect(actx.destination); audioOn=true; }catch(e){} }
-document.getElementById('enter').addEventListener('click',()=>{ document.getElementById('intro').classList.add('gone'); startAudio(); renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); note('Move with WASD · look with the mouse · press E at a station'); });
+document.getElementById('enter').addEventListener('click',()=>{ document.getElementById('intro').classList.add('gone'); startAudio();
+  if(isTouch){ document.body.classList.add('touch'); note('Drag to look · joystick to move · tap a station to interact'); }
+  else { renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); note('Move with WASD · look with the mouse · press E at a station'); } });
 
 try{ init(); }catch(e){ document.getElementById('fallback').style.display='flex'; document.getElementById('fallback').textContent='WebGL error: '+(e&&e.message||e); }
 </script>

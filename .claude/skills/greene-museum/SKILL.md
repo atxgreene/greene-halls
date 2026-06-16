@@ -89,17 +89,19 @@ hall add/rename/retire. **Don't hand-edit between the markers.**
 <!-- STATE:START -->
 _Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
 
-**`greene-halls`** (public · Pages · CDN three.js) — 8 halls
+**`greene-halls`** (public · Pages · CDN three.js) — 10 halls
 
 | hall | opens from |
 |---|---|
 | `ancient-basilica-sanctuary.html` | `file://` or served |
 | `hall-of-archangels.html` | served (fetches assets) |
+| `hall-of-the-nephilim.html` | served (fetches assets) |
 | `hall-of-the-watchers.html` | served (fetches assets) |
 | `hall-of-ufos.html` | `file://` or served |
 | `human-psi-operations-room.html` | `file://` or served |
 | `the-greene-virtual-library.html` | `file://` or served |
 | `the-lyceum.html` | `file://` or served |
+| `the-revelation.html` | `file://` or served |
 | `the-temple-of-solomon.html` | `file://` or served |
 
 
@@ -116,6 +118,7 @@ _Theology-Wing vault (`works/`, manifest order):_
 | `the-revelation.html` | THE REVELATION | standalone |
 | `human-psi-operations-room.html` | PSI OPERATIONS ROOM | standalone |
 | `the-temple-of-solomon.html` | THE TEMPLE OF SOLOMON | standalone |
+| `hall-of-archangels.html` | _(unlisted)_ | server |
 
 _Root standalone halls:_ `ancient-basilica-sanctuary.html`, `empyrean-ascent.html`, `hall-of-the-nephilim.html`, `the-lyceum.html`
 
@@ -131,6 +134,7 @@ _Other:_ gallery paintings: **21** · museum file present: **yes** · vendor/thr
 | `hall-of-ufos.html` | local-only ✓ |
 | `human-psi-operations-room.html` | local-only ✓ |
 | `the-greene-virtual-library.html` | local-only ✓ |
+| `the-revelation.html` | local-only ✓ |
 | `the-temple-of-solomon.html` | local-only ✓ |
 
 _halls/vendor/three present: **yes**_
@@ -141,13 +145,15 @@ _halls/vendor/three present: **yes**_
 | hall | present in | status |
 |---|---|---|
 | `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
-| `hall-of-archangels.html` | greene-halls, offline | ✓ in sync (2) |
+| `hall-of-archangels.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `hall-of-the-nephilim.html` | greene-halls, paleo:root | ✓ in sync (2) |
 | `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
 | `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
 | `the-lyceum.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
-| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `the-revelation.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, paleo:works} ≠ {offline} |
 
 <!-- STATE:END -->
 
@@ -312,7 +318,18 @@ so it survives context resets and `build:state` runs.
   *distinct* hall, not a replacement. Easy to promote it to the Lyceum's successor
   later if desired.
 
-### Basilica → Temple secret door — PLANNED (parallel session, do NOT pre-build here)
+### Basilica → Temple secret door — DONE (2026-06-16)
+- **Shipped.** The Basilica (`ancient-basilica-sanctuary.html`) now hosts a concealed
+  "Solomon books → Temple" link into `the-temple-of-solomon.html` (greene-halls
+  `585dd34`/`7be89af`); the Temple's public hub door was **removed** so the only
+  navigation path is through the Basilica (`68e5483`).
+- **Scope is greene-halls (public site) only** (owner decision, 2026-06-16): the
+  offline bundle keeps its normal Temple hub door (it has no Basilica), and the Paleo
+  museum keeps the Temple as an open Theology-Wing codex monument. Do not remove those.
+- **Caveat — hidden ≠ private:** the Temple file is still served at its public Pages
+  URL; the door removal hides it from navigation but does not block direct-URL access.
+
+_Original design notes (historical):_
 - Agreed design: a **hidden crypt descent** in the Basilica that opens into **The
   Temple of Solomon** — the Temple as the architectural/theological ancestor of the
   church (sanctuary, veil → screen, altar, menorah). **Opt-in and concealed**, with
@@ -337,4 +354,24 @@ so it survives context resets and `build:state` runs.
     into the sanctuary itself.
 - The Basilica's ⚠ DIVERGES row in §4 (greene-halls ≠ paleo:root) is **intentional**
   (in production / art fine-tuning) — do not auto-reconcile it.
+
+### Fields & Resonance Lab + library/lyceum reconciliation — 2026-06-16
+- New external hall **Laboratory of Fields & Resonance** lives in its **own repo**
+  (`sturdy-system`), deployed to GitHub Pages at
+  `https://atxgreene.github.io/sturdy-system/`. It is a multi-file ES-module app, so
+  it is **linked out, not embedded**: a door in `greene-halls/index.html` + a
+  "Continue to the Laboratory" link in `the-lyceum.html`'s intro. Registry-API
+  alignment (`window.museum.registerHall`) is deferred — see `HANDOFF.md` in
+  `sturdy-system`. Treat `sturdy-system` as a 4th, satellite repo.
+- **`the-lyceum.html` ⚠ DIVERGES is INTENTIONAL.** greene-halls carries the outbound
+  lab link; the paleo:root copy deliberately does not (the museum links external halls
+  via its Codex hosted panel; the offline bundle must not dead-link to a live URL).
+  Otherwise the copies match — paleo's mobile/fallback/reduced-motion layer was synced
+  into greene-halls. **Do not "reconcile" this row by removing the link.**
+- **Virtual Library reconciled.** 4 bundled texts (Conflict of Adam & Eve, Abramelin,
+  Master Key System, E S and E S P) backfilled into the offline bundle, and the EPUB/
+  DOCX reader engines (jszip 3.10.1, epub.js 0.3.93, mammoth 1.6.0) vendored into
+  `offline/halls/vendor/` so the library reads those formats **fully offline**.
+- Privacy guard: kept `main`'s approach (basilica added to ALLOW). An alternative
+  whole-token matcher was considered and dropped to avoid overriding the merged fix.
 
