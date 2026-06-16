@@ -138,8 +138,8 @@ _halls/vendor/three present: **yes**_
 | hall | present in | status |
 |---|---|---|
 | `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
-| `hall-of-archangels.html` | greene-halls, offline | ⚠ DIVERGES — {greene-halls} ≠ {offline} |
-| `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls} ≠ {paleo:works} ≠ {offline} |
+| `hall-of-archangels.html` | greene-halls, offline | ✓ in sync (2) |
+| `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, offline} ≠ {paleo:works} |
 | `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
 | `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
