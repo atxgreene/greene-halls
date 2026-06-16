@@ -40,14 +40,25 @@ Later-tradition figures (Metatron, Sandalphon, Raziel, etc.) are labeled as Kabb
 3 Enoch tradition in-app.
 
 ## Bundled full texts (Virtual Library)
-The Virtual Library serves complete public-domain editions from `library-texts/` — see
+The Virtual Library serves complete editions from `library-texts/` — see
 [`library-texts/SOURCES.md`](library-texts/SOURCES.md) for full per-title provenance
-(translator, year, source URL, and PD basis). All 14 bundled texts are public domain by age
-(R.H. Charles, G.R.S. Mead, Marcus Dods, E.B. Pusey, Longfellow, the 1611/1769 KJV, etc.); the
-Testament of Solomon reuses Joseph H. Peterson's **CC-BY** hosting of Conybeare's 1898 PD text.
+(translator, year, source, and PD basis). The first set (gathered from Project Gutenberg /
+Internet Archive) is public domain by age (R.H. Charles, G.R.S. Mead, Marcus Dods, E.B. Pusey,
+Longfellow, the 1611/1769 KJV, etc.); the Testament of Solomon reuses Joseph H. Peterson's
+**CC-BY** hosting of Conybeare's 1898 PD text.
+
+A second set was pulled from the embedded corpus of the **Ancient Basilica Sanctuary** hall
+(`ancientbasilicasanctuary.html`): the 1611 King James **Apocrypha** (combined volume) and the
+pseudepigrapha **Jasher, Apocalypse of Abraham, Odes of Solomon, Psalms of Solomon, Epistle of
+Barnabas**, plus the **Book of Giants** — sourced from aruljohn/Bible-kjv-1611 and
+scrollmapper/bible_databases_deuterocanonical.
+
 Copyrighted modern editions were deliberately excluded (the Robinson Nag Hammadi translation,
-the Soncino Zohar, Doreal's Emerald Tablets). Titles with no pre-1928 PD English translation
-(3 Enoch, the Book of Giants, the Zohar) are left unbundled and remain on the metadata view.
+the Soncino Zohar, Doreal's Emerald Tablets); 3 Enoch and the Zohar remain unbundled (no
+pre-1928 PD English translation). **One exception:** the **Book of Giants** uses W.B. Henning's
+1943 Manichaean-fragments translation, which is likely still under UK copyright (~2037). It is
+included because the same text already ships in the basilica hall, and is flagged as such in
+`SOURCES.md`.
 
 ## Engine
 Three.js r160 (MIT) via jsDelivr CDN.

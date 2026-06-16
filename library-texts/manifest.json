@@ -126,6 +126,69 @@
       "edition": "King James Bible Committee, 1611 (1769 Oxford standard text)",
       "source": "https://www.gutenberg.org/cache/epub/10/pg10.txt",
       "license": "Public domain (US) · UK Crown copyright"
+    },
+    {
+      "id": "apocrypha",
+      "title": "The Apocrypha (Deuterocanon)",
+      "file": "library-texts/the-apocrypha.md",
+      "format": "Markdown",
+      "edition": "King James Apocrypha, 1611",
+      "source": "https://github.com/aruljohn/Bible-kjv-1611",
+      "license": "Public domain"
+    },
+    {
+      "id": "jasher",
+      "title": "The Book of Jasher",
+      "file": "library-texts/book-of-jasher.md",
+      "format": "Markdown",
+      "edition": "trans. Moses Samuel, 1840",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Public domain"
+    },
+    {
+      "id": "apocabr",
+      "title": "The Apocalypse of Abraham",
+      "file": "library-texts/apocalypse-of-abraham.md",
+      "format": "Markdown",
+      "edition": "trans. Box & Landsman, 1918",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Public domain"
+    },
+    {
+      "id": "odes",
+      "title": "The Odes of Solomon",
+      "file": "library-texts/odes-of-solomon.md",
+      "format": "Markdown",
+      "edition": "trans. J. Rendel Harris, 1909",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Public domain"
+    },
+    {
+      "id": "pssol",
+      "title": "The Psalms of Solomon",
+      "file": "library-texts/psalms-of-solomon.md",
+      "format": "Markdown",
+      "edition": "trans. G. Buchanan Gray, 1913",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Public domain"
+    },
+    {
+      "id": "barnabas",
+      "title": "The Epistle of Barnabas",
+      "file": "library-texts/epistle-of-barnabas.md",
+      "format": "Markdown",
+      "edition": "Roberts–Donaldson translation",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Public domain"
+    },
+    {
+      "id": "giants",
+      "title": "The Book of Giants",
+      "file": "library-texts/book-of-giants.md",
+      "format": "Markdown",
+      "edition": "W.B. Henning, 1943 (Manichaean fragments)",
+      "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
+      "license": "Translation likely under UK copyright (~2037) — see SOURCES"
     }
   ]
 }
