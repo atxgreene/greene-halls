@@ -224,14 +224,19 @@ const ARTIMG={
 /* THE one premium "legendary" model: the colossal Lamassu guardian at the
    Mesopotamia station. file:null shows the procedural placeholder; drop a real
    high-detail scan at ./models/nephilim/lamassu.glb and set `file`. */
-const LEGENDARY={ file:'./models/nephilim/lamassu.glb', scale:1, y:0, ry:0, search:'Assyrian/Sumerian Lamassu — winged human-headed bull guardian — high-detail photogrammetry scan (British Museum or Louvre), .glb, decimated under ~10 MB, base at origin, front facing +X' };
+const LEGENDARY={ file:'./models/nephilim/lamassu.glb', targetH:3.9, y:0, ry:0, search:'Assyrian/Sumerian Lamassu — winged human-headed bull guardian — high-detail photogrammetry scan (British Museum or Louvre), .glb, decimated under ~10 MB, base at origin, front facing +X' };
 
 function note(s){ const n=document.getElementById('note'); n.textContent=s; n.classList.add('show'); clearTimeout(note._t); note._t=setTimeout(()=>n.classList.remove('show'),3000); }
 function tone(freqs,type,gain){ if(!audioOn||!actx) return; const t=actx.currentTime; freqs.forEach((f,i)=>{ const o=actx.createOscillator(); o.type=type||'sine'; o.frequency.value=f; const gg=actx.createGain(); gg.gain.value=0; o.connect(gg); gg.connect(masterGain); const st=t+i*0.16; gg.gain.linearRampToValueAtTime(gain||0.1,st+0.04); gg.gain.exponentialRampToValueAtTime(0.0004,st+1.1); o.start(st); o.stop(st+1.2); }); }
 function chime(){ tone([392,523.25],'sine',0.08); }
 
 function tryGLB(spec, group, fallbackMeshes){ if(!spec || !spec.file || typeof THREE.GLTFLoader==='undefined') return;
-  new THREE.GLTFLoader().load(spec.file, gltf=>{ const m=gltf.scene; m.scale.setScalar(spec.scale||1); m.position.y=spec.y||0; m.rotation.y=spec.ry||0; (fallbackMeshes||group.children.slice()).forEach(c=>{ if(c!==m) c.visible=false; }); group.add(m); }, undefined, ()=>{}); }
+  new THREE.GLTFLoader().load(spec.file, gltf=>{ const m=gltf.scene;
+    if(spec.targetH){ /* normalize: scale to a real-world height (units-agnostic), then recentre horizontally and seat the base at spec.y */
+      let b=new THREE.Box3().setFromObject(m); const sz=new THREE.Vector3(); b.getSize(sz); m.scale.setScalar(spec.targetH/(sz.y||1)); m.rotation.y=spec.ry||0;
+      b=new THREE.Box3().setFromObject(m); const c=new THREE.Vector3(); b.getCenter(c); m.position.set(-c.x,(spec.y||0)-b.min.y,-c.z); }
+    else { m.scale.setScalar(spec.scale||1); m.position.y=spec.y||0; m.rotation.y=spec.ry||0; }
+    (fallbackMeshes||group.children.slice()).forEach(c=>{ if(c!==m) c.visible=false; }); group.add(m); }, undefined, ()=>{}); }
 
 const M='./models/nephilim/';
 const STATIONS=[
