@@ -189,6 +189,33 @@
       "edition": "W.B. Henning, 1943 (Manichaean fragments)",
       "source": "https://github.com/scrollmapper/bible_databases_deuterocanonical",
       "license": "Translation likely under UK copyright (~2037) — see SOURCES"
+    },
+    {
+      "id": "adameve",
+      "title": "The Conflict of Adam and Eve with Satan",
+      "file": "library-texts/the-conflict-of-adam-and-eve-with-satan.epub",
+      "format": "EPUB",
+      "edition": "trans. S.C. Malan, 1882 (from the Ethiopic)",
+      "source": "https://archive.org/details/bookofadameval00malagoog",
+      "license": "Public domain"
+    },
+    {
+      "id": "abramelin",
+      "title": "The Sacred Magic of Abramelin the Mage",
+      "file": "library-texts/the-sacred-magic-of-abramelin-the-mage.epub",
+      "format": "EPUB",
+      "edition": "trans. S.L. MacGregor Mathers, 1898 (De Laurence reprint scan)",
+      "source": "https://archive.org/details/bookofsacredmagi00abra",
+      "license": "Public domain (Mathers translation, 1898)"
+    },
+    {
+      "id": "masterkey",
+      "title": "The Master Key System",
+      "file": "library-texts/the-master-key-system.epub",
+      "format": "EPUB",
+      "edition": "Charles F. Haanel, 1916",
+      "source": "https://archive.org/details/MasterKeySystem",
+      "license": "Public domain"
     }
   ]
 }

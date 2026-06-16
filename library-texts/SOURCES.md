@@ -112,3 +112,35 @@ still under UK copyright (~2037)**. It was included at the author's request beca
 text is already published on the Ancient Basilica Sanctuary hall in this repo; it is the one
 bundled text that is **not** cleanly public domain. Remove `book-of-giants.md` and its
 manifest entry if a strict public-domain posture is required.
+
+---
+
+## Added from user-supplied EPUBs (2026-06-16)
+
+Three scanned EPUBs (page images with OCR text), each a pre-1928 public-domain edition.
+Sourced from the Internet Archive.
+
+| Title | Translation / Author | Year | Source | License |
+|-------|----------------------|------|--------|---------|
+| The Conflict of Adam and Eve with Satan | trans. S.C. Malan, from the Ethiopic | 1882 | archive.org `bookofadameval00malagoog` | Public domain (by age) |
+| The Sacred Magic of Abramelin the Mage | trans. S.L. MacGregor Mathers | 1898 | archive.org `bookofsacredmagi00abra` | Public domain (translation by age) |
+| The Master Key System | Charles F. Haanel | 1916 | archive.org `MasterKeySystem` | Public domain (by age) |
+
+**Format note.** These are *page-image* EPUBs: each page is a scanned JPEG wrapped in HTML,
+with a low-accuracy OCR text layer. They read like facsimiles of the printed books and are
+larger than the typed `.txt`/`.md` entries (≈1–6 MB each).
+
+**Abramelin edition note.** The underlying Mathers translation (London, 1898) is public domain
+by age. The specific scan bundled here is the later **De Laurence Company** reprint, whose front
+matter carries a 1932 edition copyright; that claim covers De Laurence's reprint packaging, not
+Mathers's 1898 text. If a stricter posture is wanted, substitute a scan of the original 1898
+Watkins edition.
+
+---
+
+## Held back — not bundled (2026-06-16)
+
+| File supplied | Identity | Reason held |
+|---------------|----------|-------------|
+| `The_Book_Of_The_Giants.pdf` | W.B. Henning, 1943 (Sacred-Texts reprint of the BSOAS article) | **Duplicate** — the same Henning text already ships as `book-of-giants.md`. Same copyright caveat as that entry. |
+| `ES__ESP.pdf` | *E S and E S P*, Gwynne Dresser Mack, Massachusetts New Church Union (Swedenborgian), **1974** | **Likely still under copyright** (US, published 1974 → protected until ~2069). Excluded from the public-domain library pending the owner's decision. |
