@@ -667,11 +667,27 @@ const lazyBuilt=new Set();
 let altarGroup=null,sealMesh=null,hubHoleGroup=null;
 let altarOpen=false;
 
+<<<<<<< HEAD
 /* ── material helpers ── */
 const mat=(c,r=0.75,m=0.1,e=0,ei=0)=>new THREE.MeshStandardMaterial({
   color:c,roughness:r,metalness:m,emissive:e,emissiveIntensity:ei
 });
 const basicMat=c=>new THREE.MeshBasicMaterial({color:c});
+=======
+function initThree(){
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+  renderer.xr.enabled=true; document.body.appendChild(renderer.domElement);
+  scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a0703); scene.fog=new THREE.FogExp2(0x130c05,0.026);
+  camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,400); camera.position.set(0,PLAYER_H,30);
+  clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
+  buildLights(); buildGround(); buildCourt(); buildPorch(); buildHouse(); buildHolyOfHolies(); buildEsoteric(); buildStations(); buildWallTorches();
+  setupXR(); addEventListener('resize',onResize); renderer.setAnimationLoop(tick);
+}
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+const mat=(c,r=0.7,m=0.1,e=0,ei=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,emissive:e,emissiveIntensity:ei});
+>>>>>>> 60ba9d0 (Add wall torch sconces and gate torches to Temple of Solomon)
 
 function flame(x,y,z,intensity=8,dist=14){
   const l=new THREE.PointLight(0xffb259,intensity,dist,2);
@@ -1033,7 +1049,143 @@ function makeTextSprite(text,color=0xd6b15c){
   x.fillText(text,256,52);
   const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace;
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+<<<<<<< HEAD
   sp.scale.set(5,0.95,1); return sp;
+=======
+  sp.scale.set(4.4,1.3,1); return sp;
+}
+function pillarBronze(x){
+  const g=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.78,8,28),mat(0x7d5226,0.4,0.85,0x3a2410,0.25)); shaft.position.y=4; g.add(shaft);
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.8,1.4,28),mat(0x946233,0.35,0.9,0x4a2f12,0.3)); cap.position.y=8.6; g.add(cap);
+  // pomegranate net rings
+  for(let i=0;i<2;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.08,10,30),mat(0xb98142,0.4,0.85)); r.position.y=8.3+i*0.5; r.rotation.x=Math.PI/2; g.add(r); }
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.95,1.1,0.5,28),mat(0x5a3d22,0.8,0.2)); base.position.y=0.25; g.add(base);
+  g.position.x=x; return g;
+}
+function buildCourt(){
+  // bronze altar of sacrifice
+  const altar=new THREE.Group(); altar.position.set(-7,0,12);
+  const blk=new THREE.Mesh(new THREE.BoxGeometry(3,2.2,3),mat(0x6a4524,0.6,0.5,0x2a1808,0.3)); blk.position.y=1.1; altar.add(blk);
+  for(const[dx,dz]of[[-1.4,-1.4],[1.4,-1.4],[-1.4,1.4],[1.4,1.4]]){ const horn=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.7,4),mat(0x946233,0.4,0.8)); horn.position.set(dx,2.5,dz); altar.add(horn); }
+  scene.add(altar); flame(-7,2.6,12,9,12);
+  addHotspot(-7,1.6,12, ()=>openStation('altar'), 'The Bronze Altar & Molten Sea', 0xb98142);
+  // molten sea — great bronze basin on 12 oxen
+  const sea=new THREE.Group(); sea.position.set(7,0,12);
+  const basin=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.0,1.6,32,1,true),mat(0x9c6b3a,0.35,0.9,0x4a2f12,0.25)); basin.position.y=2.2; sea.add(basin);
+  const water=new THREE.Mesh(new THREE.CircleGeometry(2.2,32),mat(0x123,0.2,0.6,0x0a2a3a,0.4)); water.rotation.x=-Math.PI/2; water.position.y=2.9; sea.add(water);
+  for(let i=0;i<12;i++){ const a=i/12*6.283; const ox=new THREE.Mesh(new THREE.BoxGeometry(0.5,1.2,0.9),mat(0x7d5226,0.5,0.7)); ox.position.set(Math.cos(a)*1.9,0.6,Math.sin(a)*1.9); sea.add(ox); }
+  scene.add(sea);
+}
+const TEMPLE_Z=-10;
+function buildPorch(){
+  // the two pillars at the porch (Ulam) — Jachin (right/south), Boaz (left/north)
+  const jach=pillarBronze(3.2); jach.position.z=2; scene.add(jach);
+  const boaz=pillarBronze(-3.2); boaz.position.z=2; scene.add(boaz);
+  const jl=label('יָכִין','Jachin'); jl.position.set(3.2,10.4,2); scene.add(jl);
+  const bl=label('בֹּעַז','Boaz'); bl.position.set(-3.2,10.4,2); scene.add(bl);
+  addHotspot(3.2,2.5,3.0, ()=>openStation('pillars'),'Jachin & Boaz — the Two Pillars',0xd6b15c);
+  addHotspot(-3.2,2.5,3.0, ()=>openStation('pillars'),'Jachin & Boaz — the Two Pillars',0xd6b15c);
+  flame(3.2,9.0,2,5,8); flame(-3.2,9.0,2,5,8);
+  // porch steps
+  for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.BoxGeometry(12-i*0.5,0.3,1),mat(0x3a2a18,0.9,0.05)); s.position.set(0,0.15+i*0.3,4-i*1); scene.add(s); }
+}
+function wall(x,y,z,w,h,d,rotY=0,m){ const me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||mat(0x4a3320,0.85,0.08)); me.position.set(x,y,z); me.rotation.y=rotY; scene.add(me); return me; }
+function buildWallTorches(){
+  // Iron sconces lining the Hekhal (Holy Place) nave — z = -2, -7, -12 on each side wall
+  const iron=mat(0x3a2a14,0.85,0.45);
+  const wrap=mat(0x1e1208,0.9,0.1,0x6a3a10,0.12);
+  [[-5,-1],[-7,-1],[-12,-1],[5,1],[7,1],[12,1]].forEach(([z,side])=>{
+    const wx=side*4.55;
+    // wall-mount plate
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.28,0.18),iron);
+    plate.position.set(wx,3.9,z); scene.add(plate);
+    // horizontal arm projecting inward
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.48,6),iron);
+    arm.rotation.z=Math.PI/2; arm.position.set(wx+side*0.22,3.9,z); scene.add(arm);
+    // torch body (wrapped linen/pitch, slightly tapered)
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.07,0.44,8),wrap);
+    body.position.set(wx+side*0.48,4.1,z); scene.add(body);
+    // flame + warm PointLight
+    flame(wx+side*0.48,4.46,z,3.5,8);
+  });
+  // outer court gate torches — flanking the entrance to the porch (z~4)
+  [[-3.5,0],[3.5,0]].forEach(([x])=>{
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,4.2,8),mat(0x3a2810,0.8,0.2));
+    post.position.set(x,2.1,6); scene.add(post);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.08,0.18,8),mat(0x6a4a1a,0.6,0.55));
+    cap.position.set(x,4.3,6); scene.add(cap);
+    flame(x,4.65,6,5,10);
+  });
+}
+function buildHouse(){
+  const cedar=mat(0x6e4a28,0.7,0.12,0x2a1a0c,0.18); // cedar overlaid with gold (warm emissive)
+  const goldWall=mat(0x8a6a30,0.5,0.55,0x4a3410,0.3);
+  // Holy Place (Hekhal) walls — a long hall from z=0 back to z=-20
+  wall(-5,5,-9,0.6,10,20,0,goldWall); wall(5,5,-9,0.6,10,20,0,goldWall);
+  wall(0,10,-9,11,0.6,20,0,cedar);     // ceiling
+  wall(0,5,0.7,11,10,0.6,0,cedar);      // front wall (with doorway gap handled visually)
+  // floor of cedar/gold
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(10,20),mat(0x3a2814,0.7,0.2,0x2a1c0a,0.15)); fl.rotation.x=-Math.PI/2; fl.position.set(0,0.02,-9); scene.add(fl);
+  // The Menorah — seven-branched lampstand
+  const men=new THREE.Group(); men.position.set(-3,0,-6);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,3,12),mat(0xd6b15c,0.3,0.95,0x6a5018,0.4)); stem.position.y=1.5; men.add(stem);
+  for(let i=-3;i<=3;i++){ if(i===0){ flame(-3,3.1,-6,3,5); continue; }
+    const arc=new THREE.Mesh(new THREE.TorusGeometry(Math.abs(i)*0.4,0.06,8,16,Math.PI),mat(0xd6b15c,0.3,0.95,0x6a5018,0.4));
+    arc.position.set(0,1.6,0); arc.rotation.z=i>0?0:Math.PI; men.add(arc);
+    const cup=Math.abs(i)*0.4; flame(-3+ (i>0?cup:-cup),1.7+0.0,-6,1.6,4); }
+  scene.add(men);
+  addHotspot(-3,1.6,-6, ()=>openStation('menorah'),'The Menorah — the Lampstand',0xf4dd9a);
+  // Table of Showbread + Incense Altar
+  const tbl=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.1,0.8),mat(0xd6b15c,0.3,0.9)); tbl.position.set(3,1.2,-5); scene.add(tbl);
+  for(const dx of[-0.7,0.7])for(const dz of[-0.3,0.3]){ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.2,8),mat(0xb98142,0.4,0.85)); leg.position.set(3+dx,0.6,-5+dz); scene.add(leg); }
+  addHotspot(3,1.4,-5, ()=>openStation('showbread'),'Table of Showbread & Incense',0xd6b15c);
+  const inc=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.35,1.2,16),mat(0xd6b15c,0.3,0.9)); inc.position.set(0,0.6,-13); scene.add(inc); flame(0,1.4,-13,2.2,5);
+}
+let veil, shekhinah;
+function buildHolyOfHolies(){
+  // the Devir — a cube chamber at the back (z ~ -17), behind a crimson veil
+  const m=mat(0x7a5a28,0.5,0.5,0x4a3410,0.28);
+  wall(-5,5,-19,0.6,10,4,0,m); wall(5,5,-19,0.6,10,4,0,m); wall(0,5,-21,11,10,0.6,0,m);
+  // the veil
+  veil=new THREE.Mesh(new THREE.PlaneGeometry(9,9),new THREE.MeshStandardMaterial({color:0x6e1622,roughness:0.85,metalness:0.05,emissive:0x2a0810,emissiveIntensity:0.25,side:THREE.DoubleSide,transparent:true,opacity:0.96}));
+  veil.position.set(0,5,-15); scene.add(veil);
+  // the Ark of the Covenant + two cherubim, glowing Shekhinah
+  const ark=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.0,1.0),mat(0xd6b15c,0.3,0.95,0x6a5018,0.5)); ark.position.set(0,1.1,-18); scene.add(ark);
+  for(const dx of[-0.55,0.55]){ const ch=new THREE.Mesh(new THREE.ConeGeometry(0.4,1.2,4),mat(0xe7cf8f,0.3,0.9,0x6a5018,0.5)); ch.position.set(dx,2.1,-18); scene.add(ch);
+    const wng=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.1,0.5),mat(0xe7cf8f,0.3,0.9)); wng.position.set(dx,2.3,-18); wng.rotation.z=dx>0?-0.4:0.4; scene.add(wng); }
+  shekhinah=new THREE.PointLight(0xfff0c0,0,16,2); shekhinah.position.set(0,3,-18); scene.add(shekhinah);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.6,20,16),new THREE.MeshBasicMaterial({color:0xfff0c0,transparent:true,opacity:0.18})); glow.position.set(0,3,-18); scene.add(glow);
+  addHotspot(0,2,-14, ()=>openStation('holyofholies'),'The Holy of Holies — the Devir',0xfff0c0);
+}
+function buildEsoteric(){
+  // a side alcove (court, east) — the Seal of Solomon + grimoire vault, lit in esoteric teal/violet
+  const seal=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.08,12,48),new THREE.MeshStandardMaterial({color:0x39c9b0,emissive:0x0e6e60,emissiveIntensity:0.7,metalness:0.6,roughness:0.3}));
+  seal.position.set(13,3,-2); seal.rotation.y=Math.PI/2; scene.add(seal);
+  // hexagram inside the seal
+  const hex=new THREE.Group(); for(let i=0;i<2;i++){ const tri=new THREE.Mesh(new THREE.RingGeometry(1.15,1.25,3),new THREE.MeshBasicMaterial({color:i?0x9a7cff:0x39c9b0,side:THREE.DoubleSide,transparent:true,opacity:0.8})); tri.rotation.z=i?Math.PI:0; hex.add(tri); }
+  hex.position.set(13,3,-2.05); hex.rotation.y=Math.PI/2; scene.add(hex); seal.userData.spin=hex;
+  const ev=new THREE.PointLight(0x39c9b0,5,14,2); ev.position.set(13,3,-2); scene.add(ev);
+  addHotspot(13,2.4,-2, ()=>openStation('seal'),'The Signet & Seal of Solomon',0x39c9b0);
+  // grimoire vault — a low plinth with a floating book, violet light
+  const plinth=new THREE.Mesh(new THREE.BoxGeometry(2,1.4,1.4),mat(0x1a1226,0.8,0.2)); plinth.position.set(13,0.7,4); scene.add(plinth);
+  const book=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.2,0.9),mat(0x2a1a3a,0.6,0.2,0x4a2f6a,0.4)); book.position.set(13,1.8,4); scene.add(book); book.userData.float=true;
+  const vv=new THREE.PointLight(0x9a7cff,4,12,2); vv.position.set(13,2,4); scene.add(vv);
+  addHotspot(13,1.6,4, ()=>openStation('grimoire'),'The Grimoire Vault — the Lesser Key',0x9a7cff);
+  // Tree of Life wall (court, west) — ten sephirot
+  const tree=new THREE.Group(); tree.position.set(-13,4.5,0); tree.rotation.y=-Math.PI/2;
+  const nodes=[[0,4],[ -1.2,2.6],[1.2,2.6],[-1.2,0.8],[1.2,0.8],[0,1.6],[0,-0.6],[-1.2,-1.4],[1.2,-1.4],[0,-3]];
+  const sph=nodes.map(([x,y])=>{ const n=new THREE.Mesh(new THREE.SphereGeometry(0.35,16,12),new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0x6a5018,emissiveIntensity:0.5,metalness:0.6,roughness:0.3})); n.position.set(x,y,0); tree.add(n); return n; });
+  const paths=[[0,1],[0,2],[1,2],[1,5],[2,5],[1,3],[2,4],[3,4],[3,5],[4,5],[5,6],[3,6],[4,6],[6,7],[6,8],[7,8],[7,9],[8,9],[6,9],[3,7],[4,8],[0,5]];
+  paths.forEach(([a,b])=>{ const pa=sph[a].position,pb=sph[b].position; const dir=new THREE.Vector3().subVectors(pb,pa); const len=dir.length();
+    const cyl=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,len,6),new THREE.MeshBasicMaterial({color:0xb98142,transparent:true,opacity:0.5}));
+    cyl.position.copy(pa).addScaledVector(dir,0.5); cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize()); tree.add(cyl); });
+  scene.add(tree); const tv=new THREE.PointLight(0xd6b15c,3,12,2); tv.position.set(-12.5,4.5,0); scene.add(tv);
+  addHotspot(-13,3,0, ()=>openStation('tree'),'The Tree of Life — the Sephirot',0xd6b15c);
+  // the Builders — Hiram, by the court entrance
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,2.4,8),mat(0x4a3320,0.9,0.1)); pillar.position.set(0,1.2,22); scene.add(pillar);
+  addHotspot(0,1.4,22, ()=>openStation('builders'),'The Builders — Hiram & the Craft',0xb98142);
+>>>>>>> 60ba9d0 (Add wall torch sconces and gate torches to Temple of Solomon)
 }
 
 /* ── Zone teleport ── */
@@ -2051,6 +2203,7 @@ function boot(){
 }
 boot();
 </script>
+<script src="_nav.js" defer></script>
 </body>
 </html>
 
