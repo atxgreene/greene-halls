@@ -702,8 +702,8 @@ function addHotspot(x,y,z,action,labelText,color=0xd6b15c,radius=0.5){
 /* ── Level 1: Basilica ── */
 function buildBasilica(){
   // sky background
-  scene.background=new THREE.Color(0x08060a);
-  scene.fog=new THREE.FogExp2(0x100a18,0.018);
+  scene.background=new THREE.Color(0x18100a);
+  scene.fog=new THREE.FogExp2(0x1a1008,0.012);
 
   // Marble checker floor
   const fSize=60;
@@ -747,8 +747,8 @@ function buildBasilica(){
   scene.add(dustPts); floaters.push({mesh:dustPts,speed:0.0003,axis:'y'});
 
   // Ambient + directional
-  scene.add(new THREE.HemisphereLight(0x2a1e10,0x050308,0.4));
-  const moon=new THREE.DirectionalLight(0x8090c8,0.2); moon.position.set(-20,40,20); scene.add(moon);
+  scene.add(new THREE.HemisphereLight(0x6a5030,0x1a0f0a,1.4));
+  const moon=new THREE.DirectionalLight(0xb0c0e0,0.8); moon.position.set(-20,40,20); scene.add(moon);
 
   // 8 pairs of stone columns (16 total)
   const colMat=mat(0x3a2a18,0.85,0.06,0x1a0e06,0.12);
@@ -954,8 +954,8 @@ function buildHubIfNeeded(){
   lazyBuilt.add('hub');
 
   const Y=-30;
-  scene.background=new THREE.Color(0x060402);
-  scene.fog=new THREE.FogExp2(0x0a0703,0.014);
+  scene.background=new THREE.Color(0x120c06);
+  scene.fog=new THREE.FogExp2(0x150e06,0.009);
 
   // Domed ceiling geometry
   const domeGeo=new THREE.SphereGeometry(32,32,16,0,Math.PI*2,0,Math.PI/2);
@@ -968,8 +968,8 @@ function buildHubIfNeeded(){
   hubFloor.rotation.x=-Math.PI/2; hubFloor.position.set(0,Y+0.05,0); scene.add(hubFloor);
 
   // Hub ambient light
-  const hubAmb=new THREE.PointLight(0x8a5a2a,3,60,2); hubAmb.position.set(0,Y+15,0); scene.add(hubAmb);
-  scene.add(new THREE.HemisphereLight(0x1a1008,0x030201,0.3));
+  const hubAmb=new THREE.PointLight(0xb07838,8,80,2); hubAmb.position.set(0,Y+15,0); scene.add(hubAmb);
+  scene.add(new THREE.HemisphereLight(0x5a3818,0x0a0604,1.2));
 
   // Central pillar/pedestal
   const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2,2,16),mat(0x3a2814,0.8,0.15,0x2a1808,0.2));
@@ -1076,8 +1076,8 @@ function returnToBasilica(){
     currentLevel='basilica';
     updateZoneUI('basilica');
     Audio.setZoneAudio('basilica');
-    scene.background=new THREE.Color(0x08060a);
-    scene.fog=new THREE.FogExp2(0x100a18,0.018);
+    scene.background=new THREE.Color(0x18100a);
+    scene.fog=new THREE.FogExp2(0x1a1008,0.012);
     ov.style.opacity='0'; ov.style.pointerEvents='none';
     note('Basilica — the altar seal glows below you');
   },500);
@@ -1809,7 +1809,7 @@ function initThree(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.1;
+  renderer.toneMappingExposure=2.2;
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
