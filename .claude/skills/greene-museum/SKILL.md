@@ -153,7 +153,7 @@ _halls/vendor/three present: **yes**_
 | `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
 | `the-lyceum.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
 | `the-revelation.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
-| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, paleo:works} ≠ {offline} |
+| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 
 <!-- STATE:END -->
 
