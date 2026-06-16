@@ -384,6 +384,18 @@
   .reader-tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .reader-src{font-size:11px;font-style:italic;color:var(--muted);max-width:48ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .reader-src a{color:var(--teal)}
+  /* intake sign (Grand Hall) */
+  .intake-sign{display:flex;align-items:center;gap:16px;margin:0 0 24px;padding:16px 20px;
+    border:1px solid rgba(214,177,95,.35);border-radius:10px;
+    background:linear-gradient(180deg,rgba(40,30,12,.5),rgba(10,9,12,.4));
+    box-shadow:inset 0 0 30px rgba(214,177,95,.06)}
+  .intake-sign .is-glyph{font-size:30px;color:var(--gold);line-height:1;flex:0 0 auto;text-shadow:0 0 18px rgba(214,177,95,.5)}
+  .intake-sign .is-body{flex:1 1 auto}
+  .intake-sign .is-body h3{font-size:14px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 5px}
+  .intake-sign .is-body p{font-size:13.5px;line-height:1.65;color:var(--ivory);opacity:.85;margin:0}
+  .intake-sign kbd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82em;padding:1px 6px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.4);color:var(--gold)}
+  .intake-sign .btn{flex:0 0 auto;white-space:nowrap}
+  @media(max-width:640px){ .intake-sign{flex-direction:column;text-align:center} }
   .reader-tools .btn{padding:6px 10px;font-size:12px}
   .badge.readable{position:absolute;top:8px;left:8px;z-index:2;background:rgba(32,240,208,.16);color:#bff3ea;border-color:rgba(32,240,208,.45)}
   .drop.hasfile{border-color:var(--teal)}
@@ -1269,6 +1281,14 @@ function viewGrand(){
   const filtered = applyFilters(scope);
   const rail=(title,list)=> list.length?`<div class="rail"><h3>${title}</h3><div class="scroller">${list.map(cardHTML).join('')}</div></div>`:'';
   return wingHead('grand') + `
+    <div class="intake-sign">
+      <div class="is-glyph">✦</div>
+      <div class="is-body">
+        <h3>Adding books to the archive</h3>
+        <p>Press <b>＋ Add</b> (or tap <kbd>i</kbd>) to bring in a volume, then <b>drop a file</b> to bind its full text — it opens under <b>📖 Read full text</b>. You can also attach a file to any book already on the shelves via <b>Edit metadata</b>. Accepts PDF · EPUB · TXT · Markdown · HTML · DOCX. Your uploads stay private in this browser.</p>
+      </div>
+      <button class="btn ghost" data-act="add-book">＋ Add a book</button>
+    </div>
     <div class="blocks">
       <div class="block"><h4>Continue reading</h4><p>${reading.length} ${reading.length===1?'volume is':'volumes are'} open. The temple remembers where you paused.</p></div>
       <div class="block"><h4>The collection</h4><div class="big">${books.length}</div><p>volumes across ${uniq(books.map(b=>b.category)).length} categories.</p></div>
@@ -2217,6 +2237,7 @@ function afterRender(){
   const cf=$('#clearFilters'); if(cf) cf.onclick=()=>{ state.filters={}; render(); };
   // generic pill / goto inside views
   $$('#view [data-goto]').forEach(p=>p.onclick=()=>openDetail(p.dataset.goto));
+  $$('#view [data-act="add-book"]').forEach(b=>b.onclick=()=>openImport());
   $$('#view [data-openpath]').forEach(p=>p.onclick=()=>{ openPaths(); setTimeout(()=>openPathDetail(p.dataset.openpath),50); });
   // atlas
   $$('#view [data-sym]').forEach(c=>{ c.onclick=()=>openSymbol(+c.dataset.sym); c.onkeydown=e=>{ if(e.key==='Enter'){openSymbol(+c.dataset.sym);} }; });
