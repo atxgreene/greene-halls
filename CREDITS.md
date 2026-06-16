@@ -53,12 +53,20 @@ pseudepigrapha **Jasher, Apocalypse of Abraham, Odes of Solomon, Psalms of Solom
 Barnabas**, plus the **Book of Giants** — sourced from aruljohn/Bible-kjv-1611 and
 scrollmapper/bible_databases_deuterocanonical.
 
+A third set of three scanned EPUBs (Internet Archive) was added from owner-supplied files, each
+a pre-1928 PD edition: the **Conflict of Adam and Eve with Satan** (S.C. Malan, 1882), the
+**Sacred Magic of Abramelin the Mage** (S.L. MacGregor Mathers, 1898), and the **Master Key
+System** (Charles F. Haanel, 1916).
+
 Copyrighted modern editions were deliberately excluded (the Robinson Nag Hammadi translation,
 the Soncino Zohar, Doreal's Emerald Tablets); 3 Enoch and the Zohar remain unbundled (no
 pre-1928 PD English translation). **One exception:** the **Book of Giants** uses W.B. Henning's
 1943 Manichaean-fragments translation, which is likely still under UK copyright (~2037). It is
 included because the same text already ships in the basilica hall, and is flagged as such in
-`SOURCES.md`.
+`SOURCES.md`. A second non-PD-by-age item, *E S and E S P* (G.D. Mack, Massachusetts New Church
+Union, 1974), is bundled at the owner's explicit confirmation that the text is available to
+publish; it is flagged in `SOURCES.md`. One owner-supplied file was **held back** as a duplicate:
+a Henning *Book of Giants* PDF, since that text already ships as `book-of-giants.md`.
 
 ## Engine
 Three.js r160 (MIT) via jsDelivr CDN.
