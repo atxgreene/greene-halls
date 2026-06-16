@@ -55,6 +55,12 @@ theology, apocrypha/Enochic literature, Hermetica, occult history, symbolism, an
   reading view with A−/A+ sizing), **HTML** (sandboxed), **EPUB** (paged reader via epub.js) and
   **DOCX** (via mammoth.js). EPUB/DOCX fetch a small reader engine from the CDN on first open and
   fall back to a download link if you're offline. Readable books show a **📖 Readable** badge.
+- **Bundled public-domain texts.** Full texts committed under [`library-texts/`](library-texts/)
+  and listed in its `manifest.json` are served by Pages and loaded straight into the reader for
+  **every visitor, on any device** — matched to a catalog book by its title. A per-book upload
+  always overrides the bundled copy. Each entry carries its edition/source/license (shown as
+  provenance), keeping the public-domain-only discipline. The folder ships empty, so it's inert
+  until texts are added; see [`library-texts/README.md`](library-texts/README.md) for the schema.
 - **Your data stays local.** Metadata, notes, ratings, study paths, and projects persist in the
   browser's `localStorage`; uploaded **book files are stored in your browser's IndexedDB** (keyed
   by book) so they survive reloads. Nothing leaves your machine — there is no server.

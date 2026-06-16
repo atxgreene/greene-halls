@@ -382,6 +382,8 @@
   .img-read{text-align:center}.img-read img{max-width:100%;border-radius:8px}
   .epub-area{background:#f5efe0;border-radius:8px;overflow:hidden}
   .reader-tools{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .reader-src{font-size:11px;font-style:italic;color:var(--muted);max-width:48ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reader-src a{color:var(--teal)}
   .reader-tools .btn{padding:6px 10px;font-size:12px}
   .badge.readable{position:absolute;top:8px;left:8px;z-index:2;background:rgba(32,240,208,.16);color:#bff3ea;border-color:rgba(32,240,208,.45)}
   .drop.hasfile{border-color:var(--teal)}
@@ -1167,8 +1169,8 @@ function cardHTML(b){
   const st = b.status||'unread';
   const fav = b.fav ? '<span class="badge fav">★ Favorite</span>' : '';
   const sample = b.isSample!==false && SAMPLE_BOOKS.some(s=>s.id===b.id) ? '<span class="badge sample">Sample</span>' : (b._userSample?'<span class="badge sample">Sample</span>':'');
-  const readable = b.hasFile ? '<span class="badge readable">📖 Readable</span>' : '';
-  return `<article class="book-card" data-id="${b.id}" tabindex="0" role="button" aria-label="${esc(b.title)} by ${esc(b.author)}${b.hasFile?' — full text available':''}" style="--c1:${c1};--c2:${c2}">
+  const readable = hasReadable(b) ? '<span class="badge readable">📖 Readable</span>' : '';
+  return `<article class="book-card" data-id="${b.id}" tabindex="0" role="button" aria-label="${esc(b.title)} by ${esc(b.author)}${hasReadable(b)?' — full text available':''}" style="--c1:${c1};--c2:${c2}">
     ${sample}${readable}
     <div class="cover"><div class="gild"></div>
       <div class="ct">${esc(b.title)}</div><div class="ca">${esc(b.author||'Unknown')}</div></div>
@@ -1455,7 +1457,7 @@ function openDetail(id){
     <div class="dt-body">
       ${ev?`<div style="margin:2px 0 12px">${ev}</div>`:''}
       <div class="dt-actions">
-        <button class="primary" data-act="open">${b.hasFile?'📖 Read full text':'📖 Open Book'}</button>
+        <button class="primary" data-act="open">${hasReadable(b)?'📖 Read full text':'📖 Open Book'}</button>
         <button data-act="note">✎ Add / Edit Note</button>
         <button data-act="path">＋ Add to Study Path</button>
         <button data-act="compare">⇄ Compare</button>
@@ -1476,6 +1478,7 @@ function openDetail(id){
         <dt>Source type</dt><dd>${miss(b.sourceType)}</dd>
         <dt>File type</dt><dd>${miss(b.fileType)}</dd>
         ${b.hasFile?`<dt>Attached file</dt><dd style="color:var(--teal)">📖 ${esc(b.fileName||'file')}${b.fileSize?' · '+fmtSize(b.fileSize):''} — readable in the library</dd>`:''}
+        ${(!b.hasFile && bundledFor(b))?`<dt>Full text</dt><dd style="color:var(--teal)">📜 Public-domain edition${bundledFor(b).edition?' · '+esc(bundledFor(b).edition):''} — readable in the library</dd>`:''}
         <dt>Importance</dt><dd>${miss(b.importance)}</dd>
       </dl>
       <div class="field"><div class="label">Key themes</div><div class="relchips">${chips(b.themes)}</div></div>
@@ -1508,8 +1511,38 @@ function detailAction(act,b){
     case 'edit': openImport(b); break;
   }
 }
+/* ---- bundled (repo-hosted) public-domain texts ----
+   Full texts committed under library-texts/ and listed in a manifest are
+   loaded straight from the site, so every visitor gets them. A per-book
+   upload (IndexedDB) always overrides the bundled copy. */
+const TEXTS_MANIFEST = 'library-texts/manifest.json';
+async function loadTexts(){
+  try{
+    const r = await fetch(TEXTS_MANIFEST, {cache:'no-cache'});
+    if(!r.ok) return;
+    const data = await r.json();
+    const entries = Array.isArray(data) ? data : (data.entries || data.books || []);
+    const idx = {bySlug:{}, byId:{}, count:0};
+    entries.forEach(e=>{
+      if(!e || !e.file) return;
+      idx.count++;
+      if(e.id) idx.byId[e.id] = e;
+      [e.title, e.match].filter(Boolean).forEach(t=> idx.bySlug[slug(t)] = e);
+    });
+    state.texts = idx;
+    if(idx.count) render(); // surface readable badges/labels now that bundled texts are known
+  }catch(e){ /* no manifest yet, or offline — bundled texts simply stay unavailable */ }
+}
+function bundledFor(b){
+  const t = state.texts; if(!t) return null;
+  return t.byId[b.id] || t.bySlug[slug(b.title||'')] || null;
+}
+function hasReadable(b){ return !!(b.hasFile || bundledFor(b)); }
+
 function openReader(b){
-  if(b.hasFile) return openFileReader(b);
+  if(b.hasFile) return openFileReader(b);          // a user upload always wins
+  const entry = bundledFor(b);
+  if(entry) return openBundledReader(b, entry);    // repo-hosted public-domain text
   return openMetaReader(b);
 }
 function openMetaReader(b){
@@ -1524,24 +1557,43 @@ function openMetaReader(b){
       Add your own file for this title (<b>Edit metadata → upload</b>) and “Read full text” will open it right here.</div>
     </div></div>`);
 }
-async function openFileReader(b){
-  openModal(`<div class="modal-head"><div><div class="sub">Reading room</div><h3>${esc(b.title)}</h3></div>
+function openReaderShell(b, sub){
+  openModal(`<div class="modal-head"><div><div class="sub">${esc(sub||'Reading room')}</div><h3>${esc(b.title)}</h3></div>
       <div class="reader-tools" id="rtools"></div>
       <button class="x" data-close>×</button></div>
     <div class="modal-body"><div id="readerHost" class="reader-host"><div class="placeholder">Unbinding the manuscript…</div></div></div>`, true);
-  const host = $('#readerHost'); const tools = $('#rtools'); if(!host) return;
+}
+async function openFileReader(b){
+  openReaderShell(b);
+  const host = $('#readerHost'), tools = $('#rtools'); if(!host) return;
   const rec = await FileDB.get(b.id);
   if(!host.isConnected) return; // user closed it
   if(!rec || !rec.blob){
     host.innerHTML = `<div class="placeholder">The stored file for this book could not be found — it may have been added in a different browser, or local storage was cleared. Re-attach it via <b>Edit metadata</b>.</div>`;
     return;
   }
-  const url = URL.createObjectURL(rec.blob);
+  await renderReaderRec(host, tools, b, {blob:rec.blob, mime:rec.mime, name:rec.name||b.fileName, type:b.fileType});
+}
+async function openBundledReader(b, entry){
+  openReaderShell(b, 'Reading room · public-domain text');
+  const host = $('#readerHost'), tools = $('#rtools'); if(!host) return;
+  host.innerHTML = `<div class="placeholder">Fetching the text…</div>`;
+  let blob;
+  try{ const r = await fetch(entry.file); if(!r.ok) throw new Error('HTTP '+r.status); blob = await r.blob(); }
+  catch(e){ if(host.isConnected) host.innerHTML = `<div class="placeholder">Couldn’t load the bundled text (${esc(e.message||'error')}). <a href="${esc(entry.file)}" target="_blank" rel="noopener" style="color:var(--teal)">Open the file directly</a>.</div>`; return; }
+  if(!host.isConnected) return;
+  const name = (String(entry.file).split('/').pop()) || (slug(b.title)+'.txt');
+  await renderReaderRec(host, tools, b, {blob, name, type:entry.format||formatFromName(name), note:bundledProvenance(entry)});
+}
+/* shared render pipeline for both uploaded files and bundled texts */
+async function renderReaderRec(host, tools, b, src){
+  const url = URL.createObjectURL(src.blob);
   state._readerURL = url;
-  const name = rec.name || b.fileName || 'book';
-  const dl = `<a class="btn ghost" href="${url}" download="${esc(name)}">⤓ Download original</a>`;
-  const type = String(b.fileType||'').toUpperCase();
-  const mime = (rec.mime || rec.blob.type || '').toLowerCase();
+  const name = src.name || 'book';
+  const type = String(src.type || b.fileType || '').toUpperCase();
+  const mime = (src.mime || src.blob.type || '').toLowerCase();
+  const dl = (src.note ? src.note + ' ' : '') + `<a class="btn ghost" href="${url}" download="${esc(name)}">⤓ Download</a>`;
+  const rec = {blob:src.blob, mime, name};
   try{
     if(mime.includes('pdf') || type==='PDF'){
       host.innerHTML = `<iframe class="rframe" src="${url}" title="${esc(b.title)}"></iframe>`;
@@ -1566,8 +1618,20 @@ async function openFileReader(b){
       wireFontTools(tools, $('#readerDoc'));
     }
   }catch(e){
-    host.innerHTML = `<div class="placeholder">This file couldn’t be displayed in the reader (${esc(e.message||'unknown error')}). You can still <a href="${url}" download="${esc(name)}" style="color:var(--teal)">download the original</a>.</div>`;
+    host.innerHTML = `<div class="placeholder">This text couldn’t be displayed in the reader (${esc(e.message||'unknown error')}). You can still <a href="${url}" download="${esc(name)}" style="color:var(--teal)">download it</a>.</div>`;
   }
+}
+function bundledProvenance(entry){
+  const bits = [];
+  if(entry.edition) bits.push(esc(entry.edition));
+  if(entry.license) bits.push(esc(entry.license));
+  let s = bits.join(' · ');
+  if(entry.source) s += (s?' · ':'') + `<a href="${esc(entry.source)}" target="_blank" rel="noopener">source</a>`;
+  return s ? `<span class="reader-src" title="Public-domain text bundled with the library">📜 ${s}</span>` : '';
+}
+function formatFromName(n){
+  const e = (String(n).split('.').pop()||'').toLowerCase();
+  return ({pdf:'PDF',epub:'EPUB',txt:'TXT',md:'Markdown',markdown:'Markdown',html:'HTML',htm:'HTML',docx:'DOCX',doc:'DOCX'})[e] || 'TXT';
 }
 function fallbackDL(host, msg, url, name){
   host.innerHTML = `<div class="placeholder">${esc(msg)} You can <a href="${url}" download="${esc(name)}" style="color:var(--teal)">download the original</a> instead.</div>`;
@@ -2242,6 +2306,7 @@ function enterLibrary(){
 }
 function boot(){
   load();
+  loadTexts(); // pull repo-hosted public-domain texts (manifest); inert if none yet
   if(state.settings.motion) setMotion(true);
   renderNav();
   wireGlobal();
