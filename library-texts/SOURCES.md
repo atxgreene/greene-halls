@@ -84,3 +84,31 @@ Several texts were retrieved as OCR scans from archive.org rather than typed tra
 - Book 10 (Pistis Sophia) — HOCR searchtext from 1896 print scan
 
 Clean typed transcriptions (Gutenberg) were used for Books 1, 8, 11, 12, 13, 14, 17.
+
+---
+
+## Added from the Greene Basilica corpus (2026-06-16)
+
+Pulled from the embedded scripture/apocrypha data island in `ancientbasilicasanctuary.html`
+(which cites: KJV — aruljohn/Bible-kjv · Apocrypha — aruljohn/Bible-kjv-1611 (1611) ·
+Pseudepigrapha — scrollmapper/bible_databases_deuterocanonical; "all public domain").
+Converted to Markdown (chapter headings + verse numbers). The 66 Bible books were skipped
+(already covered by the bundled KJV), as were the four already present (1 & 2 Enoch,
+Jubilees, Testament of Solomon).
+
+| Title | Translation | Source dataset | License |
+|-------|-------------|----------------|---------|
+| The Apocrypha (Deuterocanon) — 14 books, combined | King James Apocrypha, 1611 (original spelling) | aruljohn/Bible-kjv-1611 | Public domain |
+| The Book of Jasher | Moses Samuel, 1840 (Sefer haYashar) | scrollmapper | Public domain |
+| The Apocalypse of Abraham | Box & Landsman, 1918 | scrollmapper | Public domain |
+| The Odes of Solomon | J. Rendel Harris, 1909 | scrollmapper | Public domain |
+| The Psalms of Solomon | G. Buchanan Gray, 1913 | scrollmapper | Public domain |
+| The Epistle of Barnabas | Roberts–Donaldson | scrollmapper | Public domain |
+| The Book of Giants | W.B. Henning, 1943 (Manichaean fragments) | scrollmapper | **⚠ See note** |
+
+**⚠ Book of Giants — copyright note.** The only substantial English rendering of the
+Manichaean Book of Giants fragments is W.B. Henning's 1943 translation, which is **likely
+still under UK copyright (~2037)**. It was included at the author's request because the same
+text is already published on the Ancient Basilica Sanctuary hall in this repo; it is the one
+bundled text that is **not** cleanly public domain. Remove `book-of-giants.md` and its
+manifest entry if a strict public-domain posture is required.
