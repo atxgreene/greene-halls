@@ -89,7 +89,7 @@ hall add/rename/retire. **Don't hand-edit between the markers.**
 <!-- STATE:START -->
 _Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
 
-**`greene-halls`** (public · Pages · CDN three.js) — 7 halls
+**`greene-halls`** (public · Pages · CDN three.js) — 8 halls
 
 | hall | opens from |
 |---|---|
@@ -100,6 +100,7 @@ _Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
 | `human-psi-operations-room.html` | `file://` or served |
 | `the-greene-virtual-library.html` | `file://` or served |
 | `the-lyceum.html` | `file://` or served |
+| `the-temple-of-solomon.html` | `file://` or served |
 
 
 **`Greene-Paleogenomic-Museum-VR`** (full build · museum r128 inline · halls r160 local `vendor/`)
@@ -114,6 +115,7 @@ _Theology-Wing vault (`works/`, manifest order):_
 | `hall-of-the-watchers.html` | HALL OF THE WATCHERS | server |
 | `the-revelation.html` | THE REVELATION | standalone |
 | `human-psi-operations-room.html` | PSI OPERATIONS ROOM | standalone |
+| `the-temple-of-solomon.html` | THE TEMPLE OF SOLOMON | standalone |
 
 _Root standalone halls:_ `ancient-basilica-sanctuary.html`, `empyrean-ascent.html`, `hall-of-the-nephilim.html`, `the-lyceum.html`
 
@@ -129,6 +131,7 @@ _Other:_ gallery paintings: **21** · museum file present: **yes** · vendor/thr
 | `hall-of-ufos.html` | local-only ✓ |
 | `human-psi-operations-room.html` | local-only ✓ |
 | `the-greene-virtual-library.html` | local-only ✓ |
+| `the-temple-of-solomon.html` | local-only ✓ |
 
 _halls/vendor/three present: **yes**_
 
@@ -139,11 +142,12 @@ _halls/vendor/three present: **yes**_
 |---|---|---|
 | `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
 | `hall-of-archangels.html` | greene-halls, offline | ✓ in sync (2) |
-| `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, offline} ≠ {paleo:works} |
+| `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
 | `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
 | `the-lyceum.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
+| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 
 <!-- STATE:END -->
 

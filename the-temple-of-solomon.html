@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0703" />
+<title>The Temple of Solomon — A Replica & Esoteric Archive · The Greene Museum</title>
+<meta name="description" content="A walkable replica of Solomon's Temple — Jachin and Boaz, the Menorah, the Holy of Holies — and an esoteric archive of the Solomon legend: the Seal, the Testament, the Lesser Key, and the Tree of Life. Presented as scripture, history, legend, and occult literature — never as instruction." />
+<style>
+  :root{
+    --obsidian:#0a0703; --night:#120c05; --gold:#d6b15c; --gold-bright:#f4dd9a; --bronze:#9c6b3a;
+    --cedar:#5a3d22; --crimson:#8a1f2a; --veil:#6e1622; --ivory:#f2e8cf; --ink:#cdbf9c;
+    --seal-teal:#39c9b0; --seal-violet:#9a7cff;
+    --glass:rgba(255,240,210,0.06); --glass-border:rgba(214,177,92,0.26);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --tech:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;width:100%;overflow:hidden;background:var(--obsidian);color:var(--ivory);font-family:var(--serif);}
+  canvas{display:block;}
+  button{font-family:var(--tech);cursor:pointer;}
+  ::selection{background:rgba(214,177,92,.3);}
+
+  #reticle{position:fixed;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border:1.5px solid rgba(214,177,92,.6);
+    border-radius:50%;pointer-events:none;z-index:5;transition:transform .15s,border-color .15s,opacity .2s;}
+  #reticle.hot{transform:scale(1.9);border-color:var(--gold-bright);}
+  #reticle.hidden{opacity:0;}
+  #note{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);padding:8px 18px;border:1px solid var(--glass-border);
+    border-radius:999px;background:rgba(10,7,3,.74);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    font-family:var(--tech);font-size:12px;letter-spacing:.05em;color:var(--gold);opacity:0;transition:opacity .3s;
+    pointer-events:none;z-index:5;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;}
+  #note.show{opacity:1;}
+
+  #topbar{position:fixed;top:0;left:0;right:0;height:42px;z-index:6;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;font-family:var(--tech);font-size:11px;letter-spacing:.12em;color:#b79a63;text-transform:uppercase;
+    background:linear-gradient(to bottom,rgba(10,7,3,.85),rgba(10,7,3,0));pointer-events:none;}
+  #topbar .node{color:var(--gold-bright);}
+
+  #dock{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;gap:8px;justify-content:center;align-items:center;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));flex-wrap:wrap;
+    background:linear-gradient(to top,rgba(10,7,3,.85),rgba(10,7,3,0));pointer-events:none;}
+  #dock .pill{pointer-events:auto;font-family:var(--tech);font-size:11px;letter-spacing:.08em;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:8px 14px;backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);transition:.18s;text-transform:uppercase;}
+  #dock .pill:hover{border-color:var(--gold);color:var(--ivory);box-shadow:0 0 18px rgba(214,177,92,.2);}
+
+  #joystick{position:fixed;left:24px;bottom:96px;width:120px;height:120px;border-radius:50%;z-index:6;display:none;
+    background:rgba(255,255,255,.04);border:1px solid var(--glass-border);touch-action:none;}
+  #joystick .nub{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;
+    background:rgba(214,177,92,.18);border:1px solid var(--gold);}
+  body.touch #joystick{display:block;}
+
+  #intro{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:30px;background:#000;transition:opacity 1s;}
+  #intro.gone{opacity:0;pointer-events:none;}
+  #intro .vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,#1c1206 0%,#0a0703 55%,#000 100%);}
+  #intro .inner{position:relative;max-width:680px;}
+  #intro .kick{font-family:var(--tech);letter-spacing:.42em;text-transform:uppercase;color:var(--gold);font-size:.7rem;opacity:.85;}
+  #intro h1{font-weight:400;font-size:clamp(2rem,6.4vw,3.7rem);margin:16px 0 4px;color:var(--gold-bright);letter-spacing:.04em;
+    text-shadow:0 0 50px rgba(214,177,92,.3);}
+  #intro .heb{font-size:1.1rem;color:var(--bronze);letter-spacing:.2em;margin-bottom:8px;}
+  #intro .brief{color:#d8c9a6;line-height:1.7;font-size:.96rem;margin:22px auto 0;max-width:580px;opacity:0;
+    animation:fadein 1.2s ease 1.2s forwards;}
+  #intro .brief b{color:var(--ivory);}
+  #intro .actions{margin-top:30px;opacity:0;animation:fadein 1s ease 2s forwards;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+  .btn-major{font-family:var(--tech);font-size:.92rem;letter-spacing:.14em;text-transform:uppercase;color:#1c1404;
+    background:linear-gradient(135deg,var(--gold),#e7cf8f);border:0;border-radius:999px;padding:14px 40px;transition:.18s;
+    box-shadow:0 0 0 1px rgba(214,177,92,.4);}
+  .btn-major:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(214,177,92,.35);}
+  .btn-ghost{font-family:var(--tech);font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:14px 26px;transition:.18s;}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--ivory);}
+  #intro .hint{margin-top:24px;font-family:var(--tech);font-size:.7rem;letter-spacing:.14em;color:#7c6743;opacity:0;
+    animation:fadein 1s ease 2.4s forwards;}
+  @keyframes fadein{to{opacity:1;}}
+
+  #loadwrap{position:fixed;inset:0;z-index:31;display:flex;align-items:center;justify-content:center;background:#000;transition:opacity .6s;}
+  #loadwrap.gone{opacity:0;pointer-events:none;}
+  #loadwrap .l{font-family:var(--tech);letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-size:.72rem;text-align:center;}
+  #loadwrap .barT{width:240px;height:2px;background:rgba(255,255,255,.12);margin:16px auto 0;overflow:hidden;border-radius:2px;}
+  #loadwrap .barF{height:100%;width:0;background:var(--gold);box-shadow:0 0 12px var(--gold);transition:width .3s;}
+
+  .overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:24px;
+    background:rgba(6,4,2,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .overlay.show{display:flex;animation:ovin .35s ease;}
+  @keyframes ovin{from{opacity:0;}to{opacity:1;}}
+  .panel{position:relative;width:min(880px,96vw);max-height:90vh;overflow:auto;border:1px solid var(--glass-border);
+    border-radius:16px;background:linear-gradient(160deg,rgba(24,16,7,.95),rgba(10,7,3,.97));
+    box-shadow:0 30px 90px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,240,210,.06);padding:26px 26px 30px;}
+  .panel::-webkit-scrollbar{width:9px;}
+  .panel::-webkit-scrollbar-thumb{background:rgba(214,177,92,.25);border-radius:9px;}
+  .panel .x{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:50%;background:var(--glass);
+    border:1px solid var(--glass-border);color:var(--ivory);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .panel .x:hover{border-color:var(--crimson);color:#e8a7ad;}
+  .panel .heb{font-size:1.2rem;color:var(--bronze);letter-spacing:.16em;}
+  .panel .kick{font-family:var(--tech);font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-top:4px;}
+  .panel h2{font-weight:400;font-size:clamp(1.5rem,3.6vw,2rem);margin:4px 0 8px;color:var(--gold-bright);letter-spacing:.02em;}
+  .panel p{color:#dccfac;line-height:1.65;font-size:.94rem;margin:0 0 12px;}
+  .panel p.lede{color:#e6dab9;}
+  .panel h3{font-weight:500;color:var(--gold);font-size:1.05rem;margin:16px 0 6px;letter-spacing:.02em;}
+  .panel ul{margin:0 0 12px 18px;} .panel li{color:#d3c5a2;font-size:.9rem;line-height:1.55;margin:3px 0;}
+  .panel .ref{font-family:var(--tech);font-size:.72rem;color:#9c8a5f;letter-spacing:.03em;}
+
+  .tier{display:inline-block;font-family:var(--tech);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;border:1px solid;margin:2px 4px 8px 0;}
+  .tier.scripture{color:#e7cf8f;border-color:rgba(214,177,92,.6);}
+  .tier.history{color:#bfe6ff;border-color:rgba(120,180,230,.55);}
+  .tier.legend{color:#e8b07a;border-color:rgba(200,120,60,.55);}
+  .tier.esoteric{color:#b9a7ff;border-color:rgba(154,124,255,.55);}
+  .tier.occult{color:#8df0db;border-color:rgba(57,201,176,.55);}
+
+  .safety{margin-top:14px;padding:12px 14px;border-left:2px solid var(--crimson);background:rgba(138,31,42,.1);
+    font-size:.84rem;color:#e9c3a9;line-height:1.55;border-radius:0 8px 8px 0;}
+  .safety b{color:#f4dd9a;}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .btn{font-family:var(--tech);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:9px 16px;transition:.16s;}
+  .btn:hover{border-color:var(--gold);color:var(--ivory);}
+
+  #err{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;padding:32px;text-align:center;background:#0a0703;}
+  #err .box{max-width:520px;} #err h2{font-weight:400;color:var(--gold);font-size:1.5rem;margin-bottom:12px;}
+  #err p{color:#d8c9a6;line-height:1.6;font-size:.95rem;}
+  .small{font-family:var(--tech);font-size:.68rem;color:#9c8a5f;letter-spacing:.05em;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="reticle" class="hidden"></div>
+<div id="note"></div>
+
+<div id="topbar">
+  <div><span class="node">THE TEMPLE OF SOLOMON</span> · Replica &amp; Esoteric Archive</div>
+  <div>The Greene Museum</div>
+</div>
+
+<div id="dock">
+  <button class="pill" data-act="stations">✦ Stations</button>
+  <button class="pill" data-act="center">⟲ Return to Porch</button>
+  <button class="pill" data-act="discern">☉ Discernment</button>
+  <button class="pill" data-act="audio">♪ Audio: On</button>
+</div>
+
+<div id="joystick"><div class="nub"></div></div>
+
+<div id="loadwrap"><div class="l">Raising the cedar and the gold…
+  <div class="barT"><div class="barF" id="barF"></div></div></div></div>
+
+<div id="intro">
+  <div class="vignette"></div>
+  <div class="inner">
+    <div class="kick">The Greene Museum · Scripture · Legend · Esoterica</div>
+    <h1>The Temple of Solomon</h1>
+    <div class="heb">בֵּית הַמִּקְדָּשׁ</div>
+    <p class="brief">A walkable replica of the First Temple — the pillars <b>Jachin</b> and <b>Boaz</b>, the Menorah, the
+      veiled <b>Holy of Holies</b> — and an archive of the Solomon <i>legend</i>: the Seal, the Testament, the Lesser Key,
+      and the Tree of Life. This hall presents <b>scripture, history, legend, Kabbalah, and Renaissance occult
+      literature as cultural and mythic history</b>. It is not instruction, not ritual, and makes <b>no claim</b> that
+      magic, summoning, or curses are real or effective. Walk with curiosity and discernment.</p>
+    <div class="actions">
+      <button class="btn-major" id="initBtn">Enter the Court</button>
+      <button class="btn-ghost" id="xrBtn" style="display:none">Enter in VR</button>
+    </div>
+    <div class="hint">Move&nbsp; WASD / arrows &nbsp;·&nbsp; Look&nbsp; click + mouse &nbsp;·&nbsp; Study&nbsp; E or click &nbsp;·&nbsp; Mobile&nbsp; drag to look, joystick to move</div>
+  </div>
+</div>
+
+<div id="err"><div class="box">
+  <h2>The Temple Could Not Be Raised</h2>
+  <p id="errmsg">This hall builds a real-time 3D chamber and needs WebGL plus a one-time download of the rendering engine
+    from a CDN. If you are offline or your browser blocks WebGL, the immersive temple cannot start.</p>
+</div></div>
+
+<!-- station overlays populated by JS -->
+<div class="overlay" id="ov-stations"><div class="panel"><button class="x" data-close>×</button>
+  <div class="kick">The Stations of the Temple</div><h2>Where to Walk</h2>
+  <p class="lede">Eight stations ring the court and the house. Choose one to read its scripture, history, and — clearly
+    marked apart — its legend and esoteric tradition.</p>
+  <div id="stationGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px"></div>
+</div></div>
+
+<div class="overlay" id="ov-station"><div class="panel"><button class="x" data-close>×</button>
+  <div id="stHeb" class="heb"></div><div class="kick" id="stKick"></div><h2 id="stTitle"></h2>
+  <div id="stTiers"></div>
+  <div id="stBody"></div>
+  <div class="btnrow"><button class="btn" data-close>Close</button></div>
+</div></div>
+
+<div class="overlay" id="ov-discern"><div class="panel"><button class="x" data-close>×</button>
+  <div class="kick">Discernment &amp; Return</div><h2>How to Hold This Hall</h2>
+  <p class="lede">The museum keeps measured fact and metaphor apart on purpose. So should you.</p>
+  <h3>The registers, kept separate</h3>
+  <p><span class="tier scripture">Scripture</span> the Temple as the Hebrew Bible describes it (1 Kings 6–7; 2 Chronicles 3–4).</p>
+  <p><span class="tier history">History</span> what archaeology and historians can and cannot confirm — the First Temple itself is <i>not</i> directly attested in the archaeological record.</p>
+  <p><span class="tier legend">Legend</span> later stories: the <i>Testament of Solomon</i>, the signet ring, Hiram Abiff.</p>
+  <p><span class="tier esoteric">Esoteric</span> Kabbalah and the Tree of Life — a living mystical tradition.</p>
+  <p><span class="tier occult">Occult literature</span> Renaissance grimoires (the <i>Lesser Key of Solomon</i>). Studied here as <b>literature and cultural history</b>.</p>
+  <div class="safety">This hall is a <b>museum exhibit</b>. It presents myth, scripture, and occult <i>texts</i> — it is <b>not</b> a
+    spell book, not instruction, and asserts <b>no</b> claim that ritual magic, summoning, sealing, or cursing is real or
+    works. Take what is beautiful and historical; leave superstition at the door. If any of this unsettles you, step out
+    to the porch and breathe.</div>
+  <div class="btnrow"><button class="btn" data-close>Return to the Temple</button></div>
+</div></div>
+
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+/* =====================================================================
+   THE TEMPLE OF SOLOMON · The Greene Museum
+   A self-contained, walkable replica of the First Temple + an esoteric
+   archive of the Solomon legend. Built in the Greene Halls house style
+   (three@0.160 importmap, VRButton, procedural WebAudio, WebGL fallback,
+   Three.js hub + HTML-overlay stations).
+
+   Honest-content rule (separate registers): the architecture follows the
+   Biblical description; every station tags its claims —
+   Scripture / History / Legend / Esoteric / Occult-literature — and the
+   occult material is framed as literature and myth, never as instruction.
+   ===================================================================== */
+
+let THREE, VRButton;
+try{
+  THREE = await import('three');
+  ({ VRButton } = await import('three/addons/webxr/VRButton.js'));
+}catch(e){
+  document.getElementById('err').style.display='flex';
+  document.getElementById('loadwrap').classList.add('gone');
+  console.error('Engine load failed', e); throw e;
+}
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function note(msg){ const n=$('#note'); n.textContent=msg; n.classList.add('show'); clearTimeout(note._t); note._t=setTimeout(()=>n.classList.remove('show'),2400); }
+
+/* ---------- WebAudio: warm temple ambience ---------- */
+const Audio=(()=>{
+  let ctx=null,master=null,on=true,started=false;
+  function ensure(){ if(ctx) return; const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+    master=ctx.createGain(); master.gain.value=0; master.connect(ctx.destination);
+    // low cedar drone — two detuned saw-ish sines + a soft fifth
+    [55,82.4,110].forEach((f,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=ctx.createGain(); g.gain.value=[0.13,0.08,0.05][i]; o.connect(g).connect(master); o.start(); });
+    // airy room noise
+    const len=ctx.sampleRate*3, b=ctx.createBuffer(1,len,ctx.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*0.4;
+    const n=ctx.createBufferSource(); n.buffer=b; n.loop=true;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=520; bp.Q.value=0.5;
+    const ng=ctx.createGain(); ng.gain.value=0.04; n.connect(bp).connect(ng).connect(master); n.start();
+    const lfo=ctx.createOscillator(); lfo.frequency.value=0.05; const lg=ctx.createGain(); lg.gain.value=0.05;
+    lfo.connect(lg).connect(master.gain); lfo.start();
+    scheduleBell();
+  }
+  function scheduleBell(){ clearTimeout(scheduleBell._t);
+    scheduleBell._t=setTimeout(()=>{ bell(); scheduleBell(); }, rand(9000,18000)); }
+  function bell(){ if(!ctx||!on) return; const t=ctx.currentTime; const base=rand(330,520);
+    [1,2.0,2.7].forEach((m,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=base*m;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime([0.05,0.03,0.02][i],t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+2.6); o.connect(g).connect(master); o.start(t); o.stop(t+2.7); }); }
+  function chime(freq=528,vol=0.08){ if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator();
+    o.type='sine'; o.frequency.value=freq; const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.7);
+    o.connect(g).connect(master); o.start(t); o.stop(t+0.8); }
+  function start(){ ensure(); if(ctx.state==='suspended') ctx.resume(); started=true;
+    master.gain.cancelScheduledValues(ctx.currentTime); master.gain.linearRampToValueAtTime(on?0.6:0,ctx.currentTime+1.6); }
+  function setOn(v){ on=v; if(ctx) master.gain.linearRampToValueAtTime(v?0.6:0,ctx.currentTime+0.4); }
+  return { start,setOn,chime, get started(){return started;} };
+})();
+let audioOn=true;
+
+/* ---------- Three.js temple ---------- */
+let renderer,scene,camera,clock,raycaster;
+const interactives=[]; const keys={}; const move={f:0,s:0};
+let yaw=0,pitch=0,pointerLocked=false,reticleHot=null,velocity=new THREE.Vector3();
+const PLAYER_H=1.6;
+let flames=[];
+
+function initThree(){
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+  renderer.xr.enabled=true; document.body.appendChild(renderer.domElement);
+  scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a0703); scene.fog=new THREE.FogExp2(0x130c05,0.026);
+  camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,400); camera.position.set(0,PLAYER_H,30);
+  clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
+  buildLights(); buildGround(); buildCourt(); buildPorch(); buildHouse(); buildHolyOfHolies(); buildEsoteric(); buildStations();
+  setupXR(); addEventListener('resize',onResize); renderer.setAnimationLoop(tick);
+}
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+const mat=(c,r=0.7,m=0.1,e=0,ei=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,emissive:e,emissiveIntensity:ei});
+
+function buildLights(){
+  scene.add(new THREE.HemisphereLight(0x2a1e10,0x05030a,0.55));
+  const moon=new THREE.DirectionalLight(0x8aa0c8,0.25); moon.position.set(-20,40,20); scene.add(moon);
+}
+// a warm flickering flame light + sprite
+function flame(x,y,z,intensity=8,dist=14){
+  const l=new THREE.PointLight(0xffb259,intensity,dist,2); l.position.set(x,y,z); scene.add(l);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffcf85,transparent:true,opacity:0.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+  s.scale.set(0.5,0.8,1); s.position.set(x,y,z); scene.add(s);
+  flames.push({l,s,base:intensity,phase:rand(0,9)}); return l;
+}
+function buildGround(){
+  const g=new THREE.Mesh(new THREE.CircleGeometry(60,64),mat(0x140d06,0.95,0.05)); g.rotation.x=-Math.PI/2; scene.add(g);
+  // courtyard flagstones
+  const court=new THREE.Mesh(new THREE.PlaneGeometry(28,60),mat(0x2a2014,0.9,0.05)); court.rotation.x=-Math.PI/2; court.position.y=0.01; scene.add(court);
+  // night sky dome with stars
+  const N=900,pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ const r=rand(40,58),th=rand(0,6.28),ph=rand(0.05,Math.PI/2); pos[i*3]=Math.cos(th)*Math.sin(ph)*r; pos[i*3+1]=Math.cos(ph)*r+3; pos[i*3+2]=Math.sin(th)*Math.sin(ph)*r; }
+  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(geo,new THREE.PointsMaterial({color:0xccd8ff,size:0.12,transparent:true,opacity:0.7})));
+  // incense haze planes
+  for(let i=0;i<5;i++){ const p=new THREE.Mesh(new THREE.PlaneGeometry(40,10),new THREE.MeshBasicMaterial({color:0x3a2a16,transparent:true,opacity:0.05,depthWrite:false}));
+    p.rotation.x=-Math.PI/2; p.position.set(0,1.5+i*0.7,-6); p.rotation.z=i; scene.add(p); }
+}
+// procedural Hebrew-ish glyph sprite label
+function label(text,sub,color='#d6b15c'){
+  const c=document.createElement('canvas'); c.width=512; c.height=150; const x=c.getContext('2d');
+  x.textAlign='center'; x.fillStyle=color; x.font='600 30px Georgia,serif'; x.shadowColor=color; x.shadowBlur=16;
+  x.fillText(text,256,58); x.shadowBlur=0; x.fillStyle='rgba(214,177,92,0.85)'; x.font='400 18px ui-monospace,monospace';
+  if(sub) x.fillText(sub,256,100);
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.scale.set(4.4,1.3,1); return sp;
+}
+function pillarBronze(x){
+  const g=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.78,8,28),mat(0x7d5226,0.4,0.85,0x3a2410,0.25)); shaft.position.y=4; g.add(shaft);
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.8,1.4,28),mat(0x946233,0.35,0.9,0x4a2f12,0.3)); cap.position.y=8.6; g.add(cap);
+  // pomegranate net rings
+  for(let i=0;i<2;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.08,10,30),mat(0xb98142,0.4,0.85)); r.position.y=8.3+i*0.5; r.rotation.x=Math.PI/2; g.add(r); }
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.95,1.1,0.5,28),mat(0x5a3d22,0.8,0.2)); base.position.y=0.25; g.add(base);
+  g.position.x=x; return g;
+}
+function buildCourt(){
+  // bronze altar of sacrifice
+  const altar=new THREE.Group(); altar.position.set(-7,0,12);
+  const blk=new THREE.Mesh(new THREE.BoxGeometry(3,2.2,3),mat(0x6a4524,0.6,0.5,0x2a1808,0.3)); blk.position.y=1.1; altar.add(blk);
+  for(const[dx,dz]of[[-1.4,-1.4],[1.4,-1.4],[-1.4,1.4],[1.4,1.4]]){ const horn=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.7,4),mat(0x946233,0.4,0.8)); horn.position.set(dx,2.5,dz); altar.add(horn); }
+  scene.add(altar); flame(-7,2.6,12,9,12);
+  addHotspot(-7,1.6,12, ()=>openStation('altar'), 'The Bronze Altar & Molten Sea', 0xb98142);
+  // molten sea — great bronze basin on 12 oxen
+  const sea=new THREE.Group(); sea.position.set(7,0,12);
+  const basin=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.0,1.6,32,1,true),mat(0x9c6b3a,0.35,0.9,0x4a2f12,0.25)); basin.position.y=2.2; sea.add(basin);
+  const water=new THREE.Mesh(new THREE.CircleGeometry(2.2,32),mat(0x123,0.2,0.6,0x0a2a3a,0.4)); water.rotation.x=-Math.PI/2; water.position.y=2.9; sea.add(water);
+  for(let i=0;i<12;i++){ const a=i/12*6.283; const ox=new THREE.Mesh(new THREE.BoxGeometry(0.5,1.2,0.9),mat(0x7d5226,0.5,0.7)); ox.position.set(Math.cos(a)*1.9,0.6,Math.sin(a)*1.9); sea.add(ox); }
+  scene.add(sea);
+}
+const TEMPLE_Z=-10;
+function buildPorch(){
+  // the two pillars at the porch (Ulam) — Jachin (right/south), Boaz (left/north)
+  const jach=pillarBronze(3.2); jach.position.z=2; scene.add(jach);
+  const boaz=pillarBronze(-3.2); boaz.position.z=2; scene.add(boaz);
+  const jl=label('יָכִין','Jachin'); jl.position.set(3.2,10.4,2); scene.add(jl);
+  const bl=label('בֹּעַז','Boaz'); bl.position.set(-3.2,10.4,2); scene.add(bl);
+  addHotspot(3.2,2.5,3.0, ()=>openStation('pillars'),'Jachin & Boaz — the Two Pillars',0xd6b15c);
+  addHotspot(-3.2,2.5,3.0, ()=>openStation('pillars'),'Jachin & Boaz — the Two Pillars',0xd6b15c);
+  flame(3.2,9.0,2,5,8); flame(-3.2,9.0,2,5,8);
+  // porch steps
+  for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.BoxGeometry(12-i*0.5,0.3,1),mat(0x3a2a18,0.9,0.05)); s.position.set(0,0.15+i*0.3,4-i*1); scene.add(s); }
+}
+function wall(x,y,z,w,h,d,rotY=0,m){ const me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||mat(0x4a3320,0.85,0.08)); me.position.set(x,y,z); me.rotation.y=rotY; scene.add(me); return me; }
+function buildHouse(){
+  const cedar=mat(0x6e4a28,0.7,0.12,0x2a1a0c,0.18); // cedar overlaid with gold (warm emissive)
+  const goldWall=mat(0x8a6a30,0.5,0.55,0x4a3410,0.3);
+  // Holy Place (Hekhal) walls — a long hall from z=0 back to z=-20
+  wall(-5,5,-9,0.6,10,20,0,goldWall); wall(5,5,-9,0.6,10,20,0,goldWall);
+  wall(0,10,-9,11,0.6,20,0,cedar);     // ceiling
+  wall(0,5,0.7,11,10,0.6,0,cedar);      // front wall (with doorway gap handled visually)
+  // floor of cedar/gold
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(10,20),mat(0x3a2814,0.7,0.2,0x2a1c0a,0.15)); fl.rotation.x=-Math.PI/2; fl.position.set(0,0.02,-9); scene.add(fl);
+  // The Menorah — seven-branched lampstand
+  const men=new THREE.Group(); men.position.set(-3,0,-6);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,3,12),mat(0xd6b15c,0.3,0.95,0x6a5018,0.4)); stem.position.y=1.5; men.add(stem);
+  for(let i=-3;i<=3;i++){ if(i===0){ flame(-3,3.1,-6,3,5); continue; }
+    const arc=new THREE.Mesh(new THREE.TorusGeometry(Math.abs(i)*0.4,0.06,8,16,Math.PI),mat(0xd6b15c,0.3,0.95,0x6a5018,0.4));
+    arc.position.set(0,1.6,0); arc.rotation.z=i>0?0:Math.PI; men.add(arc);
+    const cup=Math.abs(i)*0.4; flame(-3+ (i>0?cup:-cup),1.7+0.0,-6,1.6,4); }
+  scene.add(men);
+  addHotspot(-3,1.6,-6, ()=>openStation('menorah'),'The Menorah — the Lampstand',0xf4dd9a);
+  // Table of Showbread + Incense Altar
+  const tbl=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.1,0.8),mat(0xd6b15c,0.3,0.9)); tbl.position.set(3,1.2,-5); scene.add(tbl);
+  for(const dx of[-0.7,0.7])for(const dz of[-0.3,0.3]){ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.2,8),mat(0xb98142,0.4,0.85)); leg.position.set(3+dx,0.6,-5+dz); scene.add(leg); }
+  addHotspot(3,1.4,-5, ()=>openStation('showbread'),'Table of Showbread & Incense',0xd6b15c);
+  const inc=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.35,1.2,16),mat(0xd6b15c,0.3,0.9)); inc.position.set(0,0.6,-13); scene.add(inc); flame(0,1.4,-13,2.2,5);
+}
+let veil, shekhinah;
+function buildHolyOfHolies(){
+  // the Devir — a cube chamber at the back (z ~ -17), behind a crimson veil
+  const m=mat(0x7a5a28,0.5,0.5,0x4a3410,0.28);
+  wall(-5,5,-19,0.6,10,4,0,m); wall(5,5,-19,0.6,10,4,0,m); wall(0,5,-21,11,10,0.6,0,m);
+  // the veil
+  veil=new THREE.Mesh(new THREE.PlaneGeometry(9,9),new THREE.MeshStandardMaterial({color:0x6e1622,roughness:0.85,metalness:0.05,emissive:0x2a0810,emissiveIntensity:0.25,side:THREE.DoubleSide,transparent:true,opacity:0.96}));
+  veil.position.set(0,5,-15); scene.add(veil);
+  // the Ark of the Covenant + two cherubim, glowing Shekhinah
+  const ark=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.0,1.0),mat(0xd6b15c,0.3,0.95,0x6a5018,0.5)); ark.position.set(0,1.1,-18); scene.add(ark);
+  for(const dx of[-0.55,0.55]){ const ch=new THREE.Mesh(new THREE.ConeGeometry(0.4,1.2,4),mat(0xe7cf8f,0.3,0.9,0x6a5018,0.5)); ch.position.set(dx,2.1,-18); scene.add(ch);
+    const wng=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.1,0.5),mat(0xe7cf8f,0.3,0.9)); wng.position.set(dx,2.3,-18); wng.rotation.z=dx>0?-0.4:0.4; scene.add(wng); }
+  shekhinah=new THREE.PointLight(0xfff0c0,0,16,2); shekhinah.position.set(0,3,-18); scene.add(shekhinah);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.6,20,16),new THREE.MeshBasicMaterial({color:0xfff0c0,transparent:true,opacity:0.18})); glow.position.set(0,3,-18); scene.add(glow);
+  addHotspot(0,2,-14, ()=>openStation('holyofholies'),'The Holy of Holies — the Devir',0xfff0c0);
+}
+function buildEsoteric(){
+  // a side alcove (court, east) — the Seal of Solomon + grimoire vault, lit in esoteric teal/violet
+  const seal=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.08,12,48),new THREE.MeshStandardMaterial({color:0x39c9b0,emissive:0x0e6e60,emissiveIntensity:0.7,metalness:0.6,roughness:0.3}));
+  seal.position.set(13,3,-2); seal.rotation.y=Math.PI/2; scene.add(seal);
+  // hexagram inside the seal
+  const hex=new THREE.Group(); for(let i=0;i<2;i++){ const tri=new THREE.Mesh(new THREE.RingGeometry(1.15,1.25,3),new THREE.MeshBasicMaterial({color:i?0x9a7cff:0x39c9b0,side:THREE.DoubleSide,transparent:true,opacity:0.8})); tri.rotation.z=i?Math.PI:0; hex.add(tri); }
+  hex.position.set(13,3,-2.05); hex.rotation.y=Math.PI/2; scene.add(hex); seal.userData.spin=hex;
+  const ev=new THREE.PointLight(0x39c9b0,5,14,2); ev.position.set(13,3,-2); scene.add(ev);
+  addHotspot(13,2.4,-2, ()=>openStation('seal'),'The Signet & Seal of Solomon',0x39c9b0);
+  // grimoire vault — a low plinth with a floating book, violet light
+  const plinth=new THREE.Mesh(new THREE.BoxGeometry(2,1.4,1.4),mat(0x1a1226,0.8,0.2)); plinth.position.set(13,0.7,4); scene.add(plinth);
+  const book=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.2,0.9),mat(0x2a1a3a,0.6,0.2,0x4a2f6a,0.4)); book.position.set(13,1.8,4); scene.add(book); book.userData.float=true;
+  const vv=new THREE.PointLight(0x9a7cff,4,12,2); vv.position.set(13,2,4); scene.add(vv);
+  addHotspot(13,1.6,4, ()=>openStation('grimoire'),'The Grimoire Vault — the Lesser Key',0x9a7cff);
+  // Tree of Life wall (court, west) — ten sephirot
+  const tree=new THREE.Group(); tree.position.set(-13,4.5,0); tree.rotation.y=-Math.PI/2;
+  const nodes=[[0,4],[ -1.2,2.6],[1.2,2.6],[-1.2,0.8],[1.2,0.8],[0,1.6],[0,-0.6],[-1.2,-1.4],[1.2,-1.4],[0,-3]];
+  const sph=nodes.map(([x,y])=>{ const n=new THREE.Mesh(new THREE.SphereGeometry(0.35,16,12),new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0x6a5018,emissiveIntensity:0.5,metalness:0.6,roughness:0.3})); n.position.set(x,y,0); tree.add(n); return n; });
+  const paths=[[0,1],[0,2],[1,2],[1,5],[2,5],[1,3],[2,4],[3,4],[3,5],[4,5],[5,6],[3,6],[4,6],[6,7],[6,8],[7,8],[7,9],[8,9],[6,9],[3,7],[4,8],[0,5]];
+  paths.forEach(([a,b])=>{ const pa=sph[a].position,pb=sph[b].position; const dir=new THREE.Vector3().subVectors(pb,pa); const len=dir.length();
+    const cyl=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,len,6),new THREE.MeshBasicMaterial({color:0xb98142,transparent:true,opacity:0.5}));
+    cyl.position.copy(pa).addScaledVector(dir,0.5); cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize()); tree.add(cyl); });
+  scene.add(tree); const tv=new THREE.PointLight(0xd6b15c,3,12,2); tv.position.set(-12.5,4.5,0); scene.add(tv);
+  addHotspot(-13,3,0, ()=>openStation('tree'),'The Tree of Life — the Sephirot',0xd6b15c);
+  // the Builders — Hiram, by the court entrance
+  const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,2.4,8),mat(0x4a3320,0.9,0.1)); pillar.position.set(0,1.2,22); scene.add(pillar);
+  addHotspot(0,1.4,22, ()=>openStation('builders'),'The Builders — Hiram & the Craft',0xb98142);
+}
+
+function addHotspot(x,y,z,action,labelText,color){
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.06,12,32),new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.85}));
+  ring.position.set(x,y,z); ring.rotation.x=Math.PI/2; scene.add(ring);
+  const core=new THREE.Mesh(new THREE.SphereGeometry(0.18,16,12),new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.9})); core.position.set(x,y,z); scene.add(core);
+  ring.userData={action,label:labelText}; core.userData=ring.userData; interactives.push(ring,core);
+  ring.userData.spinme=true;
+}
+function buildStations(){ /* hotspots already added during build; grid built in buildStationGrid() */ }
+
+function setupXR(){ if('xr' in navigator){ navigator.xr.isSessionSupported('immersive-vr').then(ok=>{ if(ok){ const b=$('#xrBtn'); b.style.display='inline-block';
+  b.addEventListener('click',()=>{ const v=VRButton.createButton(renderer); document.body.appendChild(v); v.style.display='none'; v.click(); startExperience(); }); } }).catch(()=>{}); } }
+
+function updateMovement(dt){
+  if(renderer.xr.isPresenting) return;
+  const speed=5.0;
+  const fwd=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)+move.f;
+  const str=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+move.s;
+  const dir=new THREE.Vector3(); const sin=Math.sin(yaw),cos=Math.cos(yaw);
+  // forward=(-sin,-cos), strafe-right=(cos,-sin) — same convention as the other halls
+  dir.x=(-fwd*sin + str*cos); dir.z=(-fwd*cos - str*sin);
+  if(dir.lengthSq()>0) dir.normalize();
+  velocity.lerp(dir.multiplyScalar(speed),clamp(dt*6,0,1));
+  camera.position.addScaledVector(velocity,dt);
+  const d=Math.hypot(camera.position.x,camera.position.z); if(d>34){ camera.position.x*=34/d; camera.position.z*=34/d; }
+  camera.position.y=PLAYER_H; camera.rotation.set(pitch,yaw,0,'YXZ');
+}
+function tick(){
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  updateMovement(dt);
+  flames.forEach(f=>{ const fl=0.7+Math.sin(t*9+f.phase)*0.18+Math.random()*0.12; f.l.intensity=f.base*fl; f.s.scale.set(0.4+fl*0.2,0.7+fl*0.3,1); });
+  interactives.forEach(o=>{ if(o.userData.spinme) o.rotation.z+=dt*0.8; });
+  if(shekhinah) shekhinah.intensity=2.4+Math.sin(t*1.3)*0.8;
+  scene.traverse(o=>{ if(o.userData&&o.userData.float) o.position.y=1.8+Math.sin(t*1.4)*0.12; if(o.userData&&o.userData.spin) o.userData.spin.rotation.z+=dt*0.4; });
+  if(veil) veil.material.opacity=0.9+Math.sin(t*0.7)*0.05;
+  raycast(); renderer.render(scene,camera);
+}
+function raycast(){
+  if(overlayOpen||renderer.xr.isPresenting){ $('#reticle').classList.remove('hot'); return; }
+  raycaster.setFromCamera({x:0,y:0},camera); const hits=raycaster.intersectObjects(interactives,false);
+  const ret=$('#reticle');
+  if(hits.length && hits[0].distance<12){ reticleHot=hits[0].object; ret.classList.add('hot'); if(reticleHot.userData.label) note(reticleHot.userData.label); }
+  else{ reticleHot=null; ret.classList.remove('hot'); }
+}
+
+/* ---------- station content (separate registers, honest tiers) ---------- */
+const STATIONS={
+  pillars:{heb:'יָכִין · בֹּעַז',kick:'The Porch · Ulam',title:'Jachin & Boaz — the Two Pillars',
+    tiers:['scripture','legend'], body:`
+    <p class="lede">Two great bronze pillars stood before the porch — <b>Jachin</b> on the right and <b>Boaz</b> on the left, cast by Hiram of Tyre, crowned with capitals of lily-work and rows of pomegranates.</p>
+    <p class="ref">1 Kings 7:15–22 · 2 Chronicles 3:15–17</p>
+    <p>The names read like a sentence of dedication — <b>Jachin</b>, "He shall establish," and <b>Boaz</b>, "in strength." Scripture gives them no ritual function; they are a threshold and a declaration.</p>
+    <h3><span class="tier legend">Legend</span> Later symbolism</h3>
+    <p>Centuries after the Temple fell, the pillars became a fixture of Western symbolic tradition — paired emblems of establishment and strength flanking an entrance. That reading is <b>later interpretation</b>, not part of the Biblical text.</p>`},
+  menorah:{heb:'מְנוֹרָה',kick:'The Holy Place · Hekhal',title:'The Menorah — the Lampstand',
+    tiers:['scripture','esoteric'], body:`
+    <p class="lede">A single lampstand of pure gold, hammered from one piece — a central shaft with six branches, seven lamps that were tended to burn through the night.</p>
+    <p class="ref">Exodus 25:31–40 · 1 Kings 7:49</p>
+    <p>Seven is the Temple's recurring number — of days, of completion, of light. The menorah is the oldest continuous symbol of the tradition.</p>
+    <h3><span class="tier esoteric">Esoteric</span> The seven</h3>
+    <p>Mystical readings later mapped the seven lamps to the seven classical planets and the branches to the Tree of Life. Beautiful as correspondence; <b>not</b> a claim about astronomy or about the lamps themselves.</p>`},
+  showbread:{heb:'לֶחֶם הַפָּנִים',kick:'The Holy Place · Hekhal',title:'Table of Showbread & the Incense Altar',
+    tiers:['scripture'], body:`
+    <p class="lede">A gold-overlaid table held twelve loaves of <b>showbread</b> — "the bread of the Presence" — one for each tribe, renewed each Sabbath. A small golden altar burned incense morning and evening.</p>
+    <p class="ref">Exodus 25:23–30 · Leviticus 24:5–9 · Exodus 30:1–8</p>
+    <p>The rising incense and the standing bread were daily acts of attention — hospitality and remembrance kept, literally, on the table.</p>`},
+  holyofholies:{heb:'קֹדֶשׁ הַקֳּדָשִׁים',kick:'The Devir · behind the veil',title:'The Holy of Holies',
+    tiers:['scripture','history'], body:`
+    <p class="lede">A perfect cube at the heart of the house — twenty cubits each way, overlaid in gold, screened by a veil. Within stood the <b>Ark of the Covenant</b> beneath two great cherubim whose wings touched wall to wall.</p>
+    <p class="ref">1 Kings 6:19–28 · 1 Kings 8:6–11</p>
+    <p>Only the High Priest entered, once a year, on the Day of Atonement. The cloud of the Presence — the <b>Shekhinah</b> — is described as filling the house at its dedication.</p>
+    <h3><span class="tier history">History</span> What we can and can't say</h3>
+    <p>The First Temple is known almost entirely from text. No part of it has been excavated, and the Temple Mount is unexcavated; the Ark disappears from the record before the Babylonian destruction in 586 BCE. The chamber here is a <b>reconstruction from scripture</b>, offered as such.</p>`},
+  altar:{heb:'הַיָּם · הַמִּזְבֵּחַ',kick:'The Court',title:'The Bronze Altar & the Molten Sea',
+    tiers:['scripture','history'], body:`
+    <p class="lede">In the court stood the great <b>bronze altar</b> of sacrifice and the <b>Molten Sea</b> — a vast cast basin holding thousands of gallons, resting on twelve bronze oxen facing outward to the four directions.</p>
+    <p class="ref">1 Kings 7:23–26, 38–39 · 2 Chronicles 4:2–6</p>
+    <p>The Sea supplied water for priestly washing. Its dimensions — ten cubits across, thirty around — are a famous early note of the ratio of a circle.</p>
+    <h3><span class="tier history">History</span> Hiram's bronze</h3>
+    <p>The metalwork is credited to <b>Hiram of Tyre</b>, a Phoenician craftsman — a detail that fits the era's real Israelite–Phoenician trade. The engineering is plausible; the specific objects are known only from the text.</p>`},
+  seal:{heb:'חוֹתַם שְׁלֹמֹה',kick:'The Esoteric Archive',title:'The Signet & Seal of Solomon',
+    tiers:['legend','occult'], body:`
+    <p class="lede">A ring engraved with the divine Name, by which — in <b>legend</b> — Solomon commanded spirits to labor on the Temple. This belongs to the world of story, not scripture.</p>
+    <p class="ref">Testament of Solomon (pseudepigraphal, c. 1st–3rd c. CE)</p>
+    <p>The <i>Testament of Solomon</i> is a late legendary text, not part of the Hebrew Bible. In it the king's signet compels a parade of spirits to confess their names and be bound to the building work — a folktale explaining how so vast a house was raised.</p>
+    <h3><span class="tier occult">Occult literature</span> The hexagram</h3>
+    <p>The interlaced triangles later called the "Seal of Solomon" became a widespread protective emblem across Jewish, Islamic, and Renaissance European art. Presented here as a <b>symbol with a history</b> — no claim is made that any seal binds, protects, or summons anything.</p>`},
+  grimoire:{heb:'מַפְתֵּחַ שְׁלֹמֹה',kick:'The Grimoire Vault',title:'The Lesser Key of Solomon',
+    tiers:['occult'], body:`
+    <p class="lede">On the plinth floats a <i>grimoire</i> — a book of the Renaissance magical tradition that borrowed Solomon's name: the <b>Lesser Key of Solomon</b> (Lemegeton), whose first part, the <i>Ars Goetia</i>, catalogues seventy-two spirits and their seals.</p>
+    <p class="ref">Lemegeton Clavicula Salomonis — compiled 17th c. from older sources</p>
+    <p>These texts are <b>early-modern occult literature</b>: anonymous compilations that attached the wise king's prestige to manuals of ceremonial magic. They are studied today by historians of religion, folklore, and the book — the way this museum studies any mythos.</p>
+    <div class="safety">This is an <b>exhibit about a book</b>, not the book's instructions. The museum makes <b>no</b> claim that the
+      rituals, seals, or "spirits" in the Goetia are real or that any such practice works or is safe. Nothing here is a
+      directive to attempt anything. It is presented as cultural and literary history only.</div>`},
+  tree:{heb:'עֵץ הַחַיִּים',kick:'The Esoteric Archive',title:'The Tree of Life — the Sephirot',
+    tiers:['esoteric'], body:`
+    <p class="lede">Ten luminous nodes joined by paths — the <b>Sephirot</b> of Kabbalah, a diagram of how the infinite (Ein Sof) is understood to unfold into the world: Keter, Chokhmah, Binah… down to Malkuth, the kingdom.</p>
+    <p>Kabbalah is a real and living <b>mystical tradition</b> within Judaism (and, in adapted form, in Western esotericism). The Tree is its central contemplative map — read as theology and meditation, not as mechanism.</p>
+    <h3><span class="tier esoteric">Esoteric</span> Why it stands here</h3>
+    <p>Solomon, as the Bible's emblem of God-given wisdom, became the patron name of later wisdom traditions. The Tree marks that lineage of thought — offered for understanding, with respect and without endorsement of any claim.</p>`},
+  builders:{heb:'הַבּוֹנִים',kick:'The Court Entrance',title:'The Builders — Hiram & the Craft',
+    tiers:['scripture','legend'], body:`
+    <p class="lede">The Temple was a feat of organized craft: cedar floated down from Lebanon, stone dressed at the quarry so "neither hammer nor axe was heard" on site, and bronze cast in clay moulds on the Jordan plain.</p>
+    <p class="ref">1 Kings 5–7</p>
+    <h3><span class="tier legend">Legend</span> Hiram Abiff</h3>
+    <p>Much later, fraternal tradition elaborated the master craftsman <b>Hiram Abiff</b> into a central allegory of skill, integrity, and the keeping of a trust. That story is an <b>18th-century moral allegory</b>, not history or scripture — included here as part of how Solomon's Temple lived on in the imagination.</p>`}
+};
+const STATION_ORDER=[['pillars','Jachin & Boaz'],['menorah','The Menorah'],['showbread','Showbread & Incense'],['holyofholies','The Holy of Holies'],['altar','Altar & Molten Sea'],['seal','Signet & Seal'],['grimoire','The Lesser Key'],['tree','Tree of Life'],['builders','The Builders']];
+
+let overlayOpen=false; const visited=new Set();
+function openOverlay(id){ closeOverlay(); const ov=$('#ov-'+id); if(!ov) return; ov.classList.add('show'); overlayOpen=true;
+  $('#reticle').classList.add('hidden'); if(document.pointerLockElement) document.exitPointerLock(); Audio.chime(528,0.07); }
+function closeOverlay(){ $$('.overlay.show').forEach(o=>o.classList.remove('show')); overlayOpen=false; if(started) $('#reticle').classList.remove('hidden'); }
+function openStation(key){ const s=STATIONS[key]; if(!s) return; visited.add(key);
+  $('#stHeb').textContent=s.heb; $('#stKick').textContent=s.kick; $('#stTitle').textContent=s.title;
+  $('#stTiers').innerHTML=s.tiers.map(t=>`<span class="tier ${t}">${({scripture:'Scripture',history:'History',legend:'Legend',esoteric:'Esoteric tradition',occult:'Occult literature'})[t]}</span>`).join('');
+  $('#stBody').innerHTML=s.body; openOverlay('station'); try{localStorage.setItem('temple.visited',JSON.stringify([...visited]));}catch(e){} }
+function buildStationGrid(){ $('#stationGrid').innerHTML=STATION_ORDER.map(([k,n])=>`<button class="btn" data-st="${k}" style="justify-content:flex-start;text-align:left">${esc(n)}</button>`).join('');
+  $$('#stationGrid [data-st]').forEach(b=>b.onclick=()=>openStation(b.dataset.st)); }
+
+/* ---------- input ---------- */
+addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key==='Escape') closeOverlay();
+  if((e.key==='e'||e.key==='E')&&reticleHot&&!overlayOpen&&started) reticleHot.userData.action&&reticleHot.userData.action(); });
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+addEventListener('click',e=>{ if(overlayOpen||!started) return; if(e.target===renderer.domElement){
+  if(reticleHot){ reticleHot.userData.action&&reticleHot.userData.action(); return; }
+  if(!pointerLocked && !('ontouchstart' in window)) renderer.domElement.requestPointerLock(); } });
+document.addEventListener('pointerlockchange',()=>{ pointerLocked=!!document.pointerLockElement; });
+addEventListener('mousemove',e=>{ if(!pointerLocked||overlayOpen) return; yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.2,1.2); });
+let touchLook=null;
+addEventListener('touchstart',e=>{ if(overlayOpen) return; if(e.target===renderer.domElement){ const t=e.touches[0]; touchLook={x:t.clientX,y:t.clientY}; } },{passive:true});
+addEventListener('touchmove',e=>{ if(!touchLook||overlayOpen) return; const t=e.touches[0]; yaw-=(t.clientX-touchLook.x)*0.005; pitch=clamp(pitch-(t.clientY-touchLook.y)*0.005,-1.2,1.2); touchLook={x:t.clientX,y:t.clientY}; },{passive:true});
+addEventListener('touchend',()=>{ touchLook=null; });
+setTimeout(()=>{ if(renderer) renderer.domElement.addEventListener('touchend',()=>{ if(!overlayOpen&&reticleHot) reticleHot.userData.action&&reticleHot.userData.action(); }); },300);
+(function(){ const j=$('#joystick'),nub=j.querySelector('.nub'); let active=false,cx=0,cy=0;
+  const set=(dx,dy)=>{ const d=Math.hypot(dx,dy),max=46; if(d>max){ dx*=max/d; dy*=max/d; } nub.style.transform=`translate(${dx}px,${dy}px)`; move.s=dx/max; move.f=-dy/max; };
+  const start=e=>{ active=true; const r=j.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; e.preventDefault(); };
+  const mv=e=>{ if(!active) return; const t=e.touches?e.touches[0]:e; set(t.clientX-cx,t.clientY-cy); e.preventDefault(); };
+  const end=()=>{ active=false; move.f=move.s=0; nub.style.transform='translate(0,0)'; };
+  j.addEventListener('touchstart',start,{passive:false}); j.addEventListener('touchmove',mv,{passive:false}); j.addEventListener('touchend',end);
+})();
+$$('#dock .pill').forEach(b=>b.addEventListener('click',()=>{ const a=b.dataset.act;
+  if(a==='stations') openOverlay('stations');
+  else if(a==='center'){ camera.position.set(0,PLAYER_H,12); yaw=0; pitch=0; closeOverlay(); note('Returned to the porch'); }
+  else if(a==='discern') openOverlay('discern');
+  else if(a==='audio'){ audioOn=!audioOn; Audio.setOn(audioOn); b.textContent='♪ Audio: '+(audioOn?'On':'Off'); } }));
+$$('[data-close]').forEach(b=>b.addEventListener('click',closeOverlay));
+$$('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) closeOverlay(); }));
+
+/* ---------- boot ---------- */
+let started=false;
+function startExperience(){ if(started) return; started=true; $('#intro').classList.add('gone'); $('#reticle').classList.remove('hidden');
+  if('ontouchstart' in window) document.body.classList.add('touch'); camera.position.set(0,PLAYER_H,18); yaw=0;
+  Audio.start(); buildStationGrid();
+  try{ JSON.parse(localStorage.getItem('temple.visited')||'[]').forEach(k=>visited.add(k)); }catch(e){}
+  note('Walk between the pillars · study a station with E or a tap'); }
+$('#initBtn').addEventListener('click',startExperience);
+function boot(){ try{ initThree(); }catch(e){ $('#err').style.display='flex'; $('#loadwrap').classList.add('gone'); console.error(e); return; }
+  let p=0; const bar=$('#barF'); const iv=setInterval(()=>{ p=Math.min(100,p+rand(8,22)); bar.style.width=p+'%';
+    if(p>=100){ clearInterval(iv); setTimeout(()=>$('#loadwrap').classList.add('gone'),400); } },170); }
+boot();
+</script>
+</body>
+</html>
