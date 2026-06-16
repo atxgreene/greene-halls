@@ -291,7 +291,7 @@ function initThree(){
   scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a0703); scene.fog=new THREE.FogExp2(0x130c05,0.026);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,400); camera.position.set(0,PLAYER_H,30);
   clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
-  buildLights(); buildGround(); buildCourt(); buildPorch(); buildHouse(); buildHolyOfHolies(); buildEsoteric(); buildStations();
+  buildLights(); buildGround(); buildCourt(); buildPorch(); buildHouse(); buildHolyOfHolies(); buildEsoteric(); buildStations(); buildWallTorches();
   setupXR(); addEventListener('resize',onResize); renderer.setAnimationLoop(tick);
 }
 function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
@@ -368,6 +368,33 @@ function buildPorch(){
   for(let i=0;i<4;i++){ const s=new THREE.Mesh(new THREE.BoxGeometry(12-i*0.5,0.3,1),mat(0x3a2a18,0.9,0.05)); s.position.set(0,0.15+i*0.3,4-i*1); scene.add(s); }
 }
 function wall(x,y,z,w,h,d,rotY=0,m){ const me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||mat(0x4a3320,0.85,0.08)); me.position.set(x,y,z); me.rotation.y=rotY; scene.add(me); return me; }
+function buildWallTorches(){
+  // Iron sconces lining the Hekhal (Holy Place) nave — z = -2, -7, -12 on each side wall
+  const iron=mat(0x3a2a14,0.85,0.45);
+  const wrap=mat(0x1e1208,0.9,0.1,0x6a3a10,0.12);
+  [[-5,-1],[-7,-1],[-12,-1],[5,1],[7,1],[12,1]].forEach(([z,side])=>{
+    const wx=side*4.55;
+    // wall-mount plate
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.28,0.18),iron);
+    plate.position.set(wx,3.9,z); scene.add(plate);
+    // horizontal arm projecting inward
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.48,6),iron);
+    arm.rotation.z=Math.PI/2; arm.position.set(wx+side*0.22,3.9,z); scene.add(arm);
+    // torch body (wrapped linen/pitch, slightly tapered)
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.07,0.44,8),wrap);
+    body.position.set(wx+side*0.48,4.1,z); scene.add(body);
+    // flame + warm PointLight
+    flame(wx+side*0.48,4.46,z,3.5,8);
+  });
+  // outer court gate torches — flanking the entrance to the porch (z~4)
+  [[-3.5,0],[3.5,0]].forEach(([x])=>{
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,4.2,8),mat(0x3a2810,0.8,0.2));
+    post.position.set(x,2.1,6); scene.add(post);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.08,0.18,8),mat(0x6a4a1a,0.6,0.55));
+    cap.position.set(x,4.3,6); scene.add(cap);
+    flame(x,4.65,6,5,10);
+  });
+}
 function buildHouse(){
   const cedar=mat(0x6e4a28,0.7,0.12,0x2a1a0c,0.18); // cedar overlaid with gold (warm emissive)
   const goldWall=mat(0x8a6a30,0.5,0.55,0x4a3410,0.3);
@@ -599,5 +626,6 @@ function boot(){ try{ initThree(); }catch(e){ $('#err').style.display='flex'; $(
     if(p>=100){ clearInterval(iv); setTimeout(()=>$('#loadwrap').classList.add('gone'),400); } },170); }
 boot();
 </script>
+<script src="_nav.js" defer></script>
 </body>
 </html>
