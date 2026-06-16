@@ -785,8 +785,10 @@ function updateMovement(dt){
   const str=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+move.s;
   const dir=new THREE.Vector3();
   const sin=Math.sin(yaw),cos=Math.cos(yaw);
-  dir.x=(fwd*sin + str*cos);
-  dir.z=(fwd*-cos + str*sin);
+  // forward/strafe in world space from yaw — matches the other halls
+  // (e.g. the Lyceum): forward = (-sin,-cos), strafe-right = (cos,-sin)
+  dir.x=(-fwd*sin + str*cos);
+  dir.z=(-fwd*cos - str*sin);
   if(dir.lengthSq()>0) dir.normalize();
   velocity.lerp(dir.multiplyScalar(speed),clamp(dt*6,0,1));
   camera.position.addScaledVector(velocity,dt);
