@@ -93,7 +93,7 @@ _Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
 
 | hall | opens from |
 |---|---|
-| `ancientbasilicasanctuary.html` | `file://` or served |
+| `ancient-basilica-sanctuary.html` | `file://` or served |
 | `hall-of-archangels.html` | served (fetches assets) |
 | `hall-of-the-watchers.html` | served (fetches assets) |
 | `hall-of-ufos.html` | `file://` or served |
@@ -115,6 +115,8 @@ _Theology-Wing vault (`works/`, manifest order):_
 | `the-revelation.html` | THE REVELATION | standalone |
 | `human-psi-operations-room.html` | PSI OPERATIONS ROOM | standalone |
 
+_Root standalone halls:_ `ancient-basilica-sanctuary.html`, `empyrean-ascent.html`, `hall-of-the-nephilim.html`, `the-lyceum.html`
+
 _Other:_ gallery paintings: **21** · museum file present: **yes** · vendor/three: **yes** · layout map: **yes**
 
 
@@ -124,9 +126,24 @@ _Other:_ gallery paintings: **21** · museum file present: **yes** · vendor/thr
 |---|---|
 | `hall-of-archangels.html` | local-only ✓ |
 | `hall-of-the-watchers.html` | local-only ✓ |
+| `hall-of-ufos.html` | local-only ✓ |
 | `human-psi-operations-room.html` | local-only ✓ |
+| `the-greene-virtual-library.html` | local-only ✓ |
 
 _halls/vendor/three present: **yes**_
+
+
+**Hall parity** (shared halls, normalized for CDN↔vendor + nav) — ⚠ **drift detected, reconcile below**
+
+| hall | present in | status |
+|---|---|---|
+| `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
+| `hall-of-archangels.html` | greene-halls, offline | ⚠ DIVERGES — {greene-halls} ≠ {offline} |
+| `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls} ≠ {paleo:works} ≠ {offline} |
+| `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
+| `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
+| `the-lyceum.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
 
 <!-- STATE:END -->
 
@@ -146,9 +163,10 @@ Gallery + Lyceum north; Theology Wing + Resonance Archive flanking; hosted
 - Hall filenames: **lowercase, hyphen-separated, no spaces** (e.g.
   `human-psi-operations-room.html`). The `works/` builder *requires* clean names.
 - Keep a hall's filename **identical across all three repos** so cross-links and
-  the propagation matrix stay trivial. (Known exception to be careful of: the
-  basilica is `ancientbasilicasanctuary.html` in greene-halls but
-  `ancient-basilica-sanctuary.html` in Paleo — don't propagate that drift.)
+  the propagation matrix stay trivial. (The basilica was normalized to
+  `ancient-basilica-sanctuary.html` everywhere; greene-halls keeps a tiny
+  redirect stub at the old `ancientbasilicasanctuary.html` so the public URL
+  still resolves. `build:state` skips redirect stubs and flags any new drift.)
 - `works.json` color is a 6-digit hex **without** `#`.
 
 ---
@@ -264,6 +282,9 @@ to refresh §4 and re-sync this skill across the three repos (playbook **F**).
   ship the offline bundle pointing at a CDN.
 - **Don't embed heavy halls** into the museum codex — link them out.
 - **Filename drift** across repos breaks links — keep names identical (§5).
+- **Code drift** between a hall's copies (a fix landing in one repo only — the
+  movement bug) is caught by the **Hall parity** table in §4: run
+  `npm run build:state` and reconcile anything marked ⚠ DIVERGES.
 - **Honesty firewall** (§3.2) is non-negotiable; it's what separates this museum
   from sensationalism.
 - The 10 MB museum file: surgical edits only, unique context strings, follow

@@ -89,7 +89,7 @@ Clean typed transcriptions (Gutenberg) were used for Books 1, 8, 11, 12, 13, 14,
 
 ## Added from the Greene Basilica corpus (2026-06-16)
 
-Pulled from the embedded scripture/apocrypha data island in `ancientbasilicasanctuary.html`
+Pulled from the embedded scripture/apocrypha data island in `ancient-basilica-sanctuary.html`
 (which cites: KJV — aruljohn/Bible-kjv · Apocrypha — aruljohn/Bible-kjv-1611 (1611) ·
 Pseudepigrapha — scrollmapper/bible_databases_deuterocanonical; "all public domain").
 Converted to Markdown (chapter headings + verse numbers). The 66 Bible books were skipped
