@@ -138,9 +138,22 @@ Watkins edition.
 
 ---
 
+## Included with owner's confirmation of rights (2026-06-16)
+
+| Title | Author / Publisher | Year | License basis |
+|-------|--------------------|------|---------------|
+| E S and E S P | Gwynne Dresser Mack · Massachusetts New Church Union | 1974 | **Not PD by age.** Bundled at the owner's explicit confirmation that the text is available to publish. |
+
+**Note.** *E S and E S P* (`es-and-esp.pdf`) is a 1974 Swedenborgian booklet — Emanuel
+Swedenborg's spiritual experience ("E.S.") set against extra-sensory perception ("E.S.P."). As a
+1974 US work it is **not** public-domain by age; it is included solely on the owner's assurance
+that it is available to publish. It is the second bundled item (with the Book of Giants) that does
+not rest on PD-by-age. Remove `es-and-esp.pdf` and its manifest entry if that posture changes.
+
+---
+
 ## Held back — not bundled (2026-06-16)
 
 | File supplied | Identity | Reason held |
 |---------------|----------|-------------|
 | `The_Book_Of_The_Giants.pdf` | W.B. Henning, 1943 (Sacred-Texts reprint of the BSOAS article) | **Duplicate** — the same Henning text already ships as `book-of-giants.md`. Same copyright caveat as that entry. |
-| `ES__ESP.pdf` | *E S and E S P*, Gwynne Dresser Mack, Massachusetts New Church Union (Swedenborgian), **1974** | **Likely still under copyright** (US, published 1974 → protected until ~2069). Excluded from the public-domain library pending the owner's decision. |

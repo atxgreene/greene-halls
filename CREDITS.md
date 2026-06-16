@@ -63,9 +63,10 @@ the Soncino Zohar, Doreal's Emerald Tablets); 3 Enoch and the Zohar remain unbun
 pre-1928 PD English translation). **One exception:** the **Book of Giants** uses W.B. Henning's
 1943 Manichaean-fragments translation, which is likely still under UK copyright (~2037). It is
 included because the same text already ships in the basilica hall, and is flagged as such in
-`SOURCES.md`. Two further owner-supplied files were **held back** as not cleanly public domain —
-a duplicate Henning *Book of Giants* PDF, and *E S and E S P* (G.D. Mack, 1974), which is still
-under copyright.
+`SOURCES.md`. A second non-PD-by-age item, *E S and E S P* (G.D. Mack, Massachusetts New Church
+Union, 1974), is bundled at the owner's explicit confirmation that the text is available to
+publish; it is flagged in `SOURCES.md`. One owner-supplied file was **held back** as a duplicate:
+a Henning *Book of Giants* PDF, since that text already ships as `book-of-giants.md`.
 
 ## Engine
 Three.js r160 (MIT) via jsDelivr CDN.

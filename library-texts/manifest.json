@@ -216,6 +216,15 @@
       "edition": "Charles F. Haanel, 1916",
       "source": "https://archive.org/details/MasterKeySystem",
       "license": "Public domain"
+    },
+    {
+      "id": "esesp",
+      "title": "E S and E S P",
+      "file": "library-texts/es-and-esp.pdf",
+      "format": "PDF",
+      "edition": "Gwynne Dresser Mack, Massachusetts New Church Union, 1974",
+      "source": "Owner-supplied scan (Claremont School of Theology copy)",
+      "license": "Included with owner's confirmation of rights (1974 — not PD by age)"
     }
   ]
 }
