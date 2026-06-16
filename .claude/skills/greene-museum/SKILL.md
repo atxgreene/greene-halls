@@ -293,3 +293,48 @@ to refresh §4 and re-sync this skill across the three repos (playbook **F**).
   from sensationalism.
 - The 10 MB museum file: surgical edits only, unique context strings, follow
   `curator/museum-curator-SKILL.md`.
+
+## 11 · Roadmap & cross-session handoff
+
+Living notes for work that spans sessions. Kept here (outside the STATE block)
+so it survives context resets and `build:state` runs.
+
+### The Temple of Solomon — DONE (2026-06-16)
+- New self-contained hall `the-temple-of-solomon.html`: a walkable replica of the
+  First Temple (Jachin & Boaz, Menorah, veiled Holy of Holies, Molten Sea) plus a
+  clearly-labeled esoteric archive (Seal/Signet, the *Lesser Key*/Ars Goetia, Tree
+  of Life). **Public** — lives in greene-halls.
+- Shipped to all three repos and **in sync (3)**: greene-halls (CDN), Paleo
+  `works/` (embedded in the Theology-Wing codex), offline `halls/` (vendored).
+  Filenames are identical per repo except the path prefix (`the-temple-of-solomon.html`
+  / `works/the-temple-of-solomon.html` / `halls/the-temple-of-solomon.html`).
+- The rare-science **Lyceum** (`the-lyceum.html`) was left intact; the Temple is a
+  *distinct* hall, not a replacement. Easy to promote it to the Lyceum's successor
+  later if desired.
+
+### Basilica → Temple secret door — PLANNED (parallel session, do NOT pre-build here)
+- Agreed design: a **hidden crypt descent** in the Basilica that opens into **The
+  Temple of Solomon** — the Temple as the architectural/theological ancestor of the
+  church (sanctuary, veil → screen, altar, menorah). **Opt-in and concealed**, with
+  the way back up to the light always available, so the Basilica's calm/safe tone is
+  never disturbed.
+- Placement (best first): crypt/undercroft stair off a side chapel or behind the
+  apse → emerge in the Temple court; or a concealed panel behind the altar opened by
+  lighting candles in sequence; or a single clickable foundation-stone/icon.
+- **Open decision for the working session:** which Basilica artifact hosts the door —
+  the museum hall `ancient-basilica-sanctuary.html` (in *these* repos) **or** the
+  separate **Immersive VR basilica experience** (different repo, currently being
+  art-tuned, in production — do not edit its art). As of this note the connection
+  target is unconfirmed; the user has a parallel session working the Basilica repo.
+- **Constraints when wiring:**
+  - The Basilica is in production — treat it as read-only until the user greenlights.
+  - `ancient-basilica-sanctuary.html` is **not** in the offline bundle (parity:
+    greene-halls + paleo:root only). The Temple **is** offline. So any Temple→Basilica
+    *return* link must degrade gracefully offline (hide/disable when the Basilica file
+    isn't reachable) rather than dead-link.
+  - Honesty firewall (§3.2): the secret passage leads to esoteric content; keep it
+    opt-in and lean on the Temple's own Discernment panel — no occult material bleeds
+    into the sanctuary itself.
+- The Basilica's ⚠ DIVERGES row in §4 (greene-halls ≠ paleo:root) is **intentional**
+  (in production / art fine-tuning) — do not auto-reconcile it.
+
