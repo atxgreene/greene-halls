@@ -48,7 +48,7 @@ Longfellow, the 1611/1769 KJV, etc.); the Testament of Solomon reuses Joseph H. 
 **CC-BY** hosting of Conybeare's 1898 PD text.
 
 A second set was pulled from the embedded corpus of the **Ancient Basilica Sanctuary** hall
-(`ancientbasilicasanctuary.html`): the 1611 King James **Apocrypha** (combined volume) and the
+(`ancient-basilica-sanctuary.html`): the 1611 King James **Apocrypha** (combined volume) and the
 pseudepigrapha **Jasher, Apocalypse of Abraham, Odes of Solomon, Psalms of Solomon, Epistle of
 Barnabas**, plus the **Book of Giants** — sourced from aruljohn/Bible-kjv-1611 and
 scrollmapper/bible_databases_deuterocanonical.

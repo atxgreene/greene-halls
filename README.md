@@ -14,7 +14,7 @@ must be *served*. Pages does exactly that.
 - Watchers: `https://atxgreene.github.io/greene-halls/hall-of-the-watchers.html`
 - Archangels: `https://atxgreene.github.io/greene-halls/hall-of-archangels.html`
 - Hall of UFOs: `https://atxgreene.github.io/greene-halls/hall-of-ufos.html`
-- Ancient Basilica Sanctuary: `https://atxgreene.github.io/greene-halls/ancientbasilicasanctuary.html`
+- Ancient Basilica Sanctuary: `https://atxgreene.github.io/greene-halls/ancient-basilica-sanctuary.html`
 - **The Lyceum:** `https://atxgreene.github.io/greene-halls/the-lyceum.html`
 
 ### The Hall of UFOs
