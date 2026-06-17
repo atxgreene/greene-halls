@@ -2358,6 +2358,10 @@ function tick(){
     altarGroup.position.x=altarGroup.position.x+(altarGroup.userData.slideTarget-altarGroup.position.x)*dt*2;
   }
   raycast();
+  if(!reticleHot&&!inDescending&&!descentComplete&&currentLevel==='basilica'&&started){
+    const dp=Math.hypot(camera.position.x,camera.position.z+30);
+    if(dp<12) note('Press E to descend into the Inner Sanctum');
+  }
   renderer.render(scene,camera);
 }
 
@@ -2464,8 +2468,13 @@ function raycast(){
 addEventListener('keydown',e=>{
   keys[e.key.toLowerCase()]=true;
   if(e.key==='Escape') closeOverlay();
-  if((e.key==='e'||e.key==='E')&&reticleHot&&!overlayOpen&&started){
-    reticleHot.userData.action&&reticleHot.userData.action();
+  if((e.key==='e'||e.key==='E')&&!overlayOpen&&started){
+    if(reticleHot){
+      reticleHot.userData.action&&reticleHot.userData.action();
+    } else if(!inDescending&&!descentComplete&&currentLevel==='basilica'){
+      const d=Math.hypot(camera.position.x,camera.position.z+30);
+      if(d<8) triggerDescent();
+    }
   }
 });
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
