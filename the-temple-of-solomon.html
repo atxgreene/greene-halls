@@ -489,6 +489,12 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function tryGLB(url,onLoad,onFail){if(!gltfLoader){onFail();return;}gltfLoader.load(url,g=>onLoad(g.scene),null,()=>onFail());}
 function makeCanvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+function loadPainting(url,mesh){
+  new THREE.TextureLoader().load(url,tex=>{
+    tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
+    mesh.material=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,fog:false});
+  },undefined,()=>{});
+}
 let noteTimer;
 function note(msg,dur=2600){
   const n=$('#note'); n.textContent=msg; n.classList.add('show');
@@ -824,124 +830,129 @@ function buildElaborateMenorah(){
   addHotspot(5,2.5,-12,()=>openExhibit('menorah'),'The Seven-Branch Menorah',0xd4a520,0.55);
 }
 
+/* ── helper: make a framed painting with gold BoxGeometry border + spotlight ── */
+function makePainting(title,w,h,posX,posY,posZ,rotY,fallbackDraw){
+  // canvas fallback (dark bg + gold title text)
+  const fbTex=makeCanvasTex(512,Math.round(512*(h/w))||512,(ctx,cw,ch)=>{
+    ctx.fillStyle='#0d0a06'; ctx.fillRect(0,0,cw,ch);
+    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=3; ctx.strokeRect(8,8,cw-16,ch-16);
+    if(fallbackDraw){
+      fallbackDraw(ctx,cw,ch);
+    } else {
+      ctx.font='bold 22px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      const words=title.split(' '), lineH=30;
+      const startY=ch/2-(words.length/2)*lineH+lineH/2;
+      words.forEach((word,i)=>ctx.fillText(word,cw/2,startY+i*lineH));
+      ctx.font='11px monospace'; ctx.fillStyle='#6a5a3a';
+      ctx.fillText('Loading painting…',cw/2,ch-20);
+    }
+  });
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:fbTex,side:THREE.DoubleSide,fog:false}));
+  mesh.position.set(posX,posY,posZ); mesh.rotation.y=rotY; scene.add(mesh);
+  // gold frame (thin box slightly larger)
+  const fw=w+0.4, fh=h+0.4;
+  const frame=new THREE.Mesh(new THREE.BoxGeometry(0.08,fh,fw),mat(0x2a1808,0.6,0.55,0xd6b15c,0.22));
+  frame.position.set(posX+(rotY===Math.PI/2?-0.04:rotY===-Math.PI/2?0.04:0),posY,posZ+(rotY===0?-0.04:0));
+  frame.rotation.y=rotY; scene.add(frame);
+  // warm point light above
+  const pl=new THREE.PointLight(0xffd280,8,12,2);
+  const upX=posX+(rotY===Math.PI/2?0.8:rotY===-Math.PI/2?-0.8:0);
+  pl.position.set(upX,posY+h/2+1.2,posZ); scene.add(pl);
+  return mesh;
+}
+
 /* ── Canvas murals painted into the Basilica walls ── */
 function buildWallMurals(){
-  /* Mural 1 — Seal of Solomon (west wall) */
-  const sealTex=makeCanvasTex(512,512,(ctx)=>{
-    ctx.fillStyle='#0d1a2e'; ctx.fillRect(0,0,512,512);
-    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=5;
-    ctx.beginPath(); ctx.arc(256,256,228,0,Math.PI*2); ctx.stroke();
-    ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(256,256,216,0,Math.PI*2); ctx.stroke();
-    const names=['יְהֹוָה','אֲדֹנָי','אֵל','אֱלֹהִים','שַׁדַּי','צְבָאוֹת'];
-    ctx.font='bold 15px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
-    names.forEach((n,i)=>{
-      const a=i/names.length*Math.PI*2-Math.PI/2;
-      ctx.save(); ctx.translate(256+Math.cos(a)*188,256+Math.sin(a)*188);
-      ctx.rotate(a+Math.PI/2); ctx.fillText(n,0,0); ctx.restore();
-    });
-    const r=156;
-    [[0,-r,r*Math.sin(Math.PI/3),r*0.5,-r*Math.sin(Math.PI/3),r*0.5],
-     [0,r,-r*Math.sin(Math.PI/3),-r*0.5,r*Math.sin(Math.PI/3),-r*0.5]].forEach(([x1,y1,x2,y2,x3,y3],ti)=>{
-      ctx.beginPath();
-      ctx.moveTo(256+x1,256+y1); ctx.lineTo(256+x2,256+y2); ctx.lineTo(256+x3,256+y3); ctx.closePath();
-      ctx.strokeStyle=ti===0?'#39c9b0':'#9a7cff'; ctx.lineWidth=3; ctx.stroke();
-      ctx.fillStyle=ti===0?'rgba(57,201,176,0.08)':'rgba(154,124,255,0.08)'; ctx.fill();
-    });
-    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(256,256,46,0,Math.PI*2); ctx.stroke();
-    ctx.font='bold 22px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
-    ctx.fillText('שְׁלֹמֹה',256,263);
-    ctx.font='11px monospace'; ctx.fillStyle='#9a8060';
-    ctx.fillText('SEAL OF SOLOMON — חוֹתַם שְׁלֹמֹה',256,496);
-  });
-  const m1=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshBasicMaterial({map:sealTex,side:THREE.DoubleSide}));
-  m1.position.set(-8.5,7,-13); m1.rotation.y=Math.PI/2; scene.add(m1);
-  const mf1=new THREE.Mesh(new THREE.BoxGeometry(0.08,5.8,5.8),mat(0x2a1808,0.9,0.1,0xd6b15c,0.18));
-  mf1.position.set(-8.48,7,-13); scene.add(mf1);
+  /* Painting 1 — Judgment of Solomon (west wall) */
+  const m1=makePainting(
+    'Judgment of Solomon',5,4,-8.5,7,-13,Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 18px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('Judgment of Solomon',cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('Nicolas Poussin, c. 1649',cw/2,ch/2+10);
+      ctx.fillText('Public domain',cw/2,ch/2+30);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Nicolas_Poussin_-_The_Judgment_of_Solomon_-_WGA18286.jpg/1024px-Nicolas_Poussin_-_The_Judgment_of_Solomon_-_WGA18286.jpg',m1);
   addHotspot(-8.2,7,-13,()=>openExhibit('seal_hexagram'),'The Seal of Solomon',0x39c9b0,0.5);
 
-  /* Mural 2 — Solomon enthroned, commanding spirits (east wall) */
-  const throneSceneTex=makeCanvasTex(512,512,(ctx)=>{
-    ctx.fillStyle='#100806'; ctx.fillRect(0,0,512,512);
-    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=6; ctx.strokeRect(10,10,492,492);
-    ctx.lineWidth=1.5; ctx.strokeRect(18,18,476,476);
-    ctx.beginPath(); ctx.arc(256,230,200,Math.PI,0);
-    ctx.fillStyle='rgba(196,122,30,0.1)'; ctx.fill();
-    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=3; ctx.stroke();
-    ctx.fillStyle='#8a6418'; ctx.fillRect(196,290,120,180);
-    ctx.fillStyle='#d4a520'; ctx.fillRect(186,340,140,30);
-    ctx.fillStyle='#c47a1e';
-    for(let s=0;s<4;s++){ ctx.fillRect(170+s*10,490-s*18,172-s*20,18); }
-    ctx.fillStyle='#d4a520'; ctx.beginPath(); ctx.ellipse(256,290,46,75,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#e8c870'; ctx.beginPath(); ctx.ellipse(256,225,28,34,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#f4c020';
-    ctx.beginPath();
-    ctx.moveTo(222,196); ctx.lineTo(229,170); ctx.lineTo(238,196);
-    ctx.lineTo(247,162); ctx.lineTo(256,196);
-    ctx.lineTo(265,162); ctx.lineTo(274,196);
-    ctx.lineTo(283,170); ctx.lineTo(290,196); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#d4a520'; ctx.fillRect(220,196,72,18);
-    ctx.strokeStyle='#d4a520'; ctx.lineWidth=5;
-    ctx.beginPath(); ctx.moveTo(310,240); ctx.lineTo(345,380); ctx.stroke();
-    ctx.fillStyle='#f4c020'; ctx.beginPath(); ctx.arc(310,236,9,0,Math.PI*2); ctx.fill();
-    [155,340].forEach((sx,si)=>{
-      ctx.fillStyle=si===0?'rgba(40,20,80,0.85)':'rgba(20,40,20,0.85)';
-      ctx.beginPath(); ctx.ellipse(sx,390,22,52,si===0?0.3:-0.3,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(sx,340,16,20,0,0,Math.PI*2); ctx.fill();
-    });
-    ctx.font='bold italic 16px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
-    ctx.fillText('Solomon Commands the Spirits',256,52);
-    ctx.font='12px serif'; ctx.fillStyle='#9a7040';
-    ctx.fillText('Testament of Solomon · c. 1st–5th c. CE',256,70);
-    ctx.fillText('— Historical legend, not scripture',256,496);
-  });
-  const m2=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshBasicMaterial({map:throneSceneTex,side:THREE.DoubleSide}));
-  m2.position.set(8.5,7,-20); m2.rotation.y=-Math.PI/2; scene.add(m2);
-  const mf2=new THREE.Mesh(new THREE.BoxGeometry(0.08,5.8,5.8),mat(0x2a1808,0.9,0.1,0xc47a1e,0.18));
-  mf2.position.set(8.48,7,-20); scene.add(mf2);
+  /* Painting 2 — King Solomon by Tissot (east wall) */
+  const m2=makePainting(
+    'King Solomon',5,4,8.5,7,-20,-Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 18px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('King Solomon',cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('James Tissot, c. 1896–1902',cw/2,ch/2+10);
+      ctx.fillText('Public domain',cw/2,ch/2+30);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Tissot_King_Solomon.jpg/800px-Tissot_King_Solomon.jpg',m2);
   addHotspot(8.2,7,-20,()=>openExhibit('testament_solomon'),'The Testament of Solomon',0xc47a1e,0.5);
 
-  /* Mural 3 — Temple floor plan (back wall) */
-  const planTex=makeCanvasTex(1024,512,(ctx)=>{
-    ctx.fillStyle='#08060a'; ctx.fillRect(0,0,1024,512);
-    ctx.strokeStyle='#9c6b3a'; ctx.lineWidth=3; ctx.strokeRect(8,8,1008,496);
-    const dX=580,dY=170,dW=150,dH=150;
-    ctx.fillStyle='rgba(214,177,92,0.12)'; ctx.fillRect(dX,dY,dW,dH);
-    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=2; ctx.strokeRect(dX,dY,dW,dH);
-    const hX=330,hY=150,hW=250,hH=190;
-    ctx.fillStyle='rgba(196,122,30,0.08)'; ctx.fillRect(hX,hY,hW,hH);
-    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=2; ctx.strokeRect(hX,hY,hW,hH);
-    ctx.fillStyle='rgba(120,80,30,0.08)'; ctx.fillRect(210,185,120,120);
-    ctx.strokeStyle='#8a6030'; ctx.lineWidth=1.5; ctx.strokeRect(210,185,120,120);
-    ctx.fillStyle='#d6b15c';
-    [228,308].forEach(py=>{ ctx.beginPath(); ctx.arc(220,py,7,0,Math.PI*2); ctx.fill(); });
-    ctx.strokeStyle='#4080c0'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(185,205,18,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='rgba(64,128,192,0.2)'; ctx.fill();
-    ctx.fillStyle='rgba(200,60,20,0.35)'; ctx.fillRect(255,210,60,60);
-    ctx.strokeStyle='#c83c14'; ctx.lineWidth=1.5; ctx.strokeRect(255,210,60,60);
-    ctx.fillStyle='rgba(244,192,32,0.35)'; ctx.fillRect(dX+35,dY+50,80,50);
-    ctx.strokeStyle='#f4c020'; ctx.lineWidth=1.5; ctx.strokeRect(dX+35,dY+50,80,50);
-    ctx.font='11px monospace'; ctx.textAlign='center';
-    ctx.fillStyle='#d6b15c'; ctx.fillText('HOLY OF HOLIES (DEBIR)',dX+dW/2,dY+dH/2+5);
-    ctx.fillStyle='#c47a1e'; ctx.fillText('HOLY PLACE (HEIKHAL)',hX+hW/2,hY+hH+22);
-    ctx.fillStyle='#8a6030'; ctx.fillText('ULAM',270,250);
-    ctx.fillStyle='#4080c0'; ctx.fillText('BRAZEN SEA',165,238);
-    ctx.fillStyle='#c83c14'; ctx.fillText('ALTAR',285,286);
-    ctx.fillStyle='#f4c020'; ctx.fillText('ARK',dX+dW/2,dY+dH/2+28);
-    ctx.font='10px monospace'; ctx.fillStyle='#6a5040';
-    ctx.fillText('EAST (entrance)',256,480); ctx.fillText('WEST (Debir)',760,480);
-    ctx.font='bold 20px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
-    ctx.fillText("SOLOMON'S TEMPLE — SCHEMATIC FLOOR PLAN  (1 Kings 6–7)",512,50);
-    ctx.font='12px serif'; ctx.fillStyle='#9a8060';
-    ctx.fillText("Jerusalem · c. 957 BCE · Destroyed by Nebuchadnezzar II · 586 BCE",512,76);
-    ctx.fillText("(No physical plan survives — schematic reconstruction after the biblical text)",512,96);
-  });
-  const m3=new THREE.Mesh(new THREE.PlaneGeometry(16,8),new THREE.MeshBasicMaterial({map:planTex,side:THREE.DoubleSide}));
-  m3.position.set(0,8,-41); scene.add(m3);
-  const mf3=new THREE.Mesh(new THREE.BoxGeometry(16.5,8.5,0.12),mat(0x120a04,0.95,0.02,0x3a2010,0.12));
-  mf3.position.set(0,8,-41.1); scene.add(mf3);
+  /* Painting 3 — Solomon and the Queen of Sheba, Poynter (back wall) */
+  const m3=makePainting(
+    'Solomon and the Queen of Sheba',14,7,0,8,-38,0,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 18px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('The Visit of the Queen of Sheba',cw/2,ch/2-24);
+      ctx.fillText('to King Solomon',cw/2,ch/2-4);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('Edward Poynter, 1890',cw/2,ch/2+16);
+      ctx.fillText('Public domain',cw/2,ch/2+34);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Edward_Poynter_-_The_Visit_of_the_Queen_of_Sheba_to_King_Solomon_-_1890.jpg/1024px-Edward_Poynter_-_The_Visit_of_the_Queen_of_Sheba_to_King_Solomon_-_1890.jpg',m3);
   addHotspot(0,5,-39,()=>openExhibit('temple_historical'),'The First Temple — Historical Context',0x9c6b3a,0.7);
+
+  /* Nave painting 4 — Dedication of the Temple, Doré (west nave 1) */
+  const m4=makePainting(
+    'Dedication of the Temple',4,5,-8.5,6,-5,Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 17px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('Dedication of the Temple',cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('Gustave Doré, c. 1865',cw/2,ch/2+10);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/P111_The_Dedication_of_the_Temple.jpg/800px-P111_The_Dedication_of_the_Temple.jpg',m4);
+
+  /* Nave painting 5 — Temple of Solomon illustration (east nave 1) */
+  const m5=makePainting(
+    "Solomon's Temple",4,5,8.5,6,-5,-Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 17px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText("Solomon's Temple",cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('Historical illustration',cw/2,ch/2+10);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Salomons_tempel.jpg/800px-Salomons_tempel.jpg',m5);
+
+  /* Nave painting 6 — Tissot feast scene (west nave 2) */
+  const m6=makePainting(
+    'Royal Feast at the Temple',4,3,-8.5,6,-30,Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 17px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('Royal Feast',cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('James Tissot, c. 1896–1902',cw/2,ch/2+10);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Tissot_King_Ahasuerus_and_Haman_at_the_Feast_of_Esther.jpg/800px-Tissot_King_Ahasuerus_and_Haman_at_the_Feast_of_Esther.jpg',m6);
+
+  /* Nave painting 7 — Ark of the Covenant (east nave 2) */
+  const m7=makePainting(
+    'Ark of the Covenant',4,3,8.5,6,-30,-Math.PI/2,
+    (ctx,cw,ch)=>{
+      ctx.font='bold 17px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+      ctx.fillText('Ark of the Covenant',cw/2,ch/2-16);
+      ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+      ctx.fillText('Biblical illustration',cw/2,ch/2+10);
+    }
+  );
+  loadPainting('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Tissot_The_Ark_Passes_Over_the_Jordan.jpg/800px-Tissot_The_Ark_Passes_Over_the_Jordan.jpg',m7);
 }
 
 function buildWallTorches(){
@@ -977,15 +988,15 @@ function buildBasilica(){
   const fSize=60;
   const checker=new THREE.Mesh(new THREE.PlaneGeometry(fSize,fSize,1,1),
     (()=>{
-      const c=document.createElement('canvas'); c.width=256; c.height=256;
+      const c=document.createElement('canvas'); c.width=512; c.height=512;
       const x=c.getContext('2d');
-      for(let i=0;i<8;i++) for(let j=0;j<8;j++){
+      for(let i=0;i<16;i++) for(let j=0;j<16;j++){
         x.fillStyle=(i+j)%2===0?'#2a1e10':'#1a1208';
         x.fillRect(i*32,j*32,32,32);
       }
       const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace;
       t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(8,8);
-      return new THREE.MeshStandardMaterial({map:t,roughness:0.9,metalness:0.05});
+      return new THREE.MeshStandardMaterial({map:t,roughness:0.85,metalness:0.05});
     })()
   );
   checker.rotation.x=-Math.PI/2; checker.position.y=0.01; scene.add(checker);
@@ -2133,6 +2144,17 @@ function buildZone8(){
       wing.position.set(ws*0.82,1.0,0); wing.rotation.set(-0.18,0,ws*0.48); chG.add(wing);
     });
     chG.position.set(xOff,2.32,0); chG.rotation.y=ci===0?Math.PI/2:-Math.PI/2; arkG.add(chG);
+    // attempt to load winged-angel GLB to replace procedural cherub
+    (chGRef=>{
+      tryGLB('models/winged-angel.glb',glb=>{
+        glb.scale.setScalar(1.2);
+        // world position: arkG is at (cx, Y, cz-11); chG local pos is (xOff, 2.32, 0)
+        glb.position.set(cx+xOff, Y+2.32, cz-11);
+        glb.rotation.y=chGRef.rotation.y;
+        chGRef.visible=false;
+        scene.add(glb);
+      },()=>{});
+    })(chG);
   });
   const arkL=new THREE.PointLight(0xfff0a0,10,20,2); arkL.position.set(0,5,0); arkG.add(arkL);
   scene.add(arkG);
@@ -2189,10 +2211,16 @@ function buildZone8(){
     const kl=new THREE.PointLight(0xffd060,3,8,2); kl.position.y=4.2; sg.add(kl);
     sg.position.set(cx,Y+3.42,cz-4); scene.add(sg);
   }
-  tryGLB('../models/solomon/king-solomon.glb',
+  tryGLB('models/solomon/king-solomon.glb',
     glbScene=>{ glbScene.scale.setScalar(2.4); glbScene.position.set(cx,Y+3.42,cz-4); scene.add(glbScene); note('King Solomon — 3D model loaded',2500); },
     buildSolomonFigure
   );
+  // attempt High Priest robed figure GLB as alternative / companion
+  tryGLB('models/veiled-fallen-angel.glb',glb=>{
+    glb.scale.setScalar(1.8);
+    glb.position.set(cx-2.5,Y+3.42,cz-4);
+    scene.add(glb);
+  },()=>{});
 
   // Jachin & Boaz sanctum entrance pillars
   [cx-3,cx+3].forEach((x,pi)=>{
@@ -2313,7 +2341,7 @@ function initThree(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=2.2;
+  renderer.toneMappingExposure=1.08;
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
