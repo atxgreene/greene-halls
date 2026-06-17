@@ -2144,6 +2144,17 @@ function buildZone8(){
       wing.position.set(ws*0.82,1.0,0); wing.rotation.set(-0.18,0,ws*0.48); chG.add(wing);
     });
     chG.position.set(xOff,2.32,0); chG.rotation.y=ci===0?Math.PI/2:-Math.PI/2; arkG.add(chG);
+    // attempt to load winged-angel GLB to replace procedural cherub
+    (chGRef=>{
+      tryGLB('models/winged-angel.glb',glb=>{
+        glb.scale.setScalar(1.2);
+        // world position: arkG is at (cx, Y, cz-11); chG local pos is (xOff, 2.32, 0)
+        glb.position.set(cx+xOff, Y+2.32, cz-11);
+        glb.rotation.y=chGRef.rotation.y;
+        chGRef.visible=false;
+        scene.add(glb);
+      },()=>{});
+    })(chG);
   });
   const arkL=new THREE.PointLight(0xfff0a0,10,20,2); arkL.position.set(0,5,0); arkG.add(arkL);
   scene.add(arkG);
@@ -2200,10 +2211,16 @@ function buildZone8(){
     const kl=new THREE.PointLight(0xffd060,3,8,2); kl.position.y=4.2; sg.add(kl);
     sg.position.set(cx,Y+3.42,cz-4); scene.add(sg);
   }
-  tryGLB('../models/solomon/king-solomon.glb',
+  tryGLB('models/solomon/king-solomon.glb',
     glbScene=>{ glbScene.scale.setScalar(2.4); glbScene.position.set(cx,Y+3.42,cz-4); scene.add(glbScene); note('King Solomon — 3D model loaded',2500); },
     buildSolomonFigure
   );
+  // attempt High Priest robed figure GLB as alternative / companion
+  tryGLB('models/veiled-fallen-angel.glb',glb=>{
+    glb.scale.setScalar(1.8);
+    glb.position.set(cx-2.5,Y+3.42,cz-4);
+    scene.add(glb);
+  },()=>{});
 
   // Jachin & Boaz sanctum entrance pillars
   [cx-3,cx+3].forEach((x,pi)=>{
@@ -2324,7 +2341,7 @@ function initThree(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=2.2;
+  renderer.toneMappingExposure=1.08;
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
