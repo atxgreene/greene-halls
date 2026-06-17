@@ -472,6 +472,11 @@ try{
   document.getElementById('loadwrap').classList.add('gone');
   console.error('Engine load failed',e); throw e;
 }
+let gltfLoader=null;
+try{
+  const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
+  gltfLoader=new GLTFLoader();
+}catch(ge){console.warn('GLTFLoader unavailable',ge);}
 
 /* ── helpers ── */
 const $=(s,r=document)=>r.querySelector(s);
@@ -479,6 +484,8 @@ const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function tryGLB(url,onLoad,onFail){if(!gltfLoader){onFail();return;}gltfLoader.load(url,g=>onLoad(g.scene),null,()=>onFail());}
+function makeCanvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 let noteTimer;
 function note(msg,dur=2600){
   const n=$('#note'); n.textContent=msg; n.classList.add('show');
@@ -697,6 +704,235 @@ function addHotspot(x,y,z,action,labelText,color=0xd6b15c,radius=0.5){
   ring.userData={action,label:labelText,spinme:true};
   core.userData=ring.userData;
   interactives.push(ring,core);
+}
+
+/* ── Jachin & Boaz — The Twin Pillars (1 Kings 7:15-22) ── */
+function buildJachinBoaz(){
+  const bronzeM=mat(0x7a4a18,0.4,0.78,0x4a2808,0.2);
+  const capM=mat(0x9a6a28,0.35,0.82,0x6a4010,0.28);
+  [['יָכִין','Jachin',-4.8],['בֹּעַז','Boaz',4.8]].forEach(([heb,name,x])=>{
+    const g=new THREE.Group();
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.68,12,18),bronzeM);
+    shaft.position.y=6; g.add(shaft);
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(1.0,16,10,0,Math.PI*2,0,Math.PI/2),capM);
+    cap.position.y=12.5; cap.rotation.x=Math.PI; g.add(cap);
+    const capNeck=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.68,0.55,14),capM);
+    capNeck.position.y=12.15; g.add(capNeck);
+    for(let i=0;i<10;i++){
+      const a=i/10*Math.PI*2;
+      const pom=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,6),mat(0xc07030,0.45,0.6,0x8a4010,0.35));
+      pom.position.set(Math.cos(a)*0.92,11.55,Math.sin(a)*0.92); g.add(pom);
+    }
+    const base=new THREE.Mesh(new THREE.BoxGeometry(1.55,0.45,1.55),mat(0x2a1a0c,0.9,0.1));
+    base.position.y=0.22; g.add(base);
+    g.position.set(x,0,18.5); scene.add(g);
+    flame(x,13.4,18.5,5,13);
+    const sp=makeTextSprite(`${heb} · ${name}`,0xd6b15c);
+    sp.scale.set(4,0.8,1); sp.position.set(x,14.8,18.5); scene.add(sp);
+  });
+  const lintel=new THREE.Mesh(new THREE.BoxGeometry(10.1,0.65,0.48),mat(0x5a3810,0.78,0.18,0x2a1800,0.12));
+  lintel.position.set(0,12.7,18.5); scene.add(lintel);
+  addHotspot(0,3,19,()=>openExhibit('jachin_boaz'),'Jachin & Boaz — The Twin Pillars',0xd6b15c,1.0);
+}
+
+/* ── Brazen Sea (1 Kings 7:23-26) ── */
+function buildBrazenSea(){
+  const bz=mat(0x7a4a18,0.38,0.82,0x4a2808,0.18);
+  const g=new THREE.Group(); g.position.set(-12,0,9);
+  const bowl=new THREE.Mesh(new THREE.SphereGeometry(3.2,24,10,0,Math.PI*2,0,Math.PI/2),bz);
+  bowl.position.y=2.2; g.add(bowl);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.22,10,36),bz);
+  rim.rotation.x=-Math.PI/2; rim.position.y=2.36; g.add(rim);
+  const water=new THREE.Mesh(new THREE.CircleGeometry(3.15,24),
+    new THREE.MeshStandardMaterial({color:0x1a3a50,metalness:0.85,roughness:0.04,emissive:0x0a1c2a,emissiveIntensity:0.3}));
+  water.rotation.x=-Math.PI/2; water.position.y=2.28; g.add(water);
+  for(let grp=0;grp<4;grp++){
+    const faceAngle=grp*Math.PI/2;
+    for(let j=-1;j<=1;j++){
+      const ox=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.36,0.85,6,10),mat(0x5a4028,0.82,0.08));
+      body.rotation.z=Math.PI/2; ox.add(body);
+      const head=new THREE.Mesh(new THREE.SphereGeometry(0.3,10,8),mat(0x5a4028,0.82,0.08));
+      head.position.set(0.72,0.18,0); ox.add(head);
+      [-1,1].forEach(s=>{
+        const horn=new THREE.Mesh(new THREE.ConeGeometry(0.055,0.38,6),mat(0xd0b080,0.5,0.2));
+        horn.position.set(0.65,0.48,s*0.22); horn.rotation.z=s*0.4-0.28; ox.add(horn);
+      });
+      [[-0.32,-0.28],[-0.32,0.28],[0.32,-0.28],[0.32,0.28]].forEach(([lx,lz])=>{
+        const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.72,6),mat(0x5a4028,0.82,0.08));
+        leg.position.set(lx,-0.72,lz); ox.add(leg);
+      });
+      const angle=faceAngle+j*0.38;
+      ox.position.set(Math.cos(angle)*2.0,0.42,Math.sin(angle)*2.0);
+      ox.rotation.y=-angle+Math.PI; g.add(ox);
+    }
+  }
+  const wl=new THREE.PointLight(0x4080b0,3,12,2); wl.position.y=3; g.add(wl);
+  scene.add(g);
+  addHotspot(-12,3,9,()=>openExhibit('brazen_sea'),'The Brazen Sea — 12 Oxen',0x4080b0,0.6);
+}
+
+/* ── Seven-Branch Menorah (Exodus 25:31-40) ── */
+function buildElaborateMenorah(){
+  const gold=new THREE.MeshStandardMaterial({color:0xd4a520,metalness:0.95,roughness:0.14,emissive:0x8a6010,emissiveIntensity:0.32});
+  const g=new THREE.Group(); g.position.set(10,0,-8);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.88,1.15,0.38,12),gold);
+  base.position.y=0.19; g.add(base);
+  for(let i=0;i<3;i++){
+    const a=i/3*Math.PI*2;
+    const foot=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,0.48,8),gold);
+    foot.position.set(Math.cos(a)*0.7,-0.06,Math.sin(a)*0.7); g.add(foot);
+  }
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,3.6,10),gold);
+  shaft.position.y=2.18; g.add(shaft);
+  [0.5,1.35,2.2,3.1].forEach(ky=>{
+    const k=new THREE.Mesh(new THREE.SphereGeometry(0.2,12,8),gold); k.position.y=ky; g.add(k);
+  });
+  // 7 lamp branches: [x, cupHeight]
+  const allLamps=[[-2.1,2.6],[-1.35,3.2],[-0.65,3.7],[0,4.0],[0.65,3.7],[1.35,3.2],[2.1,2.6]];
+  allLamps.forEach(([bx,bh],li)=>{
+    if(bx!==0){
+      const startY=0.42+Math.abs(bx)*0.28;
+      const dy=bh-startY;
+      const len=Math.hypot(bx,dy);
+      const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,len,8),gold);
+      arm.position.set(bx/2,(startY+bh)/2,0);
+      arm.rotation.z=-Math.atan2(bx,dy);
+      g.add(arm);
+      for(let k=0;k<2;k++){
+        const bk=new THREE.Mesh(new THREE.SphereGeometry(0.14,10,8),gold);
+        bk.position.set(bx,1.0+k*0.85,0); g.add(bk);
+      }
+    }
+    const cup=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.1,0.28,10),gold);
+    cup.position.set(bx,bh+0.14,0); g.add(cup);
+    const brim=new THREE.Mesh(new THREE.TorusGeometry(0.18,0.05,8,14),gold);
+    brim.rotation.x=Math.PI/2; brim.position.set(bx,bh+0.3,0); g.add(brim);
+    flame(bx,bh+0.65,0,li===3?3.5:2.5,li===3?8:5);
+  });
+  const ml=new THREE.PointLight(0xffc060,7,20,2); ml.position.y=4.6; g.add(ml);
+  scene.add(g);
+  addHotspot(10,2.5,-8,()=>openExhibit('menorah'),'The Seven-Branch Menorah',0xd4a520,0.55);
+}
+
+/* ── Canvas murals painted into the Basilica walls ── */
+function buildWallMurals(){
+  /* Mural 1 — Seal of Solomon (west wall) */
+  const sealTex=makeCanvasTex(512,512,(ctx)=>{
+    ctx.fillStyle='#0d1a2e'; ctx.fillRect(0,0,512,512);
+    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(256,256,228,0,Math.PI*2); ctx.stroke();
+    ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(256,256,216,0,Math.PI*2); ctx.stroke();
+    const names=['יְהֹוָה','אֲדֹנָי','אֵל','אֱלֹהִים','שַׁדַּי','צְבָאוֹת'];
+    ctx.font='bold 15px serif'; ctx.fillStyle='#d6b15c'; ctx.textAlign='center';
+    names.forEach((n,i)=>{
+      const a=i/names.length*Math.PI*2-Math.PI/2;
+      ctx.save(); ctx.translate(256+Math.cos(a)*188,256+Math.sin(a)*188);
+      ctx.rotate(a+Math.PI/2); ctx.fillText(n,0,0); ctx.restore();
+    });
+    const r=156;
+    [[0,-r,r*Math.sin(Math.PI/3),r*0.5,-r*Math.sin(Math.PI/3),r*0.5],
+     [0,r,-r*Math.sin(Math.PI/3),-r*0.5,r*Math.sin(Math.PI/3),-r*0.5]].forEach(([x1,y1,x2,y2,x3,y3],ti)=>{
+      ctx.beginPath();
+      ctx.moveTo(256+x1,256+y1); ctx.lineTo(256+x2,256+y2); ctx.lineTo(256+x3,256+y3); ctx.closePath();
+      ctx.strokeStyle=ti===0?'#39c9b0':'#9a7cff'; ctx.lineWidth=3; ctx.stroke();
+      ctx.fillStyle=ti===0?'rgba(57,201,176,0.08)':'rgba(154,124,255,0.08)'; ctx.fill();
+    });
+    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(256,256,46,0,Math.PI*2); ctx.stroke();
+    ctx.font='bold 22px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
+    ctx.fillText('שְׁלֹמֹה',256,263);
+    ctx.font='11px monospace'; ctx.fillStyle='#9a8060';
+    ctx.fillText('SEAL OF SOLOMON — חוֹתַם שְׁלֹמֹה',256,496);
+  });
+  const m1=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshBasicMaterial({map:sealTex,side:THREE.DoubleSide}));
+  m1.position.set(-8.5,7,-13); m1.rotation.y=Math.PI/2; scene.add(m1);
+  const mf1=new THREE.Mesh(new THREE.BoxGeometry(0.08,5.8,5.8),mat(0x2a1808,0.9,0.1,0xd6b15c,0.18));
+  mf1.position.set(-8.48,7,-13); scene.add(mf1);
+  addHotspot(-8.2,7,-13,()=>openExhibit('seal_hexagram'),'The Seal of Solomon',0x39c9b0,0.5);
+
+  /* Mural 2 — Solomon enthroned, commanding spirits (east wall) */
+  const throneSceneTex=makeCanvasTex(512,512,(ctx)=>{
+    ctx.fillStyle='#100806'; ctx.fillRect(0,0,512,512);
+    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=6; ctx.strokeRect(10,10,492,492);
+    ctx.lineWidth=1.5; ctx.strokeRect(18,18,476,476);
+    ctx.beginPath(); ctx.arc(256,230,200,Math.PI,0);
+    ctx.fillStyle='rgba(196,122,30,0.1)'; ctx.fill();
+    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle='#8a6418'; ctx.fillRect(196,290,120,180);
+    ctx.fillStyle='#d4a520'; ctx.fillRect(186,340,140,30);
+    ctx.fillStyle='#c47a1e';
+    for(let s=0;s<4;s++){ ctx.fillRect(170+s*10,490-s*18,172-s*20,18); }
+    ctx.fillStyle='#d4a520'; ctx.beginPath(); ctx.ellipse(256,290,46,75,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#e8c870'; ctx.beginPath(); ctx.ellipse(256,225,28,34,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f4c020';
+    ctx.beginPath();
+    ctx.moveTo(222,196); ctx.lineTo(229,170); ctx.lineTo(238,196);
+    ctx.lineTo(247,162); ctx.lineTo(256,196);
+    ctx.lineTo(265,162); ctx.lineTo(274,196);
+    ctx.lineTo(283,170); ctx.lineTo(290,196); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#d4a520'; ctx.fillRect(220,196,72,18);
+    ctx.strokeStyle='#d4a520'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.moveTo(310,240); ctx.lineTo(345,380); ctx.stroke();
+    ctx.fillStyle='#f4c020'; ctx.beginPath(); ctx.arc(310,236,9,0,Math.PI*2); ctx.fill();
+    [155,340].forEach((sx,si)=>{
+      ctx.fillStyle=si===0?'rgba(40,20,80,0.85)':'rgba(20,40,20,0.85)';
+      ctx.beginPath(); ctx.ellipse(sx,390,22,52,si===0?0.3:-0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(sx,340,16,20,0,0,Math.PI*2); ctx.fill();
+    });
+    ctx.font='bold italic 16px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
+    ctx.fillText('Solomon Commands the Spirits',256,52);
+    ctx.font='12px serif'; ctx.fillStyle='#9a7040';
+    ctx.fillText('Testament of Solomon · c. 1st–5th c. CE',256,70);
+    ctx.fillText('— Historical legend, not scripture',256,496);
+  });
+  const m2=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshBasicMaterial({map:throneSceneTex,side:THREE.DoubleSide}));
+  m2.position.set(8.5,7,-20); m2.rotation.y=-Math.PI/2; scene.add(m2);
+  const mf2=new THREE.Mesh(new THREE.BoxGeometry(0.08,5.8,5.8),mat(0x2a1808,0.9,0.1,0xc47a1e,0.18));
+  mf2.position.set(8.48,7,-20); scene.add(mf2);
+  addHotspot(8.2,7,-20,()=>openExhibit('testament_solomon'),'The Testament of Solomon',0xc47a1e,0.5);
+
+  /* Mural 3 — Temple floor plan (back wall) */
+  const planTex=makeCanvasTex(1024,512,(ctx)=>{
+    ctx.fillStyle='#08060a'; ctx.fillRect(0,0,1024,512);
+    ctx.strokeStyle='#9c6b3a'; ctx.lineWidth=3; ctx.strokeRect(8,8,1008,496);
+    const dX=580,dY=170,dW=150,dH=150;
+    ctx.fillStyle='rgba(214,177,92,0.12)'; ctx.fillRect(dX,dY,dW,dH);
+    ctx.strokeStyle='#d6b15c'; ctx.lineWidth=2; ctx.strokeRect(dX,dY,dW,dH);
+    const hX=330,hY=150,hW=250,hH=190;
+    ctx.fillStyle='rgba(196,122,30,0.08)'; ctx.fillRect(hX,hY,hW,hH);
+    ctx.strokeStyle='#c47a1e'; ctx.lineWidth=2; ctx.strokeRect(hX,hY,hW,hH);
+    ctx.fillStyle='rgba(120,80,30,0.08)'; ctx.fillRect(210,185,120,120);
+    ctx.strokeStyle='#8a6030'; ctx.lineWidth=1.5; ctx.strokeRect(210,185,120,120);
+    ctx.fillStyle='#d6b15c';
+    [228,308].forEach(py=>{ ctx.beginPath(); ctx.arc(220,py,7,0,Math.PI*2); ctx.fill(); });
+    ctx.strokeStyle='#4080c0'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(185,205,18,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(64,128,192,0.2)'; ctx.fill();
+    ctx.fillStyle='rgba(200,60,20,0.35)'; ctx.fillRect(255,210,60,60);
+    ctx.strokeStyle='#c83c14'; ctx.lineWidth=1.5; ctx.strokeRect(255,210,60,60);
+    ctx.fillStyle='rgba(244,192,32,0.35)'; ctx.fillRect(dX+35,dY+50,80,50);
+    ctx.strokeStyle='#f4c020'; ctx.lineWidth=1.5; ctx.strokeRect(dX+35,dY+50,80,50);
+    ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillStyle='#d6b15c'; ctx.fillText('HOLY OF HOLIES (DEBIR)',dX+dW/2,dY+dH/2+5);
+    ctx.fillStyle='#c47a1e'; ctx.fillText('HOLY PLACE (HEIKHAL)',hX+hW/2,hY+hH+22);
+    ctx.fillStyle='#8a6030'; ctx.fillText('ULAM',270,250);
+    ctx.fillStyle='#4080c0'; ctx.fillText('BRAZEN SEA',165,238);
+    ctx.fillStyle='#c83c14'; ctx.fillText('ALTAR',285,286);
+    ctx.fillStyle='#f4c020'; ctx.fillText('ARK',dX+dW/2,dY+dH/2+28);
+    ctx.font='10px monospace'; ctx.fillStyle='#6a5040';
+    ctx.fillText('EAST (entrance)',256,480); ctx.fillText('WEST (Debir)',760,480);
+    ctx.font='bold 20px serif'; ctx.fillStyle='#f4dd9a'; ctx.textAlign='center';
+    ctx.fillText("SOLOMON'S TEMPLE — SCHEMATIC FLOOR PLAN  (1 Kings 6–7)",512,50);
+    ctx.font='12px serif'; ctx.fillStyle='#9a8060';
+    ctx.fillText("Jerusalem · c. 957 BCE · Destroyed by Nebuchadnezzar II · 586 BCE",512,76);
+    ctx.fillText("(No physical plan survives — schematic reconstruction after the biblical text)",512,96);
+  });
+  const m3=new THREE.Mesh(new THREE.PlaneGeometry(16,8),new THREE.MeshBasicMaterial({map:planTex,side:THREE.DoubleSide}));
+  m3.position.set(0,8,-41); scene.add(m3);
+  const mf3=new THREE.Mesh(new THREE.BoxGeometry(16.5,8.5,0.12),mat(0x120a04,0.95,0.02,0x3a2010,0.12));
+  mf3.position.set(0,8,-41.1); scene.add(mf3);
+  addHotspot(0,5,-39,()=>openExhibit('temple_historical'),'The First Temple — Historical Context',0x9c6b3a,0.7);
 }
 
 function buildWallTorches(){
@@ -1251,51 +1487,90 @@ function buildZone2(){
   flame(cx,Y+14,cz,5,25); flame(cx-10,Y+2,cz,2,8); flame(cx+10,Y+2,cz,2,8);
 }
 
-/* ZONE 3 — Ruined Chamber */
+/* ZONE 3 — Ruined Chamber (Temple ruins, 586 BCE) */
 function buildZone3(){
-  const cx=60,cz=0, Y=zoneRoom(cx,cz,20,0x1a1208,0x080604);
-  // darker, broken floor
-  const brokenFloor=new THREE.Mesh(new THREE.PlaneGeometry(35,35,8,8),mat(0x2a1a0c,0.95,0.02));
+  const cx=60,cz=0, Y=zoneRoom(cx,cz,22,0x1c1008,0x080604);
+  const am=new THREE.PointLight(0x7a4a18,4,42,2); am.position.set(cx,Y+8,cz); scene.add(am);
+  scene.add(new THREE.PointLight(0x3a2010,2,18,2)).position.set(cx-6,Y+2,cz-4);
+
+  // Cracked, warped floor
+  const brokenFloor=new THREE.Mesh(new THREE.PlaneGeometry(40,40,12,12),mat(0x2a1a0c,0.96,0.02));
   brokenFloor.rotation.x=-Math.PI/2; brokenFloor.position.set(cx,Y+0.08,cz);
-  // distort vertices for cracked look
-  const pos=brokenFloor.geometry.attributes.position;
-  for(let i=0;i<pos.count;i++) pos.setY(i,rand(-0.1,0.15));
-  pos.needsUpdate=true; brokenFloor.geometry.computeVertexNormals();
+  const bfp=brokenFloor.geometry.attributes.position;
+  for(let i=0;i<bfp.count;i++) bfp.setY(i,rand(-0.22,0.28));
+  bfp.needsUpdate=true; brokenFloor.geometry.computeVertexNormals();
   scene.add(brokenFloor);
 
-  const am=new THREE.PointLight(0x8a5520,4,35,2); am.position.set(cx,Y+6,cz); scene.add(am);
+  // Fallen arch: two broken column stubs + collapsed keystone
+  const archM=mat(0x3a2814,0.9,0.04,0x1a0e06,0.08);
+  const lstub=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.7,5,12),archM);
+  lstub.position.set(cx-5,Y+2.5,cz-8); lstub.rotation.z=0.15; scene.add(lstub);
+  const rstub=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.7,4,12),archM);
+  rstub.position.set(cx+4,Y+2,cz-8); rstub.rotation.z=-0.1; scene.add(rstub);
+  const keystone=new THREE.Mesh(new THREE.BoxGeometry(3.5,1.2,1.5),archM);
+  keystone.position.set(cx,Y+0.45,cz-8); keystone.rotation.set(0.3,0.2,0.35); scene.add(keystone);
 
-  // Broken column segments
-  const colBroken=mat(0x4a3820,0.9,0.05);
-  [[cx-6,Y+1.5,cz-4,0.2],[cx+5,Y+1,cz+3,0.4],[cx-3,Y+2,cz+6,-0.1]].forEach(([x,y,z,rot])=>{
-    const seg=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.65,3+rand(0,2),16),colBroken);
-    seg.position.set(x,y,z); seg.rotation.z=rot+rand(-0.15,0.15); scene.add(seg);
+  // Inscribed Hebrew tablet fragment (canvas texture)
+  const tabTex=makeCanvasTex(256,256,(ctx)=>{
+    ctx.fillStyle='#2a1e10'; ctx.fillRect(0,0,256,256);
+    ctx.strokeStyle='#c47a2a'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(128,28); ctx.lineTo(222,194); ctx.lineTo(34,194); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(128,228); ctx.lineTo(222,62); ctx.lineTo(34,62); ctx.closePath(); ctx.stroke();
+    ctx.strokeStyle='rgba(8,4,2,0.9)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(28,75); ctx.lineTo(162,206); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(205,28); ctx.lineTo(80,256); ctx.stroke();
+    ctx.font='bold 15px serif'; ctx.fillStyle='#c47a2a'; ctx.textAlign='center';
+    ctx.fillText('בְּשֵׁם שַׁדַּי',128,244);
+    ctx.font='10px serif'; ctx.fillStyle='#7a5a2a';
+    ctx.fillText('"In the Name of the Almighty"',128,258);
   });
+  const tab=new THREE.Mesh(new THREE.BoxGeometry(2.8,0.18,2.0),archM);
+  tab.position.set(cx-5,Y+0.28,cz-6); tab.rotation.set(-0.72,0.3,0.2); scene.add(tab);
+  const tabFace=new THREE.Mesh(new THREE.PlaneGeometry(2.75,1.95),new THREE.MeshBasicMaterial({map:tabTex,side:THREE.DoubleSide}));
+  tabFace.position.set(cx-5,Y+0.48,cz-6); tabFace.rotation.set(-0.72+Math.PI/2,0.3,0.2); scene.add(tabFace);
 
-  // Rubble piles
-  for(let i=0;i<18;i++){
-    const rb=new THREE.Mesh(
-      new THREE.BoxGeometry(rand(0.3,1.2),rand(0.2,0.8),rand(0.3,1.0)),
-      mat(0x3a2a18,0.95,0.02));
-    rb.position.set(cx+rand(-12,12),Y+rand(0,0.4),cz+rand(-12,12));
-    rb.rotation.set(rand(-0.5,0.5),rand(0,6.28),rand(-0.5,0.5));
-    scene.add(rb);
+  // Verdigris copper vessel — oxidized bronze (green patina)
+  const verdM=new THREE.MeshStandardMaterial({color:0x3a6a4a,roughness:0.85,metalness:0.38,emissive:0x1a3a24,emissiveIntensity:0.12});
+  const vessel=new THREE.Mesh(new THREE.CylinderGeometry(0.65,0.78,2.1,12),verdM);
+  vessel.position.set(cx+7,Y+0.75,cz-5); vessel.rotation.z=0.5; scene.add(vessel);
+  const puddle=new THREE.Mesh(new THREE.CircleGeometry(1.1,16),
+    new THREE.MeshStandardMaterial({color:0x1a2a1a,metalness:0.62,roughness:0.18,emissive:0x0a1a0a,emissiveIntensity:0.18}));
+  puddle.rotation.x=-Math.PI/2; puddle.position.set(cx+7,Y+0.09,cz-4); scene.add(puddle);
+
+  // Large rubble blocks (Babylonian demolition)
+  [[cx-3,Y+0.55,cz+5,0.4],[cx+6,Y+0.65,cz+4,-0.3],[cx-8,Y+0.35,cz+3,0.8],
+   [cx+2,Y+0.45,cz-3,1.1],[cx-1,Y+0.65,cz+8,0.2],[cx+5,Y+0.5,cz-2,0.6]].forEach(([x,y,z,ry])=>{
+    const rb=new THREE.Mesh(new THREE.BoxGeometry(rand(1.6,3.2),rand(0.9,2.0),rand(1.1,2.6)),mat(0x3a2a18,0.95,0.02));
+    rb.position.set(x,y,z); rb.rotation.set(rand(-0.22,0.22),ry,rand(-0.22,0.22)); scene.add(rb);
+  });
+  for(let i=0;i<28;i++){
+    const rb=new THREE.Mesh(new THREE.BoxGeometry(rand(0.3,1.0),rand(0.2,0.6),rand(0.3,0.9)),mat(0x3a2a18,0.95,0.02));
+    rb.position.set(cx+rand(-15,15),Y+rand(0,0.32),cz+rand(-13,13));
+    rb.rotation.set(rand(-0.6,0.6),rand(0,6.28),rand(-0.6,0.6)); scene.add(rb);
   }
 
+  // Ash and smoke motes drifting upward
+  const smN=100, smPos=new Float32Array(smN*3);
+  for(let i=0;i<smN;i++){ smPos[i*3]=cx+rand(-12,12); smPos[i*3+1]=Y+rand(0.5,12); smPos[i*3+2]=cz+rand(-12,12); }
+  const smGeo=new THREE.BufferGeometry(); smGeo.setAttribute('position',new THREE.BufferAttribute(smPos,3));
+  const smoke=new THREE.Points(smGeo,new THREE.PointsMaterial({color:0x8a7a6a,size:0.12,transparent:true,opacity:0.28}));
+  scene.add(smoke); floaters.push({mesh:smoke,speed:0.055,axis:'y',base:Y+5,amp:2.2,drift:true});
+
+  // Lone surviving torch
+  flame(cx,Y+3.5,cz,3,16);
+  const stick=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,2,6),mat(0x3a2010,0.9,0.05));
+  stick.position.set(cx,Y+1,cz); scene.add(stick);
+
   // Fallen stone tablets
-  [[cx-4,Y+0.3,cz-6,-0.8],[cx+3,Y+0.2,cz-4,-1.1],[cx+7,Y+0.4,cz+2,-0.6]].forEach(([x,y,z,rx])=>{
-    const tablet=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.18,1.6),mat(0x4a3a24,0.9,0.05,0x2a1a0a,0.1));
-    tablet.position.set(x,y,z); tablet.rotation.set(rx,rand(0,1),rand(-0.2,0.2)); scene.add(tablet);
+  [[cx-4,Y+0.3,cz-2,-0.82],[cx+3,Y+0.22,cz+2,-1.1],[cx+8,Y+0.42,cz+6,-0.55]].forEach(([x,y,z,rx])=>{
+    const t=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.18,1.5),mat(0x4a3a24,0.9,0.05,0x2a1a0a,0.1));
+    t.position.set(x,y,z); t.rotation.set(rx,rand(0,1),rand(-0.2,0.2)); scene.add(t);
   });
 
-  // Flickering torch (dimmer)
-  flame(cx,Y+3,cz,3,15);
-  const torchStick=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,2,6),mat(0x3a2010,0.9,0.05));
-  torchStick.position.set(cx,Y+1,cz); scene.add(torchStick);
-
-  addHotspot(cx-4,Y+1,cz-6,()=>openExhibit('fragmentary_rites'),'Fragmentary Ritual Diagrams',0xc47a4a);
+  addHotspot(cx-5,Y+1.5,cz-6,()=>openExhibit('fragmentary_rites'),'Fragmentary Ritual Diagrams',0xc47a4a);
   addHotspot(cx+3,Y+0.8,cz+4,()=>openExhibit('eroded_incantations'),'Eroded Incantation Patterns',0xc47a4a);
-  addHotspot(cx,Y+1,cz+16,()=>returnToHub(),'Return to Hub',0x9c6b3a,0.4);
+  addHotspot(cx,Y+1.2,cz-8,()=>openExhibit('temple_fall'),'The Fall of the Temple — 586 BCE',0x8a4020);
+  addHotspot(cx,Y+1,cz+18,()=>returnToHub(),'Return to Hub',0x9c6b3a,0.4);
 }
 
 /* ZONE 4 — Hermetic Alchemy Lab */
@@ -1686,6 +1961,92 @@ const EXHIBITS={
     <p>The Temple of Solomon never stood as a permanent structure. The First Temple was destroyed in 586 BCE; the Second in 70 CE. What endured was the idea — the possibility of a space in which the human and the transcendent might meet. Every hall in this archive is a later attempt to rebuild that space in language, symbol, and imagination.</p>
     <p>You are the temple. You were always the temple.</p>`,
     onOpen:()=>unlockTempleIndex()},
+
+  testament_solomon:{heb:'צַוָּאַת שְׁלֹמֹה',kick:'Basilica East Wall · Sorcerer Mural',title:'The Testament of Solomon',tiers:['legend','history'],
+    body:`<p class="lede">The <i>Testament of Solomon</i> is a pseudepigraphical text surviving in Greek manuscripts (estimated 1st–5th century CE). It is the foundational document of Solomonic demonology.</p>
+    <p>In the narrative, God gives Solomon a magical ring with the <b>Seal of Solomon</b>. Using it, Solomon summons and binds dozens of demonic figures — <b>Beelzeboul</b>, <b>Asmodeus</b>, <b>Ornias</b>, and others — compelling them to labour on the construction of the Temple. Each spirit reveals its name, astrological affiliation, the harm it causes, and the angel or object that thwarts it.</p>
+    <p>This question-and-answer structure — demon describes itself, king records it — influenced centuries of later grimoire tradition, particularly the Ars Goetia. The text is a Hellenistic-era literary composition reflecting the syncretistic religious culture of late antiquity (Jewish, Christian, and Greco-Roman elements).</p>
+    <p class="ref">D.C. Duling, "The Testament of Solomon," in <i>The Old Testament Pseudepigrapha</i>, vol. 1 (ed. Charlesworth, 1983)</p>
+    <div class="safety"><b>Source tier: Legend / History.</b> The Testament of Solomon is a literary composition, not a historical account. No claim of literal truth is made.</div>`},
+
+  temple_historical:{heb:'בֵּית הַמִּקְדָּשׁ',kick:'Basilica Back Wall · Temple Floor Plan',title:'The First Temple — Historical Context',tiers:['history','scripture'],
+    body:`<p class="lede">The First Temple — <i>Beit HaMikdash</i> — was the central sanctuary of ancient Israel described in 1 Kings 6–7 and 2 Chronicles 3–4, built by Solomon in Jerusalem around the 10th century BCE on Mount Moriah.</p>
+    <h3>Architecture</h3>
+    <p>Three sections: the <b>Ulam</b> (porch), the <b>Heikhal</b> (Holy Place, containing the Menorah, incense altar, and showbread table), and the <b>Debir</b> (Holy of Holies — a 20-cubit cube holding the Ark of the Covenant). Two bronze pillars, Jachin and Boaz, flanked the entrance. The Brazen Sea and altar stood in the courtyard.</p>
+    <h3>Historical questions</h3>
+    <p>No confirmed archaeological remains of the First Temple exist — the Temple Mount has been continuously occupied and rebuilt for three thousand years (Second Temple, Herodian expansion, Roman destruction, Byzantine church, Dome of the Rock). The biblical description is our primary source; comparison with known Iron Age Levantine temple architecture (e.g., 'Ain Dara in Syria) suggests the general layout is plausible.</p>
+    <h3>Destruction — 586 BCE</h3>
+    <p>Nebuchadnezzar II of Babylon destroyed the Temple in 586 BCE following the siege of Jerusalem. The Ark of the Covenant vanishes from the historical record at this point and has never been found.</p>
+    <p class="ref">Israel Finkelstein &amp; Neil Asher Silberman, <i>The Bible Unearthed</i> (2001); Carol Meyers, "Temple," <i>Oxford Companion to the Bible</i> (1993)</p>`},
+
+  temple_fall:{heb:'חֻרְבַּן הַבַּיִת',kick:'Zone 3 · Ruined Chamber',title:'The Fall of the Temple — 586 BCE',tiers:['history','scripture'],
+    body:`<p class="lede">The First Temple fell in the summer of 586 BCE when Nebuchadnezzar II of Babylon completed his siege of Jerusalem. It was the defining catastrophe of ancient Israelite history.</p>
+    <h3>The Destruction</h3>
+    <p>2 Kings 25 and Jeremiah 52 record the burning of the Temple, the royal palace, and the city's great houses. The bronze pillars Jachin and Boaz were broken in pieces and carried off. The Babylonian Exile began — the forced removal of Judah's leaders, craftsmen, and educated class to Mesopotamia.</p>
+    <h3>The Ark of the Covenant</h3>
+    <p>The Ark is not mentioned among Nebuchadnezzar's spoils. Its fate is unknown. Jewish tradition (2 Maccabees 2:4-8) holds that Jeremiah hid it in a cave on Mount Nebo. Ethiopian tradition (<i>Kebra Nagast</i>) claims it was taken to Axum during Solomon's era. Archaeologically: no trace has been found.</p>
+    <h3>Theological response</h3>
+    <p>Psalm 137: <i>"By the rivers of Babylon, there we sat and wept, when we remembered Zion."</i> The books of Lamentations, Ezekiel, and Second Isaiah all wrestle with how God's covenant survived the destruction of the place where God was thought to dwell — a theological crisis from which much of Judaism's mature theology emerged.</p>
+    <p class="ref">2 Kings 25; Jeremiah 52; Lamentations; Amélie Kuhrt, <i>The Ancient Near East c. 3000–330 BC</i>, vol. 2</p>`},
+
+  seal_hexagram:{heb:'חוֹתַם שְׁלֹמֹה',kick:'Basilica West Wall · Seal Mural',title:'The Seal of Solomon & the Star of David',tiers:['history','esoteric','occult'],
+    body:`<p class="lede">The hexagram's association with Solomon is medieval and distinct from its later role as the primary symbol of Jewish identity. The two converged through accident rather than continuous tradition.</p>
+    <h3><span class="tier history">History</span> Medieval Islamic tradition</h3>
+    <p>In Islamic literature of the 9th–10th century CE, Solomon's seal (<i>Khatam Sulayman</i>) was a ring inscribed with a magical symbol — the hexagram or a variation — that gave him power over jinn and spirits. This tradition fed into the Solomonic grimoires of medieval Europe, where the hexagram appeared in talismans and pentacles.</p>
+    <h3><span class="tier history">History</span> The Jewish Star of David</h3>
+    <p>The hexagram became a specifically Jewish symbol gradually. It appears on synagogues from the 3rd century CE, but widespread adoption as a universal Jewish emblem only occurred in the 17th century (Prague). It was chosen by the first Zionist Congress (1897) and incorporated into the flag of Israel (1948).</p>
+    <h3><span class="tier esoteric">Esoteric tradition</span> Western occultism</h3>
+    <p>Hermeticism used the upward triangle as Fire/spirit/masculine and the downward as Water/matter/feminine — the hexagram as the reconciliation of opposites. This reading is post-Renaissance and not found in the original Jewish or Islamic traditions.</p>
+    <p class="ref">Gershom Scholem, <i>The Star of David: History of a Symbol</i> (1949); Owen Davies, <i>Grimoires: A History of Magic Books</i> (2009)</p>`},
+
+  jachin_boaz:{heb:'יָכִין וּבֹעַז',kick:'Basilica Entrance · Twin Pillars',title:'Jachin & Boaz — The Twin Pillars',tiers:['scripture','history','esoteric'],
+    body:`<p class="lede">The two great bronze pillars at the entrance of Solomon's Temple — <b>Jachin</b> (יָכִין, "He establishes") and <b>Boaz</b> (בֹּעַז, "In strength") — were created by the craftsman Hiram of Tyre and described in 1 Kings 7:15-22.</p>
+    <h3><span class="tier scripture">Scripture</span> Biblical description</h3>
+    <p>Eighteen cubits high (~8m), twelve cubits in circumference (~3.8m), with hollow bronze shafts four fingers thick. The capitals were five cubits high, adorned with lily-work and two rows of 200 pomegranates each. Jachin stood on the right (south); Boaz on the left (north).</p>
+    <p>Their purpose is not stated. Theories: they were symbolic gatepost markers, fire-signal platforms, or the names were dedicatory inscriptions: "He [God] establishes" and "In strength [of the LORD]."</p>
+    <h3><span class="tier history">History</span> Fate</h3>
+    <p>2 Kings 25:13: <i>"The Chaldeans broke in pieces the bronze pillars of the house of the LORD"</i> and carried the bronze to Babylon, 586 BCE.</p>
+    <h3><span class="tier esoteric">Esoteric tradition</span> Later symbolism</h3>
+    <p>The pillars became central to Freemasonry (18th century), where Jachin and Boaz flank the entrance of every lodge. In Kabbalah they correspond to the right and left pillars of the Tree of Life — Chesed and Gevurah — with the Middle Pillar of balance between them. These associations are post-biblical developments.</p>`},
+
+  ark_of_covenant:{heb:'אֲרוֹן הַבְּרִית',kick:'Zone 8 · Inner Sanctum',title:'The Ark of the Covenant',tiers:['scripture','history','legend'],
+    body:`<p class="lede">The Ark of the Covenant — <i>Aron HaBrit</i> — was the sacred chest described in Exodus 25:10-22: acacia wood overlaid with pure gold, carried on golden poles, with a gold mercy seat (<i>kapporet</i>) flanked by two gold cherubim whose wings spread above it. The space between them was the locus of God's presence.</p>
+    <h3><span class="tier scripture">Scripture</span> Contents & purpose</h3>
+    <p>Hebrews 9:4: the Ark contained the golden jar of manna, Aaron's budded staff, and the stone tablets of the covenant (the Ten Commandments). It was kept in the Holy of Holies of the Tabernacle and then Solomon's Temple, accessible only to the High Priest, once a year, on Yom Kippur.</p>
+    <h3><span class="tier history">History</span> Last certain mention</h3>
+    <p>2 Chronicles 35:3 (Josiah's reign, ~622 BCE) refers to the Ark being placed in the Temple — its last clear historical mention. It is not listed among the items Nebuchadnezzar took to Babylon in 586 BCE, suggesting it either was hidden, destroyed, or removed before the siege.</p>
+    <h3><span class="tier legend">Legend</span> Later traditions</h3>
+    <p>Traditions on the Ark's fate: (1) hidden beneath the Temple Mount by Jeremiah (2 Maccabees 2:4-8); (2) taken to Ethiopia during Solomon's era (<i>Kebra Nagast</i>, 14th c. — the basis for claims it is in Axum); (3) taken to Egypt. None have archaeological support.</p>
+    <div class="safety">The Ark of the Covenant has not been found. Its current location is unknown.</div>`},
+
+  brazen_sea:{heb:'יָם הַנְּחֹשֶׁת',kick:'Basilica Entrance · Right Side',title:'The Brazen Sea — Twelve Oxen',tiers:['scripture','history'],
+    body:`<p class="lede">The Brazen Sea (<i>Yam HaNechoshet</i>) was a massive circular bronze basin described in 1 Kings 7:23-26, created by Hiram of Tyre, standing in the Temple courtyard on the backs of twelve bronze oxen — three facing each of the four cardinal directions.</p>
+    <h3><span class="tier scripture">Scripture</span> Dimensions</h3>
+    <p>1 Kings 7:23: ten cubits (~4.5m) in diameter, five cubits deep (~2.25m), thirty cubits in circumference — implying π≈3, the biblical approximation. It held 2,000 baths (~40,000 liters). The rim was shaped like a lily blossom.</p>
+    <p>2 Chronicles 4:6: the Sea was used for the priests to wash in, serving ritual purification functions parallel to the Tabernacle's bronze laver (Exodus 30:17-21).</p>
+    <h3>Symbolic reading</h3>
+    <p>In ancient Near Eastern cosmology, the sea represented primordial chaos (Babylonian <i>Tiamat</i>, biblical <i>tehom</i>). A bronze sea in the Temple courtyard may have symbolized creation order — chaos contained. The twelve oxen may correspond to the twelve tribes of Israel.</p>
+    <h3>Fate</h3>
+    <p>2 Kings 25:13: the Chaldeans <i>"broke in pieces the bronze sea"</i> and carried the bronze to Babylon, 586 BCE.</p>`},
+
+  menorah:{heb:'הַמְּנוֹרָה',kick:'Basilica Interior · North Side',title:'The Seven-Branch Menorah',tiers:['scripture','history'],
+    body:`<p class="lede">The Menorah — the seven-branched golden lampstand — is one of the oldest symbols of Judaism, described in Exodus 25:31-40 as divinely designed: <i>"And see that you make them after the pattern for them, which is being shown you on the mountain."</i></p>
+    <h3><span class="tier scripture">Scripture</span> Description</h3>
+    <p>Hammered from a single talent (~34kg) of pure gold (Exodus 25:39), the Menorah had a central shaft with three branches curving out on each side — seven lamps in total. Each branch was decorated with cups shaped like almond blossoms, knobs, and flowers. The lamps burned pure olive oil pressed for lighting (Exodus 27:20).</p>
+    <h3>The Temple Menorah</h3>
+    <p>Solomon's Temple contained ten golden lampstands (1 Kings 7:49), five on each side of the Holy Place. The Second Temple Menorah was taken to Rome after the destruction in 70 CE — it is depicted on the <b>Arch of Titus</b> still visible in Rome today, carried in the Roman triumph.</p>
+    <h3>Symbolism</h3>
+    <p>Seven lamps correspond to the seven days of creation, the seven classical planets, and — in rabbinic interpretation — the seven branches of wisdom. The almond-blossom design connects to Aaron's rod that budded (Numbers 17), a symbol of divine selection and life from dead wood. The Israeli coat of arms features the Menorah as a symbol of Jewish civilization and continuity.</p>`},
+
+  solomons_throne:{heb:'כִּסֵּא שְׁלֹמֹה',kick:'Zone 8 · Inner Sanctum',title:'The Throne of Solomon — 1 Kings 10',tiers:['scripture','history','legend'],
+    body:`<p class="lede">Solomon's throne is described in 1 Kings 10:18-20 as the most magnificent in the ancient world — the apex of the Solomonic golden age, a symbol of wisdom's rewards.</p>
+    <h3><span class="tier scripture">Scripture</span> Description</h3>
+    <p>1 Kings 10:18-20: <i>"King Solomon made a great throne of ivory, and overlaid it with the finest gold. The throne had six steps, and the throne had a round top, and on each side of the seat were armrests and two lions standing beside the armrests, while twelve lions stood there on the six steps on the one side and on the other. Nothing like it was ever made in any kingdom."</i></p>
+    <p>Six steps × two lions each = twelve lions on the steps, plus two flanking the seat = fourteen lion figures total. The round top and ivory suggest Phoenician craftsmanship — the ivory-carving industry of Tyre was renowned.</p>
+    <h3><span class="tier history">History</span> Archaeological context</h3>
+    <p>Ivory-inlaid thrones of this type are attested in the Bronze and Iron Age Levant. The Megiddo Ivories (c. 1200 BCE) show a Canaanite ruler on a lion throne receiving tribute — confirming the iconography was real, whatever the specific biblical claims.</p>
+    <h3><span class="tier legend">Legend</span> Later traditions</h3>
+    <p>Islamic and midrashic sources elaborate the throne with mechanical golden animals that performed actions as Solomon ascended each step. The Queen of Sheba was reportedly astonished by it. The throne's fate after the Babylonian destruction is unknown.</p>`},
 };
 
 function showPlanet(name){
@@ -1703,53 +2064,164 @@ function showPlanet(name){
 }
 window.showPlanet=showPlanet;
 
-/* ZONE 8 — The Inner Sanctum */
+/* ZONE 8 — The Inner Sanctum / Holy of Holies */
 function buildZone8(){
-  const cx=-42,cz=-42, Y=zoneRoom(cx,cz,18,0x06050a,0x030208);
-  const am=new THREE.PointLight(0xd6b15c,5,35,2); am.position.set(cx,Y+8,cz); scene.add(am);
+  const cx=-42,cz=-42, Y=zoneRoom(cx,cz,20,0x060508,0x030208);
+  // Extended height
+  const tallCeil=new THREE.Mesh(new THREE.CircleGeometry(20,32),mat(0x030208,0.95,0));
+  tallCeil.rotation.x=Math.PI/2; tallCeil.position.set(cx,Y+26,cz); scene.add(tallCeil);
+  const tallWall=new THREE.Mesh(new THREE.CylinderGeometry(20,20,26,32,1,true),mat(0x060508,0.95,0,0x1a1028,0.04));
+  tallWall.position.set(cx,Y+13,cz); scene.add(tallWall);
 
-  // Black reflective floor
-  const rf=new THREE.Mesh(new THREE.CircleGeometry(18,32),
-    new THREE.MeshStandardMaterial({color:0x05040a,metalness:0.92,roughness:0.05,emissive:0x100a18,emissiveIntensity:0.15}));
+  const am=new THREE.PointLight(0xd6b15c,4,42,2); am.position.set(cx,Y+14,cz); scene.add(am);
+
+  // Black mirror floor
+  const rf=new THREE.Mesh(new THREE.CircleGeometry(20,32),
+    new THREE.MeshStandardMaterial({color:0x04030a,metalness:0.93,roughness:0.04,emissive:0x080514,emissiveIntensity:0.2}));
   rf.rotation.x=-Math.PI/2; rf.position.set(cx,Y+0.07,cz); scene.add(rf);
 
-  // Twin pillars at entrance
-  [cx-3,cx+3].forEach(x=>{
-    const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,10,16),mat(0x1a1010,0.8,0.15,0x3a2820,0.2));
-    pillar.position.set(x,Y+5,cz+15); scene.add(pillar);
-    const cap=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.5,1.4),mat(0x3a2820,0.7,0.2,0xd6b15c,0.25));
-    cap.position.set(x,Y+10.25,cz+15); scene.add(cap);
-    flame(x,Y+10.6,cz+15,4,10);
+  // Floor hexagram (two inlaid triangles)
+  for(let t=0;t<2;t++){
+    const triGeo=new THREE.BufferGeometry();
+    const r=8, rot=t*Math.PI/3;
+    const verts=new Float32Array([
+      Math.cos(rot)*r,0.09,Math.sin(rot)*r,
+      Math.cos(rot+2.094)*r,0.09,Math.sin(rot+2.094)*r,
+      Math.cos(rot+4.189)*r,0.09,Math.sin(rot+4.189)*r,
+    ]);
+    triGeo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+    triGeo.setIndex([0,1,2]); triGeo.computeVertexNormals();
+    const triM=new THREE.MeshBasicMaterial({color:t?0x9a7cff:0x39c9b0,side:THREE.DoubleSide,transparent:true,opacity:0.18});
+    const tri=new THREE.Mesh(triGeo,triM);
+    tri.position.set(cx,Y,cz); scene.add(tri);
+  }
+  const floorRing=new THREE.Mesh(new THREE.TorusGeometry(9.5,0.14,8,48),
+    new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0xd6b15c,emissiveIntensity:0.55,metalness:0.75}));
+  floorRing.rotation.x=-Math.PI/2; floorRing.position.set(cx,Y+0.1,cz); scene.add(floorRing);
+  floaters.push({mesh:floorRing,type:'rotate',speed:0.018,axis:'z-self'});
+
+  // === ARK OF THE COVENANT (Exodus 25:10-22) ===
+  const arkG=new THREE.Group(); arkG.position.set(cx,Y,cz-11);
+  const goldArkM=new THREE.MeshStandardMaterial({color:0xd4a520,metalness:0.9,roughness:0.18,emissive:0x8a6010,emissiveIntensity:0.32});
+  const arkBox=new THREE.Mesh(new THREE.BoxGeometry(3.6,2.2,2.2),goldArkM);
+  arkBox.position.y=1.1; arkG.add(arkBox);
+  const kap=new THREE.Mesh(new THREE.BoxGeometry(3.7,0.22,2.3),
+    new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.96,roughness:0.1,emissive:0xc4a010,emissiveIntensity:0.45}));
+  kap.position.y=2.31; arkG.add(kap);
+  [-1.3,1.3].forEach(pz=>{
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,6,8),mat(0x8a5a28,0.8,0.1));
+    pole.rotation.z=Math.PI/2; pole.position.set(0,0.7,pz); arkG.add(pole);
+  });
+  // Gold cherubim flanking the mercy seat (Exodus 25:18-20)
+  [-1.15,1.15].forEach((xOff,ci)=>{
+    const chG=new THREE.Group();
+    const chM=new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.92,roughness:0.14,emissive:0xa08010,emissiveIntensity:0.35});
+    const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.22,0.55,6,10),chM); body.position.y=0.48; chG.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.2,12,8),chM); head.position.y=1.1; chG.add(head);
+    [-1,1].forEach(ws=>{
+      const wing=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.75),
+        new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.88,roughness:0.2,emissive:0xa08010,emissiveIntensity:0.3,side:THREE.DoubleSide}));
+      wing.position.set(ws*0.82,1.0,0); wing.rotation.set(-0.18,0,ws*0.48); chG.add(wing);
+    });
+    chG.position.set(xOff,2.32,0); chG.rotation.y=ci===0?Math.PI/2:-Math.PI/2; arkG.add(chG);
+  });
+  const arkL=new THREE.PointLight(0xfff0a0,10,20,2); arkL.position.set(0,5,0); arkG.add(arkL);
+  scene.add(arkG);
+  floaters.push({mesh:arkG,speed:0.12,axis:'y',base:Y,amp:0.05});
+
+  // === THRONE OF SOLOMON (1 Kings 10:18-20) ===
+  const thrG=new THREE.Group(); thrG.position.set(cx,Y,cz-4);
+  const ivM=new THREE.MeshStandardMaterial({color:0xf8f0d8,metalness:0.28,roughness:0.52,emissive:0xd0a020,emissiveIntensity:0.14});
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.42,2.6),ivM); seat.position.y=3.42; thrG.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(3.2,4.2,0.38),ivM); back.position.set(0,5.62,-1.1); thrG.add(back);
+  const backTop=new THREE.Mesh(new THREE.SphereGeometry(1.12,16,8,0,Math.PI*2,0,Math.PI/2),ivM);
+  backTop.position.set(0,7.82,-1.1); thrG.add(backTop);
+  for(let s=0;s<6;s++){
+    const step=new THREE.Mesh(new THREE.BoxGeometry(4.2+s*0.45,0.5,0.65),
+      new THREE.MeshStandardMaterial({color:0xf0e8d0,metalness:0.3+s*0.045,roughness:0.52,emissive:0xb08010,emissiveIntensity:0.1}));
+    step.position.set(0,0.25+s*0.5,1.25+s*0.62); thrG.add(step);
+    [-(2.1+s*0.22),(2.1+s*0.22)].forEach(lx=>{
+      const lion=new THREE.Group();
+      const lb=new THREE.Mesh(new THREE.CapsuleGeometry(0.2,0.48,4,8),ivM);
+      lb.rotation.z=Math.PI/2; lb.position.y=0.22; lion.add(lb);
+      const lh=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),ivM); lh.position.set(0.42,0.28,0); lion.add(lh);
+      lion.position.set(lx,0.5+s*0.5,1.25+s*0.62); thrG.add(lion);
+    });
+  }
+  scene.add(thrG);
+  const thrL=new THREE.PointLight(0xffe0a0,4.5,18,2); thrL.position.set(cx,Y+8,cz-4); scene.add(thrL);
+
+  // === KING SOLOMON — try GLB, fallback procedural ===
+  function buildSolomonFigure(){
+    const sg=new THREE.Group();
+    const robeM=new THREE.MeshStandardMaterial({color:0xd4a520,metalness:0.6,roughness:0.42,emissive:0x8a6010,emissiveIntensity:0.26});
+    const robe=new THREE.Mesh(new THREE.CylinderGeometry(0.68,0.88,2.8,12),robeM); robe.position.y=1.4; sg.add(robe);
+    const chest=new THREE.Mesh(new THREE.CapsuleGeometry(0.33,0.68,6,10),robeM); chest.position.y=2.86; sg.add(chest);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.3,14,10),
+      new THREE.MeshStandardMaterial({color:0xe8d0a0,roughness:0.7,metalness:0}));
+    head.position.y=3.68; sg.add(head);
+    const beard=new THREE.Mesh(new THREE.ConeGeometry(0.2,0.48,8),mat(0x4a3010,0.9,0));
+    beard.position.y=3.4; beard.rotation.x=Math.PI; sg.add(beard);
+    const crownBase=new THREE.Mesh(new THREE.CylinderGeometry(0.33,0.36,0.3,12),
+      new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.96,roughness:0.1,emissive:0xc4a010,emissiveIntensity:0.45}));
+    crownBase.position.y=4.0; sg.add(crownBase);
+    for(let i=0;i<6;i++){
+      const a=i/6*Math.PI*2;
+      const pt=new THREE.Mesh(new THREE.ConeGeometry(0.065,0.24,5),
+        new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.96,roughness:0.1,emissive:0xd4b020,emissiveIntensity:0.55}));
+      pt.position.set(Math.cos(a)*0.28,4.35,Math.sin(a)*0.28); sg.add(pt);
+    }
+    const scepter=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,2.4,8),
+      new THREE.MeshStandardMaterial({color:0xd4a520,metalness:0.9,roughness:0.1}));
+    scepter.position.set(0.78,2.48,0); scepter.rotation.z=0.3; sg.add(scepter);
+    const sTop=new THREE.Mesh(new THREE.SphereGeometry(0.14,10,8),
+      new THREE.MeshStandardMaterial({color:0xf4c020,metalness:0.9,emissive:0xd4a020,emissiveIntensity:0.55}));
+    sTop.position.set(1.12,3.55,0); sg.add(sTop);
+    const kl=new THREE.PointLight(0xffd060,3,8,2); kl.position.y=4.2; sg.add(kl);
+    sg.position.set(cx,Y+3.42,cz-4); scene.add(sg);
+  }
+  tryGLB('../models/solomon/king-solomon.glb',
+    glbScene=>{ glbScene.scale.setScalar(2.4); glbScene.position.set(cx,Y+3.42,cz-4); scene.add(glbScene); note('King Solomon — 3D model loaded',2500); },
+    buildSolomonFigure
+  );
+
+  // Jachin & Boaz sanctum entrance pillars
+  [cx-3,cx+3].forEach((x,pi)=>{
+    const pl=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,12,16),mat(0x1a1010,0.8,0.22,0x3a2820,0.26));
+    pl.position.set(x,Y+6,cz+14); scene.add(pl);
+    const plc=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.6,1.4),mat(0x3a2820,0.7,0.25,0xd6b15c,0.32));
+    plc.position.set(x,Y+12.3,cz+14); scene.add(plc);
+    flame(x,Y+12.8,cz+14,5,12);
+    const sp=makeTextSprite(pi===0?'יָכִין · JACHIN':'בֹּעַז · BOAZ',0xd6b15c);
+    sp.scale.set(3.5,0.7,1); sp.position.set(x,Y+14.2,cz+14); scene.add(sp);
   });
 
-  // Gold dust particles floating
-  const gdN=200, gdPos=new Float32Array(gdN*3);
-  for(let i=0;i<gdN;i++){ gdPos[i*3]=cx+rand(-10,10); gdPos[i*3+1]=Y+rand(0,12); gdPos[i*3+2]=cz+rand(-10,10); }
+  // Gold dust particles
+  const gdN=300, gdPos=new Float32Array(gdN*3);
+  for(let i=0;i<gdN;i++){ gdPos[i*3]=cx+rand(-14,14); gdPos[i*3+1]=Y+rand(0,20); gdPos[i*3+2]=cz+rand(-14,14); }
   const gdGeo=new THREE.BufferGeometry(); gdGeo.setAttribute('position',new THREE.BufferAttribute(gdPos,3));
-  const gdPts=new THREE.Points(gdGeo,new THREE.PointsMaterial({color:0xd6b15c,size:0.05,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
-  scene.add(gdPts); floaters.push({mesh:gdPts,speed:0.04,axis:'y',base:Y+5,amp:0.5});
+  const gdPts=new THREE.Points(gdGeo,new THREE.PointsMaterial({color:0xd6b15c,size:0.05,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending}));
+  scene.add(gdPts); floaters.push({mesh:gdPts,speed:0.03,axis:'y',base:Y+8,amp:0.45});
 
-  // Central pedestal
-  const ped=new THREE.Mesh(new THREE.CylinderGeometry(1,1.3,1.2,12),mat(0x1a1010,0.85,0.3,0xd6b15c,0.2));
+  // Book of Living Wisdom (center pedestal)
+  const ped=new THREE.Mesh(new THREE.CylinderGeometry(1,1.3,1.2,12),mat(0x1a1010,0.85,0.3,0xd6b15c,0.22));
   ped.position.set(cx,Y+0.6,cz); scene.add(ped);
-
-  // Glowing Book of Living Wisdom on pedestal
   const wisdomBook=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.14,0.9),
-    new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0xc4a040,emissiveIntensity:0.7,metalness:0.5,roughness:0.4}));
+    new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0xc4a040,emissiveIntensity:0.72,metalness:0.5,roughness:0.4}));
   wisdomBook.position.set(cx,Y+1.35,cz); scene.add(wisdomBook);
   floaters.push({mesh:wisdomBook,speed:0.6,axis:'y',base:Y+1.35,amp:0.08});
-  const bookGlow=new THREE.PointLight(0xd6b15c,8,15,2); bookGlow.position.set(cx,Y+2,cz); scene.add(bookGlow);
-
-  // Animated ring of light above book
+  const bookGlow=new THREE.PointLight(0xd6b15c,8,16,2); bookGlow.position.set(cx,Y+2,cz); scene.add(bookGlow);
   const bookRing=new THREE.Mesh(new THREE.TorusGeometry(1.5,0.06,8,32),
     new THREE.MeshStandardMaterial({color:0xd6b15c,emissive:0xd6b15c,emissiveIntensity:0.9,metalness:0.7,roughness:0.2}));
   bookRing.rotation.x=-Math.PI/2; bookRing.position.set(cx,Y+3.5,cz); scene.add(bookRing);
   floaters.push({mesh:bookRing,type:'rotate',speed:0.4,axis:'z-self'});
-  floaters.push({mesh:bookRing,speed:0.3,axis:'y',base:Y+3.5,amp:0.2});
 
   addHotspot(cx,Y+1.5,cz,()=>openExhibit('book_of_wisdom'),'The Book of Living Wisdom',0xd6b15c);
-  addHotspot(cx,Y+1,cz+14,()=>returnToHub(),'Return to Hub',0x9c6b3a,0.4);
-  flame(cx-8,Y+2,cz-8,3,12); flame(cx+8,Y+2,cz-8,3,12);
+  addHotspot(cx,Y+4,cz-11,()=>openExhibit('ark_of_covenant'),'The Ark of the Covenant',0xf4c020,0.7);
+  addHotspot(cx,Y+5,cz-4,()=>openExhibit('solomons_throne'),'The Throne of Solomon',0xd4a520,0.7);
+  addHotspot(cx,Y+1,cz+16,()=>returnToHub(),'Return to Hub',0x9c6b3a,0.4);
+  flame(cx-10,Y+2,cz-10,3,15); flame(cx+10,Y+2,cz-10,3,15);
+  flame(cx-8,Y+2,cz+8,2.5,12); flame(cx+8,Y+2,cz+8,2.5,12);
 }
 
 /* ── Overlay / exhibit system ── */
@@ -1842,7 +2314,7 @@ function initThree(){
   clock=new THREE.Clock();
   raycaster=new THREE.Raycaster();
 
-  buildBasilica(); buildWallTorches();
+  buildBasilica(); buildJachinBoaz(); buildBrazenSea(); buildElaborateMenorah(); buildWallMurals(); buildWallTorches();
   setupXR();
   addEventListener('resize',()=>{
     camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -2074,6 +2546,7 @@ function boot(){
 }
 boot();
 </script>
+
 </body>
 </html>
 
