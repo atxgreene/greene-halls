@@ -74,6 +74,7 @@
 <!-- optional post-processing for cinematic bloom; the hall renders directly if any of these fail to load -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -341,6 +342,8 @@ function buildComposer(){ try{
   composer=new THREE.EffectComposer(renderer);
   composer.addPass(new THREE.RenderPass(scene,camera));
   composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.62,0.5,0.82));
+  // linear render targets display darker than the direct sRGB render — restore output gamma
+  if(typeof THREE.ShaderPass==='function'&&typeof THREE.GammaCorrectionShader!=='undefined'){ composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader)); }
   composer.setSize(innerWidth,innerHeight);
 }catch(e){ composer=null; } }
 function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); if(composer) composer.setSize(innerWidth,innerHeight); }
@@ -464,7 +467,7 @@ function loop(){ const dt=Math.min(clock.getDelta(),0.05); const inVR=!!(rendere
   braz.forEach(b=>{ const u=b.userData; const boost=now<u.boostUntil?2.0:1; const f=reduced?0.95:(0.8+Math.sin(now*0.013+u.id*1.7)*0.08+Math.sin(now*0.041+u.id)*0.05+Math.random()*0.05); u.light.intensity=u.base*f*boost; const sc=(0.92+(reduced?0:Math.sin(now*0.02+u.id)*0.12))*(boost>1?1.3:1); u.flame.scale.setScalar(1.15*sc); u.core.scale.setScalar(0.55*sc); if(u.coals.material) u.coals.material.emissiveIntensity=1.2*f*boost; });
   if(!reduced){ spin.forEach(g=>{ g.rotation.y+=dt*0.5; }); if(thread) thread.material.opacity=0.42+Math.sin(now*0.001)*0.08;
     if(dust){ dust.rotation.y+=dt*0.012; } if(threadPulse){ threadPulse.position.z=Math.sin(now*0.00035)*(HZ-2); threadPulse.material.opacity=0.4+Math.sin(now*0.004)*0.22; } }
-  updateFocus(); if(composer&&!inVR){ composer.render(); } else { renderer.render(scene,camera); } }
+  updateFocus(); if(composer&&!inVR){ try{ composer.render(); }catch(e){ composer=null; renderer.render(scene,camera); } } else { renderer.render(scene,camera); } }
 
 function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=muted?0.0:0.5; masterGain.connect(actx.destination); audioOn=true; startDrone(); }catch(e){} }
 /* a slow, reverent drone bed — a low fifth under a lit-stone hall, with a long swell */
