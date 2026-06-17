@@ -13,6 +13,7 @@ file (and ideally a visible in-app credits line) intact.
 | `grim-reaper.glb` | Grim Reaper — Pigcraft (Sketchfab, ~59 MB) | confirm license |
 | `demon-knight/source/Sensenmonster.fbx` | "Fallen Angel Demon Knight" (Sketchfab FBX) | confirm license |
 | `giant.glb` | Farnese Hercules — Deepak C C (Sketchfab) | used for the Nephilim |
+| `models/nephilim/lamassu.glb` | Assyrian Lamassu — **source/author to confirm** (no attribution embedded in the file) | Mesopotamia (Apkallu) centrepiece — **verify license before public hosting** |
 
 > If any model's license turns out to be more restrictive than CC-BY (e.g. no
 > redistribution), replace it before public hosting — the procedural fallback figures
