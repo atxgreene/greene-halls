@@ -480,6 +480,14 @@ try{
   const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
   gltfLoader=new GLTFLoader();
 }catch(ge){console.warn('GLTFLoader unavailable',ge);}
+/* optional post-processing + environment — degrade to direct render if unavailable */
+let EffectComposer=null,RenderPass=null,UnrealBloomPass=null,RoomEnvironment=null;
+try{
+  ({EffectComposer}=await import('three/addons/postprocessing/EffectComposer.js'));
+  ({RenderPass}=await import('three/addons/postprocessing/RenderPass.js'));
+  ({UnrealBloomPass}=await import('three/addons/postprocessing/UnrealBloomPass.js'));
+  ({RoomEnvironment}=await import('three/addons/environments/RoomEnvironment.js'));
+}catch(pe){console.warn('Post-processing unavailable — direct render',pe);}
 
 /* ── helpers ── */
 const $=(s,r=document)=>r.querySelector(s);
@@ -641,6 +649,7 @@ let audioOn=true;
 
 /* ── Three.js globals ── */
 let renderer,scene,camera,clock,raycaster;
+let composer=null,bloomPass=null,dust=null;
 const interactives=[];
 const keys={};
 const move={f:0,s:0};
@@ -2342,6 +2351,8 @@ function initThree(){
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.08;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
@@ -2351,13 +2362,70 @@ function initThree(){
   clock=new THREE.Clock();
   raycaster=new THREE.Raycaster();
 
+  // image-based reflections for the bronze sea, gold menorah & metalwork
+  if(RoomEnvironment){
+    try{
+      const pmrem=new THREE.PMREMGenerator(renderer);
+      scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+    }catch(ee){console.warn('env map unavailable',ee);}
+  }
+
   buildBasilica(); buildJachinBoaz(); buildBrazenSea(); buildElaborateMenorah(); buildWallMurals(); buildWallTorches();
+  buildDust();
+  enableShadows();
   setupXR();
+
+  // composer / bloom — desktop & mobile; XR falls back to direct render below
+  if(EffectComposer&&RenderPass&&UnrealBloomPass){
+    composer=new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene,camera));
+    bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.7,0.55,0.82);
+    composer.addPass(bloomPass);
+    composer.setSize(innerWidth,innerHeight);
+  }
+
   addEventListener('resize',()=>{
     camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(innerWidth,innerHeight);
+    if(composer) composer.setSize(innerWidth,innerHeight);
+    if(bloomPass) bloomPass.setSize(innerWidth,innerHeight);
   });
   renderer.setAnimationLoop(tick);
+}
+
+/* drifting dust / incense motes caught in the light — the Basilica's calm signature */
+function buildDust(){
+  const N=900, g=new THREE.BufferGeometry(), pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    pos[i*3]  =rand(-22,22);
+    pos[i*3+1]=rand(0,16);
+    pos[i*3+2]=rand(-44,22);
+  }
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({color:0xffe6b0,size:0.05,transparent:true,opacity:0.5,
+    depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true,fog:true});
+  dust=new THREE.Points(g,m);
+  dust.frustumCulled=false;
+  scene.add(dust);
+}
+
+/* one soft shadow-casting key light + cast/receive on solid meshes (cheap, grounds the room) */
+function enableShadows(){
+  scene.traverse(o=>{
+    if(o.isDirectionalLight){
+      o.castShadow=true;
+      o.shadow.mapSize.set(2048,2048);
+      const c=o.shadow.camera;
+      c.near=1; c.far=140; c.left=-46; c.right=46; c.top=46; c.bottom=-46;
+      o.shadow.bias=-0.0004; o.shadow.normalBias=0.02;
+    }
+    if(o.isMesh){
+      const mt=o.material;
+      const transparent=Array.isArray(mt)?mt.some(x=>x&&x.transparent):mt&&mt.transparent;
+      if(!transparent){ o.castShadow=true; o.receiveShadow=true; }
+      else { o.receiveShadow=true; }
+    }
+  });
 }
 
 /* ── XR setup ── */
@@ -2390,7 +2458,17 @@ function tick(){
     const dp=Math.hypot(camera.position.x,camera.position.z+30);
     if(dp<12) note('Press E to descend into the Inner Sanctum');
   }
-  renderer.render(scene,camera);
+  if(dust){
+    dust.rotation.y+=dt*0.012;
+    const p=dust.geometry.attributes.position;
+    for(let i=1;i<p.count*3;i+=3){
+      p.array[i]+=dt*0.18;
+      if(p.array[i]>16) p.array[i]=0;
+    }
+    p.needsUpdate=true;
+  }
+  if(composer&&!renderer.xr.isPresenting) composer.render();
+  else renderer.render(scene,camera);
 }
 
 function animateFlames(t){
