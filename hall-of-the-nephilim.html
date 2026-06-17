@@ -233,7 +233,7 @@ function chime(){ tone([392,523.25],'sine',0.08); }
 function tryGLB(spec, group, fallbackMeshes){ if(!spec || !spec.file || typeof THREE.GLTFLoader==='undefined') return;
   new THREE.GLTFLoader().load(spec.file, gltf=>{ const m=gltf.scene;
     if(spec.targetH){ /* normalize: scale to a real-world height (units-agnostic), then recentre horizontally and seat the base at spec.y */
-      let b=new THREE.Box3().setFromObject(m); const sz=new THREE.Vector3(); b.getSize(sz); m.scale.setScalar(spec.targetH/(sz.y||1)); m.rotation.y=spec.ry||0;
+      let b=new THREE.Box3().setFromObject(m); const sz=new THREE.Vector3(); b.getSize(sz); const h=(isFinite(sz.y)&&sz.y>1e-4)?sz.y:1; m.scale.setScalar(spec.targetH/h); m.rotation.y=spec.ry||0;
       b=new THREE.Box3().setFromObject(m); const c=new THREE.Vector3(); b.getCenter(c); m.position.set(-c.x,(spec.y||0)-b.min.y,-c.z); }
     else { m.scale.setScalar(spec.scale||1); m.position.y=spec.y||0; m.rotation.y=spec.ry||0; }
     (fallbackMeshes||group.children.slice()).forEach(c=>{ if(c!==m) c.visible=false; }); group.add(m); }, undefined, ()=>{}); }
@@ -408,7 +408,7 @@ function loop(){ const dt=Math.min(clock.getDelta(),0.05); player.rotation.y=yaw
   const sp=3.6*dt; let fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)+touchMove.f; let str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+touchMove.s;
   fwd=Math.max(-1,Math.min(1,fwd)); str=Math.max(-1,Math.min(1,str));
   if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
-  player.position.x=Math.max(-3.4,Math.min(3.4,player.position.x)); player.position.z=Math.max(-HZ+1,Math.min(HZ-1,player.position.z));
+  player.position.x=Math.max(-HX+1,Math.min(HX-1,player.position.x)); player.position.z=Math.max(-HZ+1,Math.min(HZ-1,player.position.z));
   const now=performance.now();
   braz.forEach(b=>{ const u=b.userData; const boost=now<u.boostUntil?2.0:1; const f=reduced?0.95:(0.8+Math.sin(now*0.013+u.id*1.7)*0.08+Math.sin(now*0.041+u.id)*0.05+Math.random()*0.05); u.light.intensity=u.base*f*boost; const sc=(0.92+(reduced?0:Math.sin(now*0.02+u.id)*0.12))*(boost>1?1.3:1); u.flame.scale.setScalar(1.15*sc); u.core.scale.setScalar(0.55*sc); if(u.coals.material) u.coals.material.emissiveIntensity=1.2*f*boost; });
   if(!reduced){ spin.forEach(g=>{ g.rotation.y+=dt*0.5; }); if(thread) thread.material.opacity=0.42+Math.sin(now*0.001)*0.08; }
