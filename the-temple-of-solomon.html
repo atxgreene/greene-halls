@@ -289,6 +289,9 @@ body.touch #joystick{display:block;}
   letter-spacing:.05em;line-height:1.62;
 }
 
+/* ---------- version stamp ---------- */
+.ver{position:fixed;bottom:10px;right:14px;font-family:var(--tech);font-size:10px;letter-spacing:.14em;color:rgba(214,177,92,.28);z-index:4;pointer-events:none;user-select:none;}
+
 /* ---------- descent overlay (cinematic level-change animation) ---------- */
 .descent-overlay{
   position:fixed;inset:0;z-index:25;background:#000;
@@ -738,14 +741,20 @@ function buildJachinBoaz(){
 /* ── Brazen Sea (1 Kings 7:23-26) ── */
 function buildBrazenSea(){
   const bz=mat(0x7a4a18,0.38,0.82,0x4a2808,0.18);
-  const g=new THREE.Group(); g.position.set(-12,0,9);
-  const bowl=new THREE.Mesh(new THREE.SphereGeometry(3.2,24,10,0,Math.PI*2,0,Math.PI/2),bz);
-  bowl.position.y=2.2; g.add(bowl);
-  const rim=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.22,10,36),bz);
-  rim.rotation.x=-Math.PI/2; rim.position.y=2.36; g.add(rim);
-  const water=new THREE.Mesh(new THREE.CircleGeometry(3.15,24),
+  const g=new THREE.Group(); g.position.set(-5,0,10);
+  // Tapered cylinder cup (outer wall)
+  const outer=new THREE.Mesh(new THREE.CylinderGeometry(3.2,2.55,2.8,24,1,true),bz);
+  outer.position.y=1.4; g.add(outer);
+  // Floor disk
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(2.55,24),bz);
+  floor.rotation.x=-Math.PI/2; floor.position.y=0.02; g.add(floor);
+  // Water surface
+  const water=new THREE.Mesh(new THREE.CircleGeometry(3.1,24),
     new THREE.MeshStandardMaterial({color:0x1a3a50,metalness:0.85,roughness:0.04,emissive:0x0a1c2a,emissiveIntensity:0.3}));
-  water.rotation.x=-Math.PI/2; water.position.y=2.28; g.add(water);
+  water.rotation.x=-Math.PI/2; water.position.y=2.72; g.add(water);
+  // Decorative rim torus
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.22,10,36),bz);
+  rim.rotation.x=-Math.PI/2; rim.position.y=2.8; g.add(rim);
   for(let grp=0;grp<4;grp++){
     const faceAngle=grp*Math.PI/2;
     for(let j=-1;j<=1;j++){
@@ -769,13 +778,13 @@ function buildBrazenSea(){
   }
   const wl=new THREE.PointLight(0x4080b0,3,12,2); wl.position.y=3; g.add(wl);
   scene.add(g);
-  addHotspot(-12,3,9,()=>openExhibit('brazen_sea'),'The Brazen Sea — 12 Oxen',0x4080b0,0.6);
+  addHotspot(-5,3,10,()=>openExhibit('brazen_sea'),'The Brazen Sea — 12 Oxen',0x4080b0,0.6);
 }
 
 /* ── Seven-Branch Menorah (Exodus 25:31-40) ── */
 function buildElaborateMenorah(){
   const gold=new THREE.MeshStandardMaterial({color:0xd4a520,metalness:0.95,roughness:0.14,emissive:0x8a6010,emissiveIntensity:0.32});
-  const g=new THREE.Group(); g.position.set(10,0,-8);
+  const g=new THREE.Group(); g.position.set(5,0,-12);
   const base=new THREE.Mesh(new THREE.CylinderGeometry(0.88,1.15,0.38,12),gold);
   base.position.y=0.19; g.add(base);
   for(let i=0;i<3;i++){
@@ -812,7 +821,7 @@ function buildElaborateMenorah(){
   });
   const ml=new THREE.PointLight(0xffc060,7,20,2); ml.position.y=4.6; g.add(ml);
   scene.add(g);
-  addHotspot(10,2.5,-8,()=>openExhibit('menorah'),'The Seven-Branch Menorah',0xd4a520,0.55);
+  addHotspot(5,2.5,-12,()=>openExhibit('menorah'),'The Seven-Branch Menorah',0xd4a520,0.55);
 }
 
 /* ── Canvas murals painted into the Basilica walls ── */
@@ -2547,6 +2556,7 @@ function boot(){
 boot();
 </script>
 
+<div class="ver">TEMPLE v2</div>
 </body>
 </html>
 
