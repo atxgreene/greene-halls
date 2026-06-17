@@ -92,13 +92,32 @@
     <div class="foot">part of The Greene Paleogenomic Museum</div>
   </div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script>
+<script type="importmap">
+{ "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+let THREE, EffectComposer=null, RenderPass=null, UnrealBloomPass=null;
+try{
+  THREE = await import('three');
+}catch(e){
+  document.getElementById('fallback').style.display='flex';
+  document.getElementById('fallback').textContent='WebGL error: '+(e&&e.message||e);
+  throw e;
+}
+try{
+  ({EffectComposer}=await import('three/addons/postprocessing/EffectComposer.js'));
+  ({RenderPass}=await import('three/addons/postprocessing/RenderPass.js'));
+  ({UnrealBloomPass}=await import('three/addons/postprocessing/UnrealBloomPass.js'));
+}catch(_){}
 /* The Lyceum — Hall of Natural Philosophy. Self-contained hosted hall for the
    Greene Halls. Ported from the museum's buildLyceum(); no personal data.
    Honest-content rule kept: legend labeled as legend; the reproducible
    experiment is the point. */
 let renderer, scene, camera, player, clock, raycaster;
+let composer=null, bloomPass=null, dust=null;
 let yaw=0, pitch=0, locked=false, focused=null;
 const keys={}, interactables=[], pickMeshes=[];
 const touchMove={f:0,s:0}; let reduced=false;
@@ -108,10 +127,10 @@ let actx=null, masterGain=null, audioOn=false;
 
 function rgb(c){ return '#'+('000000'+c.toString(16)).slice(-6); }
 function mat(color,rough,metal,emissive,eInt){ const m=new THREE.MeshStandardMaterial({color:color,roughness:rough==null?0.85:rough,metalness:metal==null?0:metal}); if(emissive!=null){ m.emissive=new THREE.Color(emissive); m.emissiveIntensity=eInt==null?1:eInt; } return m; }
-function makeTexture(draw){ const cv=document.createElement('canvas'); cv.width=512; cv.height=660; const x=cv.getContext('2d'); draw(x,cv.width,cv.height); const t=new THREE.CanvasTexture(cv); if('encoding' in t) t.encoding=THREE.sRGBEncoding; t.anisotropy=4; return t; }
+function makeTexture(draw){ const cv=document.createElement('canvas'); cv.width=512; cv.height=660; const x=cv.getContext('2d'); draw(x,cv.width,cv.height); const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t; }
 function wrap(ctx,text,x,y,max,lh){ const words=text.split(' '); let line='',yy=y; for(const w of words){ const test=line+w+' '; if(ctx.measureText(test).width>max && line){ ctx.fillText(line,x,yy); line=w+' '; yy+=lh; } else line=test; } ctx.fillText(line,x,yy); return yy; }
 function wrapCenter(ctx,text,cx,cy,max,lh){ const words=text.split(' '); let line='',lines=[]; for(const w of words){ const t=line+w+' '; if(ctx.measureText(t).width>max && line){ lines.push(line.trim()); line=w+' '; } else line=t; } lines.push(line.trim()); const tot=(lines.length-1)*lh; lines.forEach((ln,i)=>ctx.fillText(ln,cx,cy-tot/2+i*lh)); }
-function makeLabel(text,color){ const cv=document.createElement('canvas'); cv.width=1024; cv.height=256; const x=cv.getContext('2d'); x.clearRect(0,0,1024,256); x.textAlign='center'; x.textBaseline='middle'; x.shadowColor='rgba(0,0,0,0.65)'; x.shadowBlur=14; x.fillStyle=rgb(color||COL.amber); x.font='700 84px sans-serif'; wrapCenter(x,text,512,128,960,92); const t=new THREE.CanvasTexture(cv); if('encoding' in t) t.encoding=THREE.sRGBEncoding; t.anisotropy=4; const m=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}); return new THREE.Mesh(new THREE.PlaneGeometry(3.0,0.75),m); }
+function makeLabel(text,color){ const cv=document.createElement('canvas'); cv.width=1024; cv.height=256; const x=cv.getContext('2d'); x.clearRect(0,0,1024,256); x.textAlign='center'; x.textBaseline='middle'; x.shadowColor='rgba(0,0,0,0.65)'; x.shadowBlur=14; x.fillStyle=rgb(color||COL.amber); x.font='700 84px sans-serif'; wrapCenter(x,text,512,128,960,92); const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; const m=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}); return new THREE.Mesh(new THREE.PlaneGeometry(3.0,0.75),m); }
 let _disc; function softDisc(){ if(_disc) return _disc; const cv=document.createElement('canvas'); cv.width=cv.height=128; const x=cv.getContext('2d'); const g=x.createRadialGradient(64,64,2,64,64,64); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.4,'rgba(255,255,255,0.5)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,128,128); _disc=new THREE.CanvasTexture(cv); return _disc; }
 function glowSprite(color,scale,opacity){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:softDisc(),color:color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:opacity==null?0.6:opacity})); s.scale.setScalar(scale); return s; }
 function plaqueTemple(obj,secret){ return makeTexture((x,W,H)=>{ const grd=x.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#d8c29a'); grd.addColorStop(1,'#b89a6e'); x.fillStyle=grd; x.fillRect(0,0,W,H); x.strokeStyle=rgb(obj.c||COL.amber); x.lineWidth=6; x.strokeRect(12,12,W-24,H-24); x.fillStyle='#6b4f2a'; x.font='600 22px monospace'; x.fillText((obj.th||'').toUpperCase(),34,58); x.fillStyle='#2a1d10'; x.font='700 42px sans-serif'; let yy=wrap(x,obj.g,32,110,W-60,46); x.fillStyle='#7a5a2e'; x.font='400 23px monospace'; x.fillText(obj.o,34,yy+38); x.fillStyle='#3a2c18'; x.font='400 23px sans-serif'; yy=wrap(x,obj.d,34,yy+82,W-68,32); if(secret){ x.fillStyle=rgb(COL.amber); x.font='600 20px monospace'; x.fillText('◈ THE EXPERIMENT',34,yy+50); x.fillStyle='#2a1d10'; x.font='400 22px sans-serif'; wrap(x,obj.sec,34,yy+84,W-68,30); } else { x.fillStyle='#6b4f2a'; x.font='400 20px monospace'; x.fillText('look + press E / click →',34,H-40); } }); }
@@ -124,13 +143,22 @@ function chime(){ tone([528],'sine',0.1); }
 function init(){
   renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
-  renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
-  renderer.shadowMap.enabled=true; document.body.appendChild(renderer.domElement);
+  renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.useLegacyLights=true; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; document.body.appendChild(renderer.domElement);
   scene=new THREE.Scene(); scene.background=new THREE.Color(0x0a0e12); scene.fog=new THREE.FogExp2(0x0c1014,0.016);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,200);
   player=new THREE.Object3D(); player.position.set(0,1.62,-12); player.add(camera); scene.add(player);
   clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
   buildHall();
+  buildDust();
+  enableShadows();
+  if(EffectComposer&&RenderPass&&UnrealBloomPass){
+    composer=new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene,camera));
+    bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.6,0.55,0.82);
+    composer.addPass(bloomPass);
+    composer.setSize(innerWidth,innerHeight);
+  }
   addEventListener('resize',onResize);
   addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='KeyE'||e.code==='Enter') interact(); });
   addEventListener('keyup',e=>{ keys[e.code]=false; });
@@ -158,7 +186,29 @@ function setupTouch(){
     else if(t.identifier===lookId){ lookId=null; if(tap && performance.now()-tap.t<320) interact(); tap=null; } } }
   addEventListener('touchend',end); addEventListener('touchcancel',end);
 }
-function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); if(composer) composer.setSize(innerWidth,innerHeight); if(bloomPass) bloomPass.setSize(innerWidth,innerHeight); }
+/* drifting dust / motes caught in the light */
+function buildDust(){
+  const N=700, g=new THREE.BufferGeometry(), pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ pos[i*3]=(Math.random()*2-1)*9; pos[i*3+1]=Math.random()*9; pos[i*3+2]=(Math.random()*2-1)*16; }
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({color:0xffe6b0,size:0.045,transparent:true,opacity:0.45,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true,fog:true});
+  dust=new THREE.Points(g,m); dust.frustumCulled=false; scene.add(dust);
+}
+/* soft shadow-casting key light + cast/receive on solid meshes */
+function enableShadows(){
+  scene.traverse(o=>{
+    if(o.isDirectionalLight){
+      o.castShadow=true; o.shadow.mapSize.set(2048,2048);
+      const c=o.shadow.camera; c.near=0.5; c.far=120; c.left=-30; c.right=30; c.top=30; c.bottom=-30;
+      o.shadow.bias=-0.0004; o.shadow.normalBias=0.02;
+    }
+    if(o.isMesh){
+      const mt=o.material; const transparent=Array.isArray(mt)?mt.some(x=>x&&x.transparent):mt&&mt.transparent;
+      if(!transparent){ o.castShadow=true; o.receiveShadow=true; } else { o.receiveShadow=true; }
+    }
+  });
+}
 
 function buildHall(){
   const hx=9, hz=16, H=6;
@@ -280,7 +330,8 @@ function loop(){
   player.position.x=Math.max(-8.4,Math.min(8.4,player.position.x)); player.position.z=Math.max(-15.2,Math.min(15.2,player.position.z));
   if(!reduced) interactables.forEach(g=>{ if(g.userData.type==='sci'&&g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; });
   updateFocus();
-  renderer.render(scene,camera);
+  if(dust&&!reduced){ const p=dust.geometry.attributes.position; for(let i=1;i<p.count*3;i+=3){ p.array[i]+=dt*0.16; if(p.array[i]>9) p.array[i]=0; } p.needsUpdate=true; }
+  if(composer) composer.render(); else renderer.render(scene,camera);
 }
 
 function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=0.5; masterGain.connect(actx.destination); audioOn=true; }catch(e){} }
