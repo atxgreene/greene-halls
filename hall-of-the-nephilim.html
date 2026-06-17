@@ -46,6 +46,8 @@
   #knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(231,207,143,.5);border:1px solid var(--gold);}
   #rm{position:fixed;right:14px;top:14px;z-index:8;font-family:var(--serif);font-size:12px;color:var(--ivory);background:rgba(10,8,18,.6);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;}
   #rm.on{color:#0a0610;background:var(--gold);}
+  #mute{position:fixed;right:152px;top:14px;z-index:8;font-family:var(--serif);font-size:12px;color:var(--ivory);background:rgba(10,8,18,.6);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;}
+  #mute.on{color:#0a0610;background:var(--gold);}
   body.touch #stick{display:block;}
 </style>
 </head>
@@ -53,6 +55,7 @@
   <div id="note"></div><div id="reticle"></div>
   <div id="hud"><div class="th"></div><div class="ti"></div><div class="o"></div><div class="d"></div></div>
   <button id="rm" title="Toggle reduced motion">Reduced motion</button>
+  <button id="mute" title="Toggle sound">Sound off</button>
   <div id="stick"><div id="knob"></div></div>
   <div id="intro">
     <div class="kick">The Greene Museum · Theology Wing</div>
@@ -60,13 +63,23 @@
     <p>Follow one thread: heavenly beings who descend, mingle with mortals, and bring forbidden knowledge — and the giants and heroes who follow. From the Watchers of Enoch, walk the civilizations — Mesopotamia, Egypt, Greece, the Norse, Mesoamerica — and see the motif rise again in each one’s architecture, artifacts, and art.</p>
     <div class="tiers"><span><b style="color:#e7cf8f">✓ Scripture</b> — text/tradition</span><span><b style="color:#6fb0a6">≈ Parallel</b> — comparative, not contact</span><span><b style="color:#b084e0">◌ Modern claim</b> — labeled speculation</span></div>
     <button id="enter">Enter the Hall</button>
-    <div class="hint">Move: WASD / arrows · Look: mouse (click to capture) · Interact: <b>E</b> or click</div>
+    <div class="hint">Move: WASD / arrows · Look: mouse (click to capture) · Interact: <b>E</b> or click · <b>Enter VR</b> for a headset · ♪ toggles sound</div>
   </div>
   <div id="fallback"><div class="wrap" id="fbwrap"><h1>The Hall of the Nephilim — The Watchers' Thread</h1>
     <p style="color:#c4a8ff">Your device couldn’t start the 3-D hall, so here is the full thread.</p></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
+<!-- optional post-processing for cinematic bloom; the hall renders directly if any of these fail to load -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script>
 /* The Hall of the Nephilim — self-contained hosted hall for the Greene Halls.
    The Watchers/Nephilim motif traced across seven civilizations, each given its
@@ -79,12 +92,12 @@
    station's `glb` (the building) and/or `relic` (the artifact/tool); on success
    the loader hides the placeholder, on any error it keeps it. Drop files under
    ./models/nephilim/ . The `search` strings are the asset-hunt brief. */
-let renderer, scene, camera, player, clock, raycaster;
+let renderer, scene, camera, player, clock, raycaster, vrCon0=null, vrCon1=null, vrRay=null, composer=null;
 let yaw=0, pitch=0, locked=false, focused=null;
 const keys={}, interactables=[], pickMeshes=[], spin=[], braz=[];
 const touchMove={f:0,s:0}; let reduced=false;
 const isTouch = matchMedia('(pointer:coarse)').matches || ('ontouchstart' in window);
-let actx=null, masterGain=null, audioOn=false; let thread=null;
+let actx=null, masterGain=null, audioOn=false; let thread=null, dust=null, threadPulse=null, droneNodes=null, muted=false;
 const HX=12, HZ=23, H=7.6;
 
 function rgb(c){ return '#'+('000000'+c.toString(16)).slice(-6); }
@@ -224,14 +237,19 @@ const ARTIMG={
 /* THE one premium "legendary" model: the colossal Lamassu guardian at the
    Mesopotamia station. file:null shows the procedural placeholder; drop a real
    high-detail scan at ./models/nephilim/lamassu.glb and set `file`. */
-const LEGENDARY={ file:'./models/nephilim/lamassu.glb', scale:1, y:0, ry:0, search:'Assyrian/Sumerian Lamassu — winged human-headed bull guardian — high-detail photogrammetry scan (British Museum or Louvre), .glb, decimated under ~10 MB, base at origin, front facing +X' };
+const LEGENDARY={ file:'./models/nephilim/lamassu.glb', targetH:3.9, y:0, ry:0, search:'Assyrian/Sumerian Lamassu — winged human-headed bull guardian — high-detail photogrammetry scan (British Museum or Louvre), .glb, decimated under ~10 MB, base at origin, front facing +X' };
 
 function note(s){ const n=document.getElementById('note'); n.textContent=s; n.classList.add('show'); clearTimeout(note._t); note._t=setTimeout(()=>n.classList.remove('show'),3000); }
 function tone(freqs,type,gain){ if(!audioOn||!actx) return; const t=actx.currentTime; freqs.forEach((f,i)=>{ const o=actx.createOscillator(); o.type=type||'sine'; o.frequency.value=f; const gg=actx.createGain(); gg.gain.value=0; o.connect(gg); gg.connect(masterGain); const st=t+i*0.16; gg.gain.linearRampToValueAtTime(gain||0.1,st+0.04); gg.gain.exponentialRampToValueAtTime(0.0004,st+1.1); o.start(st); o.stop(st+1.2); }); }
 function chime(){ tone([392,523.25],'sine',0.08); }
 
 function tryGLB(spec, group, fallbackMeshes){ if(!spec || !spec.file || typeof THREE.GLTFLoader==='undefined') return;
-  new THREE.GLTFLoader().load(spec.file, gltf=>{ const m=gltf.scene; m.scale.setScalar(spec.scale||1); m.position.y=spec.y||0; m.rotation.y=spec.ry||0; (fallbackMeshes||group.children.slice()).forEach(c=>{ if(c!==m) c.visible=false; }); group.add(m); }, undefined, ()=>{}); }
+  new THREE.GLTFLoader().load(spec.file, gltf=>{ const m=gltf.scene;
+    if(spec.targetH){ /* normalize: scale to a real-world height (units-agnostic), then recentre horizontally and seat the base at spec.y */
+      let b=new THREE.Box3().setFromObject(m); const sz=new THREE.Vector3(); b.getSize(sz); const h=(isFinite(sz.y)&&sz.y>1e-4)?sz.y:1; m.scale.setScalar(spec.targetH/h); m.rotation.y=spec.ry||0;
+      b=new THREE.Box3().setFromObject(m); const c=new THREE.Vector3(); b.getCenter(c); m.position.set(-c.x,(spec.y||0)-b.min.y,-c.z); }
+    else { m.scale.setScalar(spec.scale||1); m.position.y=spec.y||0; m.rotation.y=spec.ry||0; }
+    (fallbackMeshes||group.children.slice()).forEach(c=>{ if(c!==m) c.visible=false; }); group.add(m); }, undefined, ()=>{}); }
 
 const M='./models/nephilim/';
 const STATIONS=[
@@ -288,7 +306,7 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,200);
   player=new THREE.Object3D(); player.position.set(0,1.62,-HZ+2); player.add(camera); scene.add(player);
   clock=new THREE.Clock(); raycaster=new THREE.Raycaster();
-  mats(); buildHall(); buildFallback();
+  mats(); buildHall(); buildFallback(); buildComposer();
   addEventListener('resize',onResize);
   addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='KeyE'||e.code==='Enter') interact(); });
   addEventListener('keyup',e=>{ keys[e.code]=false; });
@@ -298,9 +316,37 @@ function init(){
   document.addEventListener('mousemove',e=>{ if(!locked) return; yaw-=e.movementX*0.0022; pitch-=e.movementY*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch)); });
   setupTouch();
   document.getElementById('rm').addEventListener('click',()=>{ reduced=!reduced; document.getElementById('rm').classList.toggle('on',reduced); note(reduced?'Reduced motion on':'Reduced motion off'); });
+  document.getElementById('mute').addEventListener('click',toggleMute);
+  setupVR();
   renderer.setAnimationLoop(loop);
 }
-function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+/* ── WebXR / VR ── walk the thread in a headset; entirely additive — desktop & touch are untouched */
+function setupVR(){ if(!renderer.xr) return; renderer.xr.enabled=true;
+  try{ if(typeof VRButton!=='undefined'){ const b=VRButton.createButton(renderer); b.style.zIndex='30'; b.style.fontFamily='var(--serif)'; document.body.appendChild(b); } }catch(e){}
+  function mkController(i){ const c=renderer.xr.getController(i); c.addEventListener('selectstart',()=>vrInteract(c)); player.add(c); return c; }
+  try{ vrCon0=mkController(0); vrCon1=mkController(1);
+    const rg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,-1)]);
+    vrRay=new THREE.Line(rg,new THREE.LineBasicMaterial({color:0xE8C679,transparent:true,opacity:0.55})); vrRay.scale.z=6; vrCon0.add(vrRay);
+  }catch(e){}
+  renderer.xr.addEventListener('sessionstart',()=>{ player.position.y=0; const intro=document.getElementById('intro'); if(intro) intro.classList.add('gone'); startAudio(); note('Left stick to glide · right stick to turn · trigger to interact'); });
+  renderer.xr.addEventListener('sessionend',()=>{ player.position.y=1.62; });
+}
+function vrInteract(controller){ try{ const o=new THREE.Vector3(), q=new THREE.Quaternion(), d=new THREE.Vector3();
+  controller.getWorldPosition(o); controller.getWorldQuaternion(q); d.set(0,0,-1).applyQuaternion(q);
+  if(pickMeshes.length===0){ interactables.forEach(g=>g.traverse(c=>{ if(c.isMesh){ c.userData._root=g; pickMeshes.push(c); } })); }
+  raycaster.set(o,d); raycaster.far=12; const hits=raycaster.intersectObjects(pickMeshes,false);
+  const root=hits.length?(hits[0].object.userData._root||null):null; if(root){ focused=root; interact(); } }catch(e){} }
+/* cinematic bloom — only if the post-processing scripts loaded; otherwise the hall renders directly */
+function buildComposer(){ try{
+  if(typeof THREE.EffectComposer!=='function'||typeof THREE.RenderPass!=='function'||typeof THREE.UnrealBloomPass!=='function') return;
+  composer=new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene,camera));
+  composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.62,0.5,0.82));
+  // linear render targets display darker than the direct sRGB render — restore output gamma
+  if(typeof THREE.ShaderPass==='function'&&typeof THREE.GammaCorrectionShader!=='undefined'){ composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader)); }
+  composer.setSize(innerWidth,innerHeight);
+}catch(e){ composer=null; } }
+function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); if(composer) composer.setSize(innerWidth,innerHeight); }
 function setupTouch(){
   const stick=document.getElementById('stick'), knob=document.getElementById('knob'); let stickId=null, lookId=null, last=null, tap=null;
   function upd(t){ const r=stick.getBoundingClientRect(); let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2); const max=r.width/2; const d=Math.hypot(dx,dy); if(d>max){ dx*=max/d; dy*=max/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; touchMove.f=-dy/max; touchMove.s=dx/max; }
@@ -324,8 +370,11 @@ function buildHall(){
   const wE=new THREE.Mesh(new THREE.PlaneGeometry(hz*2,H),wallMat); wE.position.set(hx,H/2,0); wE.rotation.y=-Math.PI/2; scene.add(wE);
   const wN=new THREE.Mesh(new THREE.PlaneGeometry(hx*2,H),wallMat); wN.position.set(0,H/2,hz); wN.rotation.y=Math.PI; scene.add(wN);
   const wS=new THREE.Mesh(new THREE.PlaneGeometry(hx*2,H),wallMat); wS.position.set(0,H/2,-hz); scene.add(wS);
-  scene.add(new THREE.HemisphereLight(0x6a5f8c,0x0e0a16,0.42)); scene.add(new THREE.AmbientLight(0x1c1628,0.26));
+  scene.add(new THREE.HemisphereLight(0x7c6fa6,0x0e0a16,0.5)); scene.add(new THREE.AmbientLight(0x221b34,0.22));
+  const moon=new THREE.DirectionalLight(0xa8b6e6,0.4); moon.position.set(-7,17,-hz*0.55); scene.add(moon);
   thread=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.02,hz*2-1),new THREE.MeshBasicMaterial({color:0xE8C679,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false})); thread.position.set(0,0.04,0); scene.add(thread);
+  // a mote of light that travels the thread, binding the civilizations end to end
+  threadPulse=glowSprite(0xE8C679,1.25,0.6); threadPulse.position.set(0,0.14,0); scene.add(threadPulse);
   const title=makeLabel('THE HALL OF THE NEPHILIM',0xc4a8ff); title.position.set(0,5.4,-hz+0.25); scene.add(title);
   const sub=makeLabel('the Watchers’ thread, across the civilizations',0xb9a6ff,0.5); sub.position.set(0,1.0,-hz+0.25); scene.add(sub);
   // entrance braziers
@@ -347,6 +396,8 @@ function buildHall(){
     const nm=makeLabel(s.g,s.color); nm.position.set(0,3.85,0); grp.add(nm);
     const cul=makeLabel(s.o,0xd9cdae,0.46); cul.position.set(0,0.95,0.55); grp.add(cul);
     grp.add(contactShadow(1.0,0.5,0,0));
+    // a soft colored aura breathing each civilization's hue around its stele (sprite glow — no per-light cost)
+    const acc=glowSprite(s.color,2.6,0.2); acc.position.set(side*6.8,2.5,z); scene.add(acc);
     // plaque on a lectern beside the stele (reachable from the nave)
     const fp=framedPanel(plaque(s,false),1.6,2.05); fp.position.set(side*1.0,2.0,0.0); fp.rotation.y=-faceRot; grp.add(fp);
     fp.userData={ type:'plaque', texSec:plaque(s,true), panel:fp.children[1], revealed:false, data:s }; interactables.push(fp);
@@ -365,6 +416,9 @@ function buildHall(){
     if(s.kind==='apkallu'){ // the legendary centrepiece — a colossal Lamassu guardian + Sumerian statuary
       const lam=lamassu(); lam.position.set(side*4.9,0,z-3.4); lam.rotation.y=0.4; lam.scale.setScalar(1.14); scene.add(lam); tryGLB(LEGENDARY,lam);
       scene.add(contactShadow(2.2,0.46,side*4.9,z-3.4));
+      // a reverent shaft of light + warm spot on the guardian — the room's focal drama
+      const lamSpot=new THREE.SpotLight(0xffe9c4,3.0,24,Math.PI/7,0.55,1.3); lamSpot.position.set(side*4.9,7.6,z-2.0); lamSpot.target.position.set(side*4.9,2.2,z-3.4); scene.add(lamSpot); scene.add(lamSpot.target);
+      const lamShaft=new THREE.Mesh(new THREE.CylinderGeometry(0.45,2.5,7.4,24,1,true),new THREE.MeshBasicMaterial({color:0xffe6b0,transparent:true,opacity:0.05,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); lamShaft.position.set(side*4.9,3.9,z-3.4); scene.add(lamShaft);
       const lamNm=makeLabel('Lamassu — winged guardian',0x6FA0A6,0.5); lamNm.position.set(side*4.9,4.6,z-3.4); scene.add(lamNm);
       const ledge=box(2.0,0.55,0.62,MAT.stone); ledge.position.set(side*9.2,0.27,z+0.4); scene.add(ledge);
       [-0.6,0,0.6].forEach(ox=>{ const v=votiveFigure(); v.position.set(side*9.2+ox,0.55,z+0.4); v.rotation.y=faceRot+(Math.random()*0.3-0.15); scene.add(v); });
@@ -381,7 +435,7 @@ function buildHall(){
   const dn=320, dg=new THREE.BufferGeometry(), dp=new Float32Array(dn*3);
   for(let i=0;i<dn;i++){ dp[i*3]=(Math.random()-0.5)*hx*2; dp[i*3+1]=Math.random()*H; dp[i*3+2]=(Math.random()-0.5)*hz*2; }
   dg.setAttribute('position',new THREE.BufferAttribute(dp,3));
-  scene.add(new THREE.Points(dg,new THREE.PointsMaterial({color:0xd6b88a,size:0.028,transparent:true,opacity:0.4,depthWrite:false,blending:THREE.AdditiveBlending})));
+  dust=new THREE.Points(dg,new THREE.PointsMaterial({color:0xd6b88a,size:0.028,transparent:true,opacity:0.4,depthWrite:false,blending:THREE.AdditiveBlending})); scene.add(dust);
 }
 function buildDescent(x,z,color){ const ray=new THREE.Mesh(new THREE.CylinderGeometry(0.25,1.8,7.2,20,1,true),new THREE.MeshBasicMaterial({color:0xffe6b0,transparent:true,opacity:0.06,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); ray.position.set(x,3.6,z); scene.add(ray); const halo=glowSprite(color,4.2,0.16); halo.position.set(x,6.8,z); scene.add(halo); }
 function buildFallback(){ const w=document.getElementById('fbwrap'); if(w.dataset.built) return; w.dataset.built='1';
@@ -399,17 +453,33 @@ function updateFocus(){ if(pickMeshes.length===0){ interactables.forEach(g=>g.tr
   if(root!==focused){ focused=root; const ret=document.getElementById('reticle'), hud=document.getElementById('hud');
     if(!root){ ret.classList.remove('hot'); hud.classList.remove('show'); } else { ret.classList.add('hot'); hud.classList.add('show'); const dt=root.userData.data;
       hud.querySelector('.th').textContent=dt.th||''; hud.querySelector('.ti').textContent=dt.g||''; hud.querySelector('.o').textContent=dt.o||''; hud.querySelector('.d').textContent=dt.d||''; } } }
-function loop(){ const dt=Math.min(clock.getDelta(),0.05); player.rotation.y=yaw; camera.rotation.x=pitch;
+function loop(){ const dt=Math.min(clock.getDelta(),0.05); const inVR=!!(renderer.xr&&renderer.xr.isPresenting); if(!inVR){ player.rotation.y=yaw; camera.rotation.x=pitch; }
   const sp=3.6*dt; let fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)+touchMove.f; let str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+touchMove.s;
   fwd=Math.max(-1,Math.min(1,fwd)); str=Math.max(-1,Math.min(1,str));
   if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
-  player.position.x=Math.max(-3.4,Math.min(3.4,player.position.x)); player.position.z=Math.max(-HZ+1,Math.min(HZ-1,player.position.z));
+  if(inVR){ const s=renderer.xr.getSession();
+    if(s){ const hf=new THREE.Vector3(), hr=new THREE.Vector3(); camera.getWorldDirection(hf); hf.y=0; if(hf.lengthSq()<1e-4) hf.set(0,0,-1); hf.normalize(); hr.set(-hf.z,0,hf.x);
+      for(const src of s.inputSources){ const gp=src.gamepad; if(!gp||!gp.axes) continue; const ax=gp.axes; const px=ax.length>2?ax[2]:(ax[0]||0), py=ax.length>3?ax[3]:(ax[1]||0);
+        if(src.handedness==='right'){ if(Math.abs(px)>0.6) player.rotation.y-=Math.sign(px)*dt*1.6; }
+        else if(Math.hypot(px,py)>0.14){ player.position.x+=(hf.x*(-py)+hr.x*px)*sp*1.5; player.position.z+=(hf.z*(-py)+hr.z*px)*sp*1.5; } } } }
+  player.position.x=Math.max(-HX+1,Math.min(HX-1,player.position.x)); player.position.z=Math.max(-HZ+1,Math.min(HZ-1,player.position.z));
   const now=performance.now();
   braz.forEach(b=>{ const u=b.userData; const boost=now<u.boostUntil?2.0:1; const f=reduced?0.95:(0.8+Math.sin(now*0.013+u.id*1.7)*0.08+Math.sin(now*0.041+u.id)*0.05+Math.random()*0.05); u.light.intensity=u.base*f*boost; const sc=(0.92+(reduced?0:Math.sin(now*0.02+u.id)*0.12))*(boost>1?1.3:1); u.flame.scale.setScalar(1.15*sc); u.core.scale.setScalar(0.55*sc); if(u.coals.material) u.coals.material.emissiveIntensity=1.2*f*boost; });
-  if(!reduced){ spin.forEach(g=>{ g.rotation.y+=dt*0.5; }); if(thread) thread.material.opacity=0.42+Math.sin(now*0.001)*0.08; }
-  updateFocus(); renderer.render(scene,camera); }
+  if(!reduced){ spin.forEach(g=>{ g.rotation.y+=dt*0.5; }); if(thread) thread.material.opacity=0.42+Math.sin(now*0.001)*0.08;
+    if(dust){ dust.rotation.y+=dt*0.012; } if(threadPulse){ threadPulse.position.z=Math.sin(now*0.00035)*(HZ-2); threadPulse.material.opacity=0.4+Math.sin(now*0.004)*0.22; } }
+  updateFocus(); if(composer&&!inVR){ try{ composer.render(); }catch(e){ composer=null; renderer.render(scene,camera); } } else { renderer.render(scene,camera); } }
 
-function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=0.5; masterGain.connect(actx.destination); audioOn=true; }catch(e){} }
+function startAudio(){ if(actx) return; try{ actx=new (window.AudioContext||window.webkitAudioContext)(); masterGain=actx.createGain(); masterGain.gain.value=muted?0.0:0.5; masterGain.connect(actx.destination); audioOn=true; startDrone(); }catch(e){} }
+/* a slow, reverent drone bed — a low fifth under a lit-stone hall, with a long swell */
+function startDrone(){ if(!actx||droneNodes) return;
+  const out=actx.createGain(); out.gain.value=0.0; out.connect(masterGain);
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=560; lp.Q.value=0.7; lp.connect(out);
+  const base=55, oscs=[]; [[base,'triangle',0.4],[base*1.5,'sine',0.16],[base*2.001,'sine',0.10],[base*2.997,'sine',0.06]].forEach(([f,t,g])=>{ const o=actx.createOscillator(); o.type=t; o.frequency.value=f; const og=actx.createGain(); og.gain.value=g; o.connect(og); og.connect(lp); o.start(); oscs.push(o); });
+  const lfo=actx.createOscillator(); lfo.type='sine'; lfo.frequency.value=0.045; const lg=actx.createGain(); lg.gain.value=0.09; lfo.connect(lg); lg.connect(out.gain); lfo.start();
+  out.gain.setValueAtTime(0.0,actx.currentTime); out.gain.linearRampToValueAtTime(0.30,actx.currentTime+7);
+  droneNodes={out,lp,oscs,lfo}; }
+function toggleMute(){ if(!actx) startAudio(); muted=!muted; if(masterGain&&actx) masterGain.gain.linearRampToValueAtTime(muted?0.0:0.5,actx.currentTime+0.3);
+  const b=document.getElementById('mute'); if(b){ b.classList.toggle('on',!muted); b.textContent=muted?'Sound off':'Sound on'; } note(muted?'Sound off':'Sound on'); }
 document.getElementById('enter').addEventListener('click',()=>{ document.getElementById('intro').classList.add('gone'); startAudio();
   if(isTouch){ document.body.classList.add('touch'); note('Drag to look · joystick to move · tap an artifact to interact'); }
   else { renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); note('Walk the nave — press E at each civilization'); } });
