@@ -480,6 +480,14 @@ try{
   console.error('Engine load failed', e);
   throw e;
 }
+/* optional post-processing + environment — degrade to direct render if unavailable */
+let EffectComposer=null,RenderPass=null,UnrealBloomPass=null,RoomEnvironment=null;
+try{
+  ({EffectComposer}=await import('three/addons/postprocessing/EffectComposer.js'));
+  ({RenderPass}=await import('three/addons/postprocessing/RenderPass.js'));
+  ({UnrealBloomPass}=await import('three/addons/postprocessing/UnrealBloomPass.js'));
+  ({RoomEnvironment}=await import('three/addons/environments/RoomEnvironment.js'));
+}catch(pe){console.warn('Post-processing unavailable — direct render',pe);}
 
 /* ----------------------------------------------------------------------
    (A) HELPERS + OPERATOR PROFILE
@@ -593,6 +601,7 @@ let audioEnabled=true;
    (C) THREE.JS FACILITY
    ---------------------------------------------------------------------- */
 let renderer,scene,camera,clock;
+let composer=null,bloomPass=null;
 const zones=[]; // {name, pos, color, key, label}
 const interactives=[]; // raycastable meshes -> {action}
 let raycaster,reticleHot=null;
@@ -608,12 +617,22 @@ function initThree(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
   scene=new THREE.Scene();
   scene.background=new THREE.Color(0x05070A);
   scene.fog=new THREE.FogExp2(0x05080d,0.030);
+
+  // subtle image-based reflections on the room's metal/console surfaces
+  if(RoomEnvironment){
+    try{
+      const pmrem=new THREE.PMREMGenerator(renderer);
+      scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+    }catch(ee){console.warn('env map unavailable',ee);}
+  }
 
   camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.05,400);
   camera.position.set(0,PLAYER_H,0);
@@ -625,13 +644,47 @@ function initThree(){
   buildZones();
   buildCentralTable();
   buildStarfield();
+  enableShadows();
   setupXR();
+
+  // composer / bloom — desktop & mobile; XR falls back to direct render in tick()
+  if(EffectComposer&&RenderPass&&UnrealBloomPass){
+    composer=new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene,camera));
+    bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.8,0.6,0.78);
+    composer.addPass(bloomPass);
+    composer.setSize(innerWidth,innerHeight);
+  }
 
   addEventListener('resize',onResize);
   renderer.setAnimationLoop(tick);
 }
 
-function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+function onResize(){
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  if(composer) composer.setSize(innerWidth,innerHeight);
+  if(bloomPass) bloomPass.setSize(innerWidth,innerHeight);
+}
+
+/* soft shadow-casting key light + cast/receive on solid meshes */
+function enableShadows(){
+  scene.traverse(o=>{
+    if(o.isDirectionalLight){
+      o.castShadow=true;
+      o.shadow.mapSize.set(2048,2048);
+      const c=o.shadow.camera;
+      c.near=0.5; c.far=120; c.left=-30; c.right=30; c.top=30; c.bottom=-30;
+      o.shadow.bias=-0.0004; o.shadow.normalBias=0.02;
+    }
+    if(o.isMesh){
+      const mt=o.material;
+      const transparent=Array.isArray(mt)?mt.some(x=>x&&x.transparent):mt&&mt.transparent;
+      if(!transparent){ o.castShadow=true; o.receiveShadow=true; }
+      else { o.receiveShadow=true; }
+    }
+  });
+}
 
 function buildRoom(){
   // lighting: low pulsing ambient + teal/orange accents
@@ -809,7 +862,8 @@ function tick(){
   if(scene.userData.pulse) scene.userData.pulse.intensity=1.0+Math.sin(t*0.8)*0.25;
   if(starMat) starMat.opacity=0.45+Math.sin(t*0.5)*0.25;
   raycast();
-  renderer.render(scene,camera);
+  if(composer&&!renderer.xr.isPresenting) composer.render();
+  else renderer.render(scene,camera);
 }
 
 function raycast(){
