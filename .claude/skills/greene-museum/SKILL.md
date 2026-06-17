@@ -145,8 +145,8 @@ _halls/vendor/three present: **yes**_
 | hall | present in | status |
 |---|---|---|
 | `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
-| `hall-of-archangels.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, offline} ≠ {paleo:works} |
-| `hall-of-the-nephilim.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
+| `hall-of-archangels.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `hall-of-the-nephilim.html` | greene-halls, paleo:root | ✓ in sync (2) |
 | `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
 | `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
@@ -304,6 +304,14 @@ to refresh §4 and re-sync this skill across the three repos (playbook **F**).
 
 Living notes for work that spans sessions. Kept here (outside the STATE block)
 so it survives context resets and `build:state` runs.
+
+> **Session reminder:** after any hall add, rename, retire, or content change
+> that touches more than one repo, run:
+> ```bash
+> cd Greene-Paleogenomic-Museum-VR && npm run build:state
+> ```
+> This refreshes the §4 inventory, flags parity drift, and re-syncs this skill
+> into greene-halls and greene-museum-offline so the copies never drift.
 
 ### The Temple of Solomon — DONE (2026-06-16)
 - New self-contained hall `the-temple-of-solomon.html`: a walkable replica of the
