@@ -87,7 +87,7 @@ re-syncs this skill into every repo so the copies never drift. Run it after any
 hall add/rename/retire. **Don't hand-edit between the markers.**
 
 <!-- STATE:START -->
-_Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
+_Generated 2026-06-17 by `scripts/build_state.mjs` — do not hand-edit._
 
 **`greene-halls`** (public · Pages · CDN three.js) — 10 halls
 
@@ -102,7 +102,7 @@ _Generated 2026-06-16 by `scripts/build_state.mjs` — do not hand-edit._
 | `the-greene-virtual-library.html` | `file://` or served |
 | `the-lyceum.html` | `file://` or served |
 | `the-revelation.html` | `file://` or served |
-| `the-temple-of-solomon.html` | `file://` or served |
+| `the-temple-of-solomon.html` | served (fetches assets) |
 
 
 **`Greene-Paleogenomic-Museum-VR`** (full build · museum r128 inline · halls r160 local `vendor/`)
@@ -117,7 +117,7 @@ _Theology-Wing vault (`works/`, manifest order):_
 | `hall-of-the-watchers.html` | HALL OF THE WATCHERS | server |
 | `the-revelation.html` | THE REVELATION | standalone |
 | `human-psi-operations-room.html` | PSI OPERATIONS ROOM | standalone |
-| `the-temple-of-solomon.html` | THE TEMPLE OF SOLOMON | standalone |
+| `the-temple-of-solomon.html` | THE TEMPLE OF SOLOMON | server |
 | `hall-of-archangels.html` | _(unlisted)_ | server |
 
 _Root standalone halls:_ `ancient-basilica-sanctuary.html`, `empyrean-ascent.html`, `hall-of-the-nephilim.html`, `the-lyceum.html`
@@ -145,15 +145,15 @@ _halls/vendor/three present: **yes**_
 | hall | present in | status |
 |---|---|---|
 | `ancient-basilica-sanctuary.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
-| `hall-of-archangels.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
-| `hall-of-the-nephilim.html` | greene-halls, paleo:root | ✓ in sync (2) |
+| `hall-of-archangels.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, offline} ≠ {paleo:works} |
+| `hall-of-the-nephilim.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
 | `hall-of-the-watchers.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
 | `hall-of-ufos.html` | greene-halls, offline | ✓ in sync (2) |
 | `human-psi-operations-room.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
-| `the-greene-virtual-library.html` | greene-halls, offline | ✓ in sync (2) |
+| `the-greene-virtual-library.html` | greene-halls, offline | ⚠ DIVERGES — {greene-halls} ≠ {offline} |
 | `the-lyceum.html` | greene-halls, paleo:root | ⚠ DIVERGES — {greene-halls} ≠ {paleo:root} |
 | `the-revelation.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
-| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ✓ in sync (3) |
+| `the-temple-of-solomon.html` | greene-halls, paleo:works, offline | ⚠ DIVERGES — {greene-halls, offline} ≠ {paleo:works} |
 
 <!-- STATE:END -->
 
