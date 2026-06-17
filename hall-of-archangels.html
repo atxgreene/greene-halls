@@ -68,6 +68,7 @@
   #panel .close{position:absolute;top:16px;right:18px;font-size:26px;color:#8a8068;cursor:pointer;line-height:1;background:none;border:none;font-family:inherit}
   #panel .close:hover{color:var(--gold)}
   #panel .rank{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.85}
+  #panel .tierbadge{display:inline-block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;border:1px solid;border-radius:999px;padding:3px 11px;margin-top:10px;opacity:.92}
   #panel h2{font-size:38px;font-weight:400;letter-spacing:.05em;color:var(--parch);margin:6px 0 2px;text-shadow:0 0 26px var(--glow)}
   #panel .aka{font-size:13px;font-style:italic;color:#9a8e72;margin-bottom:14px}
   #panel .narrate{display:inline-flex;align-items:center;gap:8px;margin:4px 0 6px;background:rgba(217,180,99,.08);
@@ -855,12 +856,22 @@ function boot(LIB){
   function showToast(html,hold){ toastEl.innerHTML=html; toastEl.style.opacity='1'; if(toastTimer)clearTimeout(toastTimer); if(hold)toastTimer=setTimeout(hideToast,hold); }
   function hideToast(){ toastEl.style.opacity='0'; }
 
+  /* Canonical source tiers (docs/SHARED-CANON.md). Canonical & Enochic map to the
+     shared scale; "Later Mystical Tradition" is the museum extension for 3 Enoch /
+     Talmud / Kabbalah material beyond the Enochic core. Honestly labelled, never blended. */
+  const TIERS={ michael:'Canonical Scripture', gabriel:'Canonical Scripture', raphael:'Deuterocanonical · Enochic',
+    uriel:'Enochic Tradition', raguel:'Enochic Tradition', saraqael:'Enochic Tradition', remiel:'Enochic Tradition',
+    metatron:'Later Mystical Tradition', sandalphon:'Later Mystical Tradition', raziel:'Later Mystical Tradition',
+    camael:'Later Mystical Tradition', zadkiel:'Later Mystical Tradition' };
+  const TIERTONE={ 'Canonical Scripture':'#e7cf8f', 'Deuterocanonical · Enochic':'#6fb0a6', 'Enochic Tradition':'#6fb0a6', 'Later Mystical Tradition':'#b79be0' };
   function showPanel(ex){
     const a=ex.a; panel.style.setProperty('--glow',a.glow);
+    const tier=TIERS[a.key]||'Tradition', tc=TIERTONE[tier]||'#e7cf8f';
     panelBody.innerHTML=`
       <div class="rank">${a.rank}</div>
       <h2>${a.name}</h2>
       <div class="aka">${a.aka}</div>
+      <div class="tierbadge" style="border-color:${tc};color:${tc}">✦ ${tier}</div>
       <button class="narrate" id="narrate-btn">🔊 Narrate this account</button>
       <div class="divider"></div>
       <div class="story">${a.story}</div>
