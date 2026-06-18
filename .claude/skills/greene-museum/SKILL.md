@@ -34,6 +34,39 @@ premium (Apple-launch-demo polish), and it must stay **honest** (see §3).
 Every hall is a **single self-contained HTML file** that runs on its own. The
 museum is the sum of these halls, presented three ways for three audiences.
 
+### 1.1 · Build destination — single-source world kernel (PWA)
+
+> **North Star (from `docs/architecture-blueprint.html`):** "Add a room once.
+> Place it once. Classify it once. Build everything."
+
+The three-repo setup is the **current working model**, not the final form.
+The endgame is a **single installable PWA** — one source repo, one build
+script, three outputs:
+
+```
+ONE source repo  ──▶ scripts/build.mjs ─┬─▶ PUBLIC site  (→ Pages / greene-halls)
+  museum shell                          ├─▶ OFFLINE PWA  (vendored, service-worker cached)
+  halls/  models/  art/  gallery/       └─▶ STANDALONE wrappers  (shareable single pages)
+  halls.json  (single spatial truth)
+```
+
+**Conventions to hold now so the migration is mechanical, not a rewrite:**
+- Self-contained, path-relative halls (no hardcoded origins) ✓
+- Vendorable Three.js — one pinned version, swappable CDN ↔ local ✓
+- `halls.json` — converging the museum's monument list, layout map's hosted
+  panel, and `works.json` into one machine-readable registry (in progress)
+- Asset discipline: Draco `.glb`, webp textures, procedural audio where possible
+- Privacy gate (`npm run check:privacy`) stays the publish filter — 4 private
+  exhibits never leave the source repo
+
+**The heaviest single lift when flipping the switch:** unify Three.js —
+museum r128 (inline) → r160 (ES module), matching the hall renderer.
+
+**Reference docs** (read before architectural decisions):
+- `docs/architecture-blueprint.html` — full spatial + system masterplan
+- `docs/PWA-ROADMAP.md` — sequenced migration steps and caching strategy
+- `docs/layout-map.svg` — canonical spatial blueprint (rooms in world-space)
+
 ---
 
 ## 2 · The three repositories (roles & system of record)
@@ -87,7 +120,7 @@ re-syncs this skill into every repo so the copies never drift. Run it after any
 hall add/rename/retire. **Don't hand-edit between the markers.**
 
 <!-- STATE:START -->
-_Generated 2026-06-17 by `scripts/build_state.mjs` — do not hand-edit._
+_Generated 2026-06-18 by `scripts/build_state.mjs` — do not hand-edit._
 
 **`greene-halls`** (public · Pages · CDN three.js) — 10 halls
 
