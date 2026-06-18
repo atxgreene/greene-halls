@@ -1,0 +1,96 @@
+{
+  "museum": "The Greene Paleogenomic Museum",
+  "version": 1,
+  "halls": [
+    {
+      "id": "lobby",
+      "name": "Museum Lobby",
+      "file": "index.html",
+      "description": "The central atrium — portals to every wing of the museum.",
+      "theme": "navigation",
+      "tags": ["lobby", "navigation"],
+      "pos": { "x": 0, "z": 0 }
+    },
+    {
+      "id": "nephilim",
+      "name": "Hall of the Nephilim",
+      "file": "hall-of-the-nephilim.html",
+      "description": "The Watchers, the Nephilim, and the giants of antiquity — Enochic sources and comparative mythology.",
+      "theme": "ancient",
+      "tags": ["enochic", "giants", "mythology", "3D"],
+      "pos": { "x": -3, "z": -2 }
+    },
+    {
+      "id": "watchers",
+      "name": "Hall of the Watchers",
+      "file": "hall-of-the-watchers.html",
+      "description": "The fallen Watchers from the Book of Enoch — their descent, their teachings, their judgment.",
+      "theme": "ancient",
+      "tags": ["enochic", "watchers", "mythology", "3D", "audio"],
+      "pos": { "x": -1, "z": -2 }
+    },
+    {
+      "id": "archangels",
+      "name": "Hall of the Archangels",
+      "file": "hall-of-archangels.html",
+      "description": "Michael, Raphael, Gabriel, Uriel — the divine hierarchy and the celestial court.",
+      "theme": "celestial",
+      "tags": ["archangels", "celestial", "enochic", "3D", "audio"],
+      "pos": { "x": 1, "z": -2 }
+    },
+    {
+      "id": "revelation",
+      "name": "The Revelation",
+      "file": "the-revelation.html",
+      "description": "Walk through John's Apocalypse — Patmos, the throne room, the seven seals, the new Jerusalem.",
+      "theme": "celestial",
+      "tags": ["revelation", "apocalypse", "visions", "3D"],
+      "pos": { "x": 3, "z": -2 }
+    },
+    {
+      "id": "lyceum",
+      "name": "The Lyceum",
+      "file": "the-lyceum.html",
+      "description": "Hall of Natural Philosophy — Pythagoras, Newton, and Tesla. Interactive experiments and the Music of the Spheres.",
+      "theme": "science",
+      "tags": ["philosophy", "science", "pythagoras", "newton", "tesla", "3D"],
+      "pos": { "x": -2, "z": 0 }
+    },
+    {
+      "id": "psi",
+      "name": "Human Psi Operations Room",
+      "file": "human-psi-operations-room.html",
+      "description": "The classified wing — Stanford Research Institute, remote viewing, the STARGATE program.",
+      "theme": "paranormal",
+      "tags": ["psi", "remote-viewing", "stargate", "3D"],
+      "pos": { "x": 2, "z": 0 }
+    },
+    {
+      "id": "library",
+      "name": "The Greene Virtual Library",
+      "file": "the-greene-virtual-library.html",
+      "description": "A temple of scrolls and texts — the primary sources behind the museum's exhibits.",
+      "theme": "library",
+      "tags": ["library", "texts", "3D"],
+      "pos": { "x": 0, "z": -2 }
+    },
+    {
+      "id": "temple",
+      "name": "The Temple of Solomon",
+      "file": "the-temple-of-solomon.html",
+      "description": "Walk the first Temple — the Holy of Holies, the Ark, the Pillars of Jachin and Boaz.",
+      "theme": "ancient",
+      "tags": ["temple", "solomon", "jerusalem", "3D"],
+      "pos": { "x": -1, "z": 2 }
+    },
+    {
+      "id": "basilica",
+      "name": "Ancient Basilica Sanctuary",
+      "file": "ancient-basilica-sanctuary.html",
+      "description": "A late-antique Christian basilica — apse, nave, narthex, and candlelit atmosphere.",
+      "theme": "sacred",
+      "tags": ["basilica", "christian", "sanctuary", "3D"],
+      "pos": { "x": 1, "z": 2 }
+    }
+  ]
+}

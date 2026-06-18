@@ -55,6 +55,18 @@
   a.nephilim .d{color:#c09080}
   .foot{margin-top:48px;font-size:12px;color:#6b6354;line-height:1.8;max-width:560px}
   .foot code{color:#9a8e72}
+  #mapBtn{position:fixed;right:16px;bottom:16px;z-index:20;background:rgba(10,9,14,.75);border:1px solid rgba(217,180,99,.35);border-radius:999px;padding:8px 16px;font-size:12px;letter-spacing:.18em;color:#c8bfa8;cursor:pointer;font-family:inherit;backdrop-filter:blur(6px);transition:.2s}
+  #mapBtn:hover{border-color:#d9b463;color:#e9dcc0}
+  #mapModal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.68);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s}
+  #mapModal.open{opacity:1;pointer-events:auto}
+  #mapModal .box{background:#0d0c12;border:1px solid rgba(217,180,99,.3);border-radius:8px;padding:28px 32px;max-width:min(560px,92vw);width:100%;color:#c8bfa8}
+  #mapModal h3{color:#e9dcc0;font-weight:400;font-size:17px;letter-spacing:.1em;margin-bottom:20px}
+  #mapList{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+  #mapList li a{display:block;padding:7px 10px;border-radius:4px;border:1px solid rgba(217,180,99,.18);color:#c8bfa8;text-decoration:none;font-size:13px;transition:.18s}
+  #mapList li a:hover{border-color:#d9b463;color:#e9dcc0;background:rgba(217,180,99,.06)}
+  #mapList li a .tag{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#6b6354;margin-left:6px}
+  #mapClose{display:block;margin-top:18px;text-align:center;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#7a7060;cursor:pointer}
+  #mapClose:hover{color:#d9b463}
 </style>
 </head>
 <body>
@@ -107,5 +119,33 @@
   <div class="foot">The Virtual Library, the Hall of UFOs, the Ancient Basilica Sanctuary, the Lyceum, the Psi Operations Room, and The Revelation are self-contained — they fall back gracefully and run from any static host. For the Watchers, Archangels, and Hall of the Nephilim 3D models and narration to load,
     open them from a local server (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
 </div>
+<button id="mapBtn">⊞ Map</button>
+<div id="mapModal">
+  <div class="box">
+    <h3>Museum Map</h3>
+    <ul id="mapList"></ul>
+    <span id="mapClose">Close</span>
+  </div>
+</div>
+<script>
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+(function(){
+  const btn=document.getElementById('mapBtn'),modal=document.getElementById('mapModal'),list=document.getElementById('mapList'),closeEl=document.getElementById('mapClose');
+  btn.addEventListener('click',()=>{ modal.classList.add('open'); if(!list.children.length) loadMap(); });
+  closeEl.addEventListener('click',()=>modal.classList.remove('open'));
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('open'); });
+  function loadMap(){
+    fetch('halls.json').then(r=>r.json()).then(d=>{
+      d.halls.forEach(h=>{
+        const li=document.createElement('li');
+        li.innerHTML=`<a href="${h.file}"><span>${h.name}</span><span class="tag">${h.theme}</span></a>`;
+        list.appendChild(li);
+      });
+    }).catch(()=>{
+      list.innerHTML='<li style="grid-column:1/-1;color:#6b6354;font-size:13px">Map unavailable offline</li>';
+    });
+  }
+})();
+</script>
 </body>
 </html>
