@@ -108,6 +108,16 @@ const keys={}, interactables=[], pickMeshes=[], spin=[], braz=[];
 const touchMove={f:0,s:0}; let reduced=false;
 const isTouch = matchMedia('(pointer:coarse)').matches || ('ontouchstart' in window);
 let actx=null, masterGain=null, audioOn=false; let thread=null, dust=null, threadPulse=null, droneNodes=null, muted=false;
+const PERF={prMax:Math.min(devicePixelRatio||1,isTouch?1.5:2),prMin:1,pr:1,ema:16.7,since:0};
+PERF.pr=PERF.prMax;
+function tunePerf(dtMs){
+  PERF.ema=PERF.ema*0.9+dtMs*0.1; PERF.since+=dtMs;
+  if(PERF.since<700) return; PERF.since=0;
+  const fps=1000/PERF.ema; let pr=PERF.pr;
+  if(fps<52&&pr>PERF.prMin) pr=Math.max(PERF.prMin,+(pr-0.25).toFixed(2));
+  else if(fps>58&&pr<PERF.prMax) pr=Math.min(PERF.prMax,+(pr+0.25).toFixed(2));
+  if(pr!==PERF.pr){ PERF.pr=pr; renderer.setPixelRatio(pr); if(composer){ composer.setPixelRatio(pr); composer.setSize(innerWidth,innerHeight); } }
+}
 const HX=12, HZ=23, H=7.6;
 
 function rgb(c){ return '#'+('000000'+c.toString(16)).slice(-6); }
@@ -309,7 +319,7 @@ const STATIONS=[
 
 function init(){
   renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(PERF.pr); renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.useLegacyLights=true; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
@@ -476,7 +486,7 @@ function updateFocus(){ if(pickMeshes.length===0){ interactables.forEach(g=>g.tr
   if(root!==focused){ focused=root; const ret=document.getElementById('reticle'), hud=document.getElementById('hud');
     if(!root){ ret.classList.remove('hot'); hud.classList.remove('show'); } else { ret.classList.add('hot'); hud.classList.add('show'); const dt=root.userData.data;
       hud.querySelector('.th').textContent=dt.th||''; hud.querySelector('.ti').textContent=dt.g||''; hud.querySelector('.o').textContent=dt.o||''; hud.querySelector('.d').textContent=dt.d||''; } } }
-function loop(){ const dt=Math.min(clock.getDelta(),0.05); const inVR=!!(renderer.xr&&renderer.xr.isPresenting); if(!inVR){ player.rotation.y=yaw; camera.rotation.x=pitch; }
+function loop(){ const dt=Math.min(clock.getDelta(),0.05); const inVR=!!(renderer.xr&&renderer.xr.isPresenting); if(!inVR){ tunePerf(dt*1000); player.rotation.y=yaw; camera.rotation.x=pitch; }
   const sp=3.6*dt; let fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)+touchMove.f; let str=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+touchMove.s;
   fwd=Math.max(-1,Math.min(1,fwd)); str=Math.max(-1,Math.min(1,str));
   if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
