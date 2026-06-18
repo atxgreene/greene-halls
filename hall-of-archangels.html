@@ -120,9 +120,26 @@
   #err{position:fixed;inset:0;z-index:99;display:none;align-items:center;justify-content:center;background:#070608;padding:40px;text-align:center}
   #err div{max-width:560px}#err h2{color:var(--crim);font-weight:400;margin-bottom:16px;letter-spacing:.1em}
   #err p{color:#b9ac90;line-height:1.7;font-size:15px}
+  #lockHint{position:fixed;left:50%;bottom:22%;transform:translateX(-50%);background:rgba(10,9,14,.82);border:1px solid rgba(217,180,99,.3);border-radius:999px;padding:9px 22px;font-size:12.5px;letter-spacing:.12em;color:#c8bfa8;pointer-events:none;opacity:0;transition:opacity .3s;z-index:50;white-space:nowrap;backdrop-filter:blur(8px)}
+  #lockHint.show{opacity:1}
+  #helpModal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+  #helpModal.open{opacity:1;pointer-events:auto}
+  #helpModal .box{background:#0d0c12;border:1px solid rgba(217,180,99,.3);border-radius:8px;padding:28px 36px;max-width:min(480px,90vw);color:#c8bfa8;font-size:14px;line-height:2}
+  #helpModal .box h3{color:#e9dcc0;font-weight:400;font-size:17px;letter-spacing:.08em;margin-bottom:14px}
+  #helpModal .box .key{display:inline-block;border:1px solid rgba(217,180,99,.4);border-radius:4px;padding:1px 8px;margin:0 3px;font-size:12px;color:#d9b463;font-family:monospace}
+  #helpModal .close{display:block;margin-top:18px;text-align:center;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#7a7060;cursor:pointer}
+  #helpModal .close:hover{color:#d9b463}
+
+  #preload{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  #preload.done{display:none}
+  #preload .sp{width:42px;height:42px;border-radius:50%;border:2px solid transparent}
+  #preload .sp::before{content:'';display:block;width:100%;height:100%;border-radius:50%;border:2px solid rgba(217,180,99,.18);box-sizing:border-box}
+  @keyframes preload-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div id="preload" style="background:#050406"><div class="sp" style="border-top-color:#d9b463;animation:preload-spin 0.9s linear infinite"></div></div>
+<div id="lockHint">Mouse free — click canvas to re-capture · E to interact</div>
 
 <!-- INTRO -->
 <div id="intro">
@@ -160,6 +177,7 @@
   <button class="ibtn" id="btn-music">♪ Music: On</button>
   <button class="ibtn" id="btn-narr">🔊 Narrate: Off</button>
   <button class="ibtn" id="btn-dir">☰ Directory</button>
+  <button class="ibtn" id="helpBtn">? Help</button>
 </div>
 
 <!-- Directory -->
@@ -811,7 +829,7 @@ function boot(LIB){
   });
   addEventListener('keyup',e=>keys[e.code]=false);
   canvas.addEventListener('click',()=>{ if(started&&!inCinematic&&!isTouch) canvas.requestPointerLock(); });
-  document.addEventListener('pointerlockchange',()=>locked=(document.pointerLockElement===canvas));
+  document.addEventListener('pointerlockchange',()=>{ locked=(document.pointerLockElement===canvas); if(!locked){ const lh=document.getElementById('lockHint'); if(lh){ lh.classList.add('show'); clearTimeout(lh._t); lh._t=setTimeout(()=>lh.classList.remove('show'),2500); } } });
   document.addEventListener('mousemove',e=>{ if(!locked||inCinematic)return; yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.35,1.35); });
 
   let touchMove={x:0,y:0},lookId=null,lastLook={x:0,y:0};
@@ -925,7 +943,7 @@ function boot(LIB){
     startAudio(); musicSetMode('hall');
     showToast('Walk the hall. Approach an archangel and press <span class="key">E</span> to read, <span class="key">N</span> to hear it spoken.',7000);
   }
-  document.getElementById('enter').onclick=()=>{ startAudio(); startCinematic(); };
+  document.getElementById('enter').onclick=()=>{ if('ontouchstart' in window && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(()=>{}); } startAudio(); startCinematic(); };
   document.getElementById('skiplink').onclick=()=>{ startAudio(); enterHall(false); };
 
   // VR button
@@ -962,6 +980,15 @@ function boot(LIB){
       audio.chordIdx=0; applyChord(0);
       musicGain.gain.linearRampToValueAtTime(audio.on?0.18:0.0001, ctx.currentTime+6);
       loopChords(); loopBells(); tryMusicFile();
+      // celestial hall breath — slightly brighter bandpass than the Watchers (divine vs. fallen register)
+      const blen=ctx.sampleRate*3; const nbuf=ctx.createBuffer(1,blen,ctx.sampleRate); const nd=nbuf.getChannelData(0);
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      for(let i=0;i<blen;i++){ const wh=Math.random()*2-1; b0=.99886*b0+wh*.0555179; b1=.99332*b1+wh*.0750759; b2=.96900*b2+wh*.1538520; b3=.86650*b3+wh*.3104856; b4=.55000*b4+wh*.5329522; b5=-.7616*b5-wh*.0168980; nd[i]=(b0+b1+b2+b3+b4+b5+b6+wh*.5362)*0.11; b6=wh*.115926; }
+      const ns=ctx.createBufferSource(); ns.buffer=nbuf; ns.loop=true;
+      const nbp=ctx.createBiquadFilter(); nbp.type='bandpass'; nbp.frequency.value=180; nbp.Q.value=0.8;
+      const nbp2=ctx.createBiquadFilter(); nbp2.type='bandpass'; nbp2.frequency.value=420; nbp2.Q.value=1.2;
+      const ng=ctx.createGain(); ng.gain.value=0; ns.connect(nbp); nbp.connect(nbp2); nbp2.connect(ng); ng.connect(master);
+      ng.gain.linearRampToValueAtTime(0.018, ctx.currentTime+8); ns.start(); audio.breath={src:ns,g:ng};
     }catch(e){ console.warn('audio failed',e); }
   }
   function applyChord(idx){ const ctx=audio.ctx; if(!ctx)return; const c=PROG[idx%PROG.length], tt=ctx.currentTime;
@@ -1074,9 +1101,24 @@ function boot(LIB){
   window.__count=(k)=>{const e=exhibits.find(x=>x.a.key===k);if(!e)return'no';let m=0;const b=new THREE.Box3();e.node.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){m++;b.expandByObject(o);}});const s=new THREE.Vector3();b.getSize(s);return JSON.stringify({meshes:m,sizeY:+s.y.toFixed(2),minY:+b.min.y.toFixed(2)});};
   document.getElementById('loadnote').textContent='the host is gathered';
   const enterBtn=document.getElementById('enter'); enterBtn.disabled=false; enterBtn.focus();
+  document.getElementById('preload')?.classList.add('done');
 }
 
 init();
+document.getElementById('helpBtn')?.addEventListener('click',()=>document.getElementById('helpModal')?.classList.add('open'));
+document.getElementById('helpClose')?.addEventListener('click',()=>document.getElementById('helpModal')?.classList.remove('open'));
+document.getElementById('helpModal')?.addEventListener('click',e=>{ if(e.target===document.getElementById('helpModal')) document.getElementById('helpModal').classList.remove('open'); });
 </script>
+<div id="helpModal">
+  <div class="box">
+    <h3>Controls</h3>
+    <div><span class="key">W A S D</span> or <span class="key">↑ ↓ ← →</span> — Move</div>
+    <div><span class="key">Mouse</span> — Look (click canvas to capture)</div>
+    <div><span class="key">E</span> — Interact with an exhibit</div>
+    <div><span class="key">Esc</span> — Release mouse / exit pointer lock</div>
+    <div style="margin-top:10px;font-size:12px;color:#7a7060">On mobile: drag to look · joystick to move · tap to interact</div>
+    <span class="close" id="helpClose">Close</span>
+  </div>
+</div>
 </body>
 </html>

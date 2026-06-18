@@ -451,9 +451,16 @@
   }
   .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  #preload{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  #preload.done{display:none}
+  #preload .sp{width:42px;height:42px;border-radius:50%;border:2px solid transparent}
+  #preload .sp::before{content:'';display:block;width:100%;height:100%;border-radius:50%;border:2px solid rgba(217,180,99,.18);box-sizing:border-box}
+  @keyframes preload-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div id="preload" style="background:#050403"><div class="sp" style="border-top-color:#d9b463;animation:preload-spin 0.9s linear infinite"></div></div>
 <canvas id="scene" aria-hidden="true"></canvas>
 <div id="backdrop" aria-hidden="true"></div>
 <div class="vig" aria-hidden="true"></div>
@@ -1060,6 +1067,7 @@ async function initTemple(){
     temple3d = true;
     addEventListener('resize', onResize);
     renderLoop();
+    document.getElementById('preload')?.classList.add('done');
   }catch(e){
     console.warn('Temple unavailable:', e && e.message);
     document.body.classList.add('no3d');
@@ -2399,6 +2407,7 @@ function wireGlobal(){
 
 /* opening sequence */
 function enterLibrary(){
+  if('ontouchstart' in window && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(()=>{}); }
   const btn=$('#enterBtn'); btn.disabled=true; btn.textContent='The doors are opening…';
   $('#gate').classList.add('opening');
   playCue('door');

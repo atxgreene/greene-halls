@@ -357,9 +357,16 @@ body.touch #joystick{display:block;}
   transition:.16s;cursor:pointer;
 }
 .completion-badge .x:hover{border-color:var(--crimson);color:#e8a7ad;}
+
+  #preload{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  #preload.done{display:none}
+  #preload .sp{width:42px;height:42px;border-radius:50%;border:2px solid transparent}
+  #preload .sp::before{content:'';display:block;width:100%;height:100%;border-radius:50%;border:2px solid rgba(217,180,99,.18);box-sizing:border-box}
+  @keyframes preload-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div id="preload" style="background:#06050a"><div class="sp" style="border-top-color:#d9b463;animation:preload-spin 0.9s linear infinite"></div></div>
 
 <div id="reticle" class="hidden"></div>
 <div id="note"></div>
@@ -2647,6 +2654,7 @@ $('#closeBadge2').addEventListener('click',()=>$('#completionBadge').style.displ
 /* ── Boot ── */
 function startExperience(){
   if(started) return; started=true;
+  if('ontouchstart' in window && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(()=>{}); }
   $('#intro').classList.add('gone');
   $('#reticle').classList.remove('hidden');
   if('ontouchstart' in window) document.body.classList.add('touch');
@@ -2665,7 +2673,7 @@ function boot(){
   let p=0; const bar=$('#barF');
   const iv=setInterval(()=>{
     p=Math.min(100,p+rand(8,20)); bar.style.width=p+'%';
-    if(p>=100){ clearInterval(iv); setTimeout(()=>$('#loadwrap').classList.add('gone'),400); }
+    if(p>=100){ clearInterval(iv); setTimeout(()=>{ $('#loadwrap').classList.add('gone'); document.getElementById('preload')?.classList.add('done'); },400); }
   },160);
 }
 boot();

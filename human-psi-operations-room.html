@@ -182,9 +182,28 @@
 
   .legend{font-family:var(--tech);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#5f7c77;margin-top:6px;}
   .ok{color:var(--signal-teal);} .warn{color:var(--burnt-orange);}
+
+  #lockHint{position:fixed;left:50%;bottom:22%;transform:translateX(-50%);background:rgba(10,9,14,.82);border:1px solid rgba(217,180,99,.3);border-radius:999px;padding:9px 22px;font-size:12.5px;letter-spacing:.12em;color:#c8bfa8;pointer-events:none;opacity:0;transition:opacity .3s;z-index:50;white-space:nowrap;backdrop-filter:blur(8px)}
+  #lockHint.show{opacity:1}
+
+  #helpModal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+  #helpModal.open{opacity:1;pointer-events:auto}
+  #helpModal .box{background:#0d0c12;border:1px solid rgba(217,180,99,.3);border-radius:8px;padding:28px 36px;max-width:min(480px,90vw);color:#c8bfa8;font-size:14px;line-height:2}
+  #helpModal .box h3{color:#e9dcc0;font-weight:400;font-size:17px;letter-spacing:.08em;margin-bottom:14px}
+  #helpModal .box .key{display:inline-block;border:1px solid rgba(217,180,99,.4);border-radius:4px;padding:1px 8px;margin:0 3px;font-size:12px;color:#d9b463;font-family:monospace}
+  #helpModal .close{display:block;margin-top:18px;text-align:center;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#7a7060;cursor:pointer}
+  #helpModal .close:hover{color:#d9b463}
+
+  #preload{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  #preload.done{display:none}
+  #preload .sp{width:42px;height:42px;border-radius:50%;border:2px solid transparent}
+  #preload .sp::before{content:'';display:block;width:100%;height:100%;border-radius:50%;border:2px solid rgba(217,180,99,.18);box-sizing:border-box}
+  @keyframes preload-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div id="preload" style="background:#06080c"><div class="sp" style="border-top-color:#d9b463;animation:preload-spin 0.9s linear infinite"></div></div>
+<div id="lockHint">Mouse free — click canvas to re-capture · E to interact</div>
 
 <!-- ============ RETICLE + HUD ============ -->
 <div id="reticle" class="hidden"></div>
@@ -201,6 +220,7 @@
   <button class="pill" data-act="center">⟲ Return to Center</button>
   <button class="pill" data-act="audio">♪ Audio: On</button>
   <button class="pill red" data-act="panic">⏻ Ground &amp; Stop Audio</button>
+  <button class="pill" id="helpBtn">? Help</button>
 </div>
 
 <div id="joystick"><div class="nub"></div></div>
@@ -1313,7 +1333,7 @@ addEventListener('click',e=>{
     if(!pointerLocked && !('ontouchstart' in window)) renderer.domElement.requestPointerLock();
   }
 });
-document.addEventListener('pointerlockchange',()=>{ pointerLocked=!!document.pointerLockElement; });
+document.addEventListener('pointerlockchange',()=>{ pointerLocked=!!document.pointerLockElement; if(!pointerLocked){ const lh=document.getElementById('lockHint'); if(lh){ lh.classList.add('show'); clearTimeout(lh._t); lh._t=setTimeout(()=>lh.classList.remove('show'),2500); } } });
 addEventListener('mousemove',e=>{ if(!pointerLocked||overlayOpen) return;
   yaw-=e.movementX*0.0022; pitch=clamp(pitch-e.movementY*0.0022,-1.2,1.2); });
 
@@ -1365,6 +1385,7 @@ function ensureAudio(){ if(!Audio.started) Audio.start(); if(!audioEnabled){ aud
 let started=false;
 function startExperience(){
   if(started) return; started=true;
+  if('ontouchstart' in window && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(()=>{}); }
   $('#intro').classList.add('gone'); $('#reticle').classList.remove('hidden');
   if('ontouchstart' in window) document.body.classList.add('touch');
   camera.position.set(0,PLAYER_H,4); yaw=Math.PI;
@@ -1378,7 +1399,7 @@ function startExperience(){
 function boot(){
   try{ initThree(); }catch(e){ $('#err').style.display='flex'; $('#loadwrap').classList.add('gone'); console.error(e); return; }
   let p=0; const bar=$('#barF'); const iv=setInterval(()=>{ p=Math.min(100,p+rand(8,22)); bar.style.width=p+'%';
-    if(p>=100){ clearInterval(iv); setTimeout(()=>$('#loadwrap').classList.add('gone'),400); } },180);
+    if(p>=100){ clearInterval(iv); setTimeout(()=>{ $('#loadwrap').classList.add('gone'); document.getElementById('preload')?.classList.add('done'); },400); } },180);
 }
 $('#initBtn').addEventListener('click',startExperience);
 boot();
@@ -1389,6 +1410,20 @@ renderer&&renderer.xr&&renderer.xr.addEventListener&&renderer.xr.addEventListene
   c0&&c0.addEventListener&&c0.addEventListener('select',()=>{ if(reticleHot) reticleHot.userData.action&&reticleHot.userData.action(); });
   scene.add(c0);
 });
+document.getElementById('helpBtn')?.addEventListener('click',()=>document.getElementById('helpModal')?.classList.add('open'));
+document.getElementById('helpClose')?.addEventListener('click',()=>document.getElementById('helpModal')?.classList.remove('open'));
+document.getElementById('helpModal')?.addEventListener('click',e=>{ if(e.target===document.getElementById('helpModal')) document.getElementById('helpModal').classList.remove('open'); });
 </script>
+<div id="helpModal">
+  <div class="box">
+    <h3>Controls</h3>
+    <div><span class="key">W A S D</span> or <span class="key">↑ ↓ ← →</span> — Move</div>
+    <div><span class="key">Mouse</span> — Look (click canvas to capture)</div>
+    <div><span class="key">E</span> — Interact with an exhibit</div>
+    <div><span class="key">Esc</span> — Release mouse / exit pointer lock</div>
+    <div style="margin-top:10px;font-size:12px;color:#7a7060">On mobile: drag to look · joystick to move · tap to interact</div>
+    <span class="close" id="helpClose">Close</span>
+  </div>
+</div>
 </body>
 </html>
