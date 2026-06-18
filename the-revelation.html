@@ -243,10 +243,20 @@ function boot(LIB){
   const YAXIS=new THREE.Vector3(0,1,0);
   const isTouch=('ontouchstart'in window)&&matchMedia('(pointer:coarse)').matches;
   const TAU=Math.PI*2;
+  const PERF={prMax:Math.min(devicePixelRatio||1,isTouch?1.5:2),prMin:1,pr:1,ema:16.7,since:0};
+  PERF.pr=PERF.prMax;
+  function tunePerf(dtMs){
+    PERF.ema=PERF.ema*0.9+dtMs*0.1; PERF.since+=dtMs;
+    if(PERF.since<700) return; PERF.since=0;
+    const fps=1000/PERF.ema; let pr=PERF.pr;
+    if(fps<52&&pr>PERF.prMin) pr=Math.max(PERF.prMin,+(pr-0.25).toFixed(2));
+    else if(fps>58&&pr<PERF.prMax) pr=Math.min(PERF.prMax,+(pr+0.25).toFixed(2));
+    if(pr!==PERF.pr){ PERF.pr=pr; renderer.setPixelRatio(pr); if(composer){ composer.setPixelRatio(pr); composer.setSize(innerWidth,innerHeight); } }
+  }
 
   /* ===================== renderer / scene / camera ===================== */
   const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setPixelRatio(PERF.pr);
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -1370,6 +1380,7 @@ function boot(LIB){
   function animate(){
     const dt=Math.min(clock.getDelta(),0.05); const t=clock.elapsedTime;
     const presenting=renderer.xr.isPresenting;
+    if(!presenting) tunePerf(dt*1000);
     sceneClock+=dt; window.sceneClock=sceneClock;
 
     if(!presenting){ player.rotation.y=yaw; camera.rotation.set(pitch,0,0); camera.position.set(0,EYE,0); }

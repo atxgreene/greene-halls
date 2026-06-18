@@ -609,12 +609,23 @@ let raycaster,reticleHot=null;
 const keys={};
 const move={f:0,s:0}; // joystick
 let yaw=0,pitch=0,pointerLocked=false;
+const _isTouch=('ontouchstart' in window)&&matchMedia('(pointer:coarse)').matches;
+const PERF={prMax:Math.min(devicePixelRatio||1,_isTouch?1.5:2),prMin:1,pr:1,ema:16.7,since:0};
+PERF.pr=PERF.prMax;
+function tunePerf(dtMs){
+  PERF.ema=PERF.ema*0.9+dtMs*0.1; PERF.since+=dtMs;
+  if(PERF.since<700) return; PERF.since=0;
+  const fps=1000/PERF.ema; let pr=PERF.pr;
+  if(fps<52&&pr>PERF.prMin) pr=Math.max(PERF.prMin,+(pr-0.25).toFixed(2));
+  else if(fps>58&&pr<PERF.prMax) pr=Math.min(PERF.prMax,+(pr+0.25).toFixed(2));
+  if(pr!==PERF.pr){ PERF.pr=pr; renderer.setPixelRatio(pr); if(composer){ composer.setPixelRatio(pr); composer.setSize(innerWidth,innerHeight); } }
+}
 const PLAYER_H=1.65, RADIUS=11;
 let velocity=new THREE.Vector3();
 
 function initThree(){
   renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setPixelRatio(PERF.pr);
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
@@ -855,6 +866,7 @@ function updateMovement(dt){
 
 function tick(){
   const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  if(!renderer.xr.isPresenting) tunePerf(dt*1000);
   updateMovement(dt);
   // animate
   if(tableCore){ tableCore.rotation.y+=dt*0.3; tableCore.rotation.x=Math.sin(t*0.2)*0.1; }
