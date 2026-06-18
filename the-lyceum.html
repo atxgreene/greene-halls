@@ -102,10 +102,18 @@
     <p>English physicist and mathematician. In the Principia (1687) he set out three laws of motion and universal gravitation; in Opticks (1704) he showed white light is a mixture of colours. He also co-invented the calculus and built the first reflecting telescope.</p>
     <div class="ex">The experiment — the experimentum crucis</div>
     <p>A glass prism spreads sunlight into a spectrum, and a second prism recombines it to white. Colour is a property of the light itself, not of the glass.</p>
-    <h2>Nikola Tesla</h2><div class="yr">1856 – 1943 · Electricity, Fields &amp; Resonance</div>
+    <h2>Nikola Tesla</h2><div class=”yr”>1856 – 1943 · Electricity, Fields &amp; Resonance</div>
     <p>Serbian-American electrical engineer. He devised the alternating-current (AC) induction motor and the polyphase system that powers the modern grid, plus the resonant “Tesla coil.” He held roughly 300 patents and contributed to early radio and wireless.</p>
-    <div class="ex">The experiment — the rotating magnetic field</div>
+    <div class=”ex”>The experiment — the rotating magnetic field</div>
     <p>Two AC currents a quarter-cycle apart make a field that rotates, spinning a rotor with no contact. The coil is a resonant transformer producing high-voltage, high-frequency discharges.</p>
+    <h2>Johannes Kepler</h2><div class=”yr”>1571 – 1630 · Celestial Mechanics &amp; Harmony</div>
+    <p>German astronomer. He discovered the three laws of planetary motion: orbits are ellipses with the Sun at one focus, a radius sweeps equal areas in equal times, and the square of the period is proportional to the cube of the semi-major axis (T²∝r³).</p>
+    <div class=”ex”>The experiment — Harmonices Mundi</div>
+    <p>Kepler's <em>Harmonices Mundi</em> (1619) assigned each planet a musical note whose pitch varies with its angular speed. The orbital period ratios 4:5:6:8 approximate the innermost four planets — a Pythagorean cosmos made quantitative.</p>
+    <h2>Michael Faraday</h2><div class=”yr”>1791 – 1867 · Electromagnetism &amp; Induction</div>
+    <p>English experimentalist. He discovered electromagnetic induction (1831): a changing magnetic field induces an electric current in a nearby conductor. His intuitive field concept was later formalized by Maxwell into the equations that unified electricity and magnetism.</p>
+    <div class=”ex”>The experiment — induction coil</div>
+    <p>EMF = −dΦ/dt. A magnet moving through a coil changes the magnetic flux Φ, inducing a voltage. The faster the motion, the greater the induced EMF. Every generator and transformer on Earth operates on this principle.</p>
     <h2>The Music of the Spheres</h2><div class="yr">Pythagorean musica universalis</div>
     <p>The Pythagoreans held the heavens are ordered by number: each planetary sphere moves through the aether at a speed set by simple ratios, sounding a cosmic harmony. <em>Honest note:</em> a sound-bearing aether and an audible “music of the spheres” are philosophy and metaphor, not measured physics — space carries no acoustic medium. The true kernel endures: orbital and vibrational systems really do lock to whole-number resonances.</p>
     <div class="foot">part of The Greene Paleogenomic Museum</div>
@@ -271,6 +279,35 @@ function buildHall(){
     return { idle:fieldRing, run:()=>{ arcs.visible=true; glow.intensity=3.2; toroid.material.emissiveIntensity=1.2; tone([58,61,90],'sawtooth',0.07); note('AC energized — a rotating magnetic field and high-voltage, high-frequency discharge'); setTimeout(()=>{ arcs.visible=false; glow.intensity=0; toroid.material.emissiveIntensity=0.2; },1300); } };
   }
 
+  function devKepler(dev,col){
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.52,0.18,16),mat(0x12151a,0.6,0.2)); base.position.y=0.09; dev.add(base);
+    const body=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,12),mat(0x3a2a14,0.5,0.12)); body.position.y=0.5; dev.add(body);
+    const orbs=[]; const radii=[0.48,0.72,1.0,1.28]; const cols=[0xe8c064,0xd08830,0xa0c8e8,0xcc7060];
+    radii.forEach((r,i)=>{
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.008,6,48),new THREE.MeshBasicMaterial({color:cols[i],transparent:true,opacity:0.45,blending:THREE.AdditiveBlending,depthWrite:false})); ring.rotation.x=Math.PI/2; ring.position.y=0.5; dev.add(ring);
+      const orb=new THREE.Mesh(new THREE.SphereGeometry(0.058,10,8),mat(cols[i],0.25,0.7,cols[i],0.4)); orb.position.set(r,0.5,0); dev.add(orb); orbs.push({orb,r,sp:0.35*(1/r)**0.5,a:Math.random()*Math.PI*2});
+    });
+    let spin=true;
+    return { idle:{rotation:{z:0}}, run:()=>{
+      const freqs=[196,246.9,293.7,369.99]; tone(freqs,'sine',0.09);
+      orbs.forEach(o=>o.orb.material.emissiveIntensity=2.2); setTimeout(()=>orbs.forEach(o=>o.orb.material.emissiveIntensity=0.4),1800);
+      note('Harmonices Mundi — orbits pulse in the ratios 4:5:6:8 (Kepler\'s third law: T²∝r³)'); },
+      orbs, update:(dt)=>{ orbs.forEach(o=>{ o.a+=o.sp*dt; o.orb.position.set(Math.cos(o.a)*o.r,0.5,Math.sin(o.a)*o.r); }); } };
+  }
+  function devFaraday(dev,col){
+    const base=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.12,0.5),mat(0x1a1208,0.7,0.1)); base.position.y=0.06; dev.add(base);
+    const core=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.6,16),mat(0x606060,0.4,0.5)); core.rotation.z=Math.PI/2; core.position.y=0.36; dev.add(core);
+    const coilGrp=new THREE.Group(); coilGrp.position.y=0.36; dev.add(coilGrp);
+    for(let i=0;i<18;i++){ const a=i/18*Math.PI*1.7-Math.PI*0.85, r=0.18, y=((i/18)-0.5)*0.5; const wire=new THREE.Mesh(new THREE.TorusGeometry(r,0.012,4,6,Math.PI*0.42),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending,depthWrite:false})); wire.rotation.set(0,a,0); wire.position.y=y; coilGrp.add(wire); }
+    const magnet=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.4,12),mat(0xcc2233,0.4,0.3)); magnet.rotation.z=Math.PI/2; magnet.position.set(-0.45,0.36,0); dev.add(magnet);
+    const fieldLine=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.004,0.7,4),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})); fieldLine.position.set(0,0.36,0); dev.add(fieldLine);
+    let pushed=false;
+    return { idle:coilGrp, run:()=>{
+      if(pushed) return; pushed=true;
+      const t0=Date.now(); const frames=()=>{ const t=(Date.now()-t0)/1000; magnet.position.x=-0.45+t*0.55; fieldLine.material.opacity=Math.min(1,t*3)*0.8; if(t<1.2) requestAnimationFrame(frames); else{ pushed=false; magnet.position.x=-0.45; fieldLine.material.opacity=0; } };
+      frames(); tone([280,420,560],'sine',0.08); note('Electromagnetic induction — a moving magnet induces a current; the faster it moves, the greater the EMF (Faraday\'s law)'); } };
+  }
+
   const STATIONS=[
     { side:-1, z:-6, color:0xE8C679, th:'Harmonics · Geometry', g:'Pythagoras of Samos', short:'The Monochord', o:'c. 570 – c. 495 BCE',
       d:'Greek philosopher who founded a school at Croton. His circle is credited with the theorem a²+b²=c² and the discovery that musical consonances follow simple whole-number ratios — octave 2:1, fifth 3:2, fourth 4:3 — binding number, sound, and cosmos.',
@@ -280,7 +317,13 @@ function buildHall(){
       sec:'The experimentum crucis: a glass prism spreads sunlight into a spectrum, and a second prism recombines it to white. Colour is a property of the light itself, not of the glass. Press E to split the beam.', make:devNewton },
     { side:-1, z:6, color:0x9FB4FF, th:'Electricity · Fields · Resonance', g:'Nikola Tesla', short:'The Tesla Coil', o:'1856 – 1943',
       d:'Serbian-American electrical engineer. He devised the alternating-current (AC) induction motor and the polyphase system that powers the modern grid, plus the resonant "Tesla coil." He held roughly 300 patents and contributed to early radio and wireless.',
-      sec:'The rotating magnetic field: two AC currents a quarter-cycle apart make a field that rotates, spinning a rotor with no contact. The coil is a resonant transformer producing high-voltage, high-frequency discharges. Press E to energize it.', make:devTesla }
+      sec:'The rotating magnetic field: two AC currents a quarter-cycle apart make a field that rotates, spinning a rotor with no contact. The coil is a resonant transformer producing high-voltage, high-frequency discharges. Press E to energize it.', make:devTesla },
+    { side:1, z:-6, color:0xC8B48A, th:'Celestial Mechanics · Harmony', g:'Johannes Kepler', short:'The Orrery', o:'1571 – 1630',
+      d:'German astronomer and mathematician. He discovered the three laws of planetary motion: orbits are ellipses, equal areas are swept in equal times, and the square of the period is proportional to the cube of the semi-major axis (T²∝r³).',
+      sec:'Harmonices Mundi (1619): each planet sings a note whose pitch varies with its orbital speed. The harmonic ratios 4:5:6:8 approximate the orbit spacings — a Pythagorean cosmos made quantitative. Press E to hear the chord.', make:devKepler },
+    { side:1, z:6, color:0xA8D8C0, th:'Electromagnetism · Induction', g:'Michael Faraday', short:'The Induction Coil', o:'1791 – 1867',
+      d:'English experimentalist. He discovered electromagnetic induction (1831): a changing magnetic field induces a current in a nearby coil. His field concept, later formalized by Maxwell, unified electricity and magnetism.',
+      sec:'Faraday\'s law: EMF = −dΦ/dt. A magnet moving through a coil changes the magnetic flux Φ, inducing a voltage and a current. The faster the motion, the greater the EMF. This principle drives every generator on Earth. Press E to slide the magnet.', make:devFaraday }
   ];
   STATIONS.forEach(s=>{
     const side=s.side, bx=side*6.4, wallx=side*(hx-0.12), rot=side<0?Math.PI/2:-Math.PI/2;
@@ -295,7 +338,7 @@ function buildHall(){
     fp.userData={ type:'plaque', texSec:plaqueTemple(s,true), panel:fp.children[1], revealed:false, data:s }; interactables.push(fp);
     const dev=new THREE.Group(); dev.position.set(side*3.4,0,s.z); dev.rotation.y=rot; scene.add(dev);
     const handle=s.make(dev,s.color);
-    dev.userData={ type:'sci', idle:handle.idle||null, run:handle.run, data:{ th:'Experiment · press E', g:s.short, o:s.o, d:s.sec } };
+    dev.userData={ type:'sci', idle:handle.idle||null, run:handle.run, update:handle.update||null, data:{ th:'Experiment · press E', g:s.short, o:s.o, d:s.sec } };
     interactables.push(dev);
   });
 
@@ -348,7 +391,7 @@ function loop(){
   fwd=Math.max(-1,Math.min(1,fwd)); str=Math.max(-1,Math.min(1,str));
   if(fwd||str){ player.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp; player.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp; }
   player.position.x=Math.max(-8.4,Math.min(8.4,player.position.x)); player.position.z=Math.max(-15.2,Math.min(15.2,player.position.z));
-  if(!reduced) interactables.forEach(g=>{ if(g.userData.type==='sci'&&g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; });
+  if(!reduced) interactables.forEach(g=>{ if(g.userData.type==='sci'){ if(g.userData.idle) g.userData.idle.rotation.z+=dt*0.5; if(g.userData.update) g.userData.update(dt); } });
   updateFocus();
   if(dust&&!reduced){ const p=dust.geometry.attributes.position; for(let i=1;i<p.count*3;i+=3){ p.array[i]+=dt*0.16; if(p.array[i]>9) p.array[i]=0; } p.needsUpdate=true; }
   if(composer) composer.render(); else renderer.render(scene,camera);
