@@ -650,6 +650,58 @@ let audioOn=true;
 /* ── Three.js globals ── */
 let renderer,scene,camera,clock,raycaster;
 let composer=null,bloomPass=null,dust=null;
+const isTouch=matchMedia('(hover:none),(pointer:coarse)').matches;
+/* ── performance layer ──────────────────────────────────────────────────────
+   The temple teleports the player between widely-separated, self-contained
+   clusters (basilica at y=0; eight zones + hub spread across a 120-unit field
+   at y=-30). At any instant only ONE cluster is visible, so three levers give a
+   large speed-up with no visible loss:
+     1. light culling   — keep only point lights whose falloff actually reaches
+                           the camera (range-aware), hard-capped at MAX_LIT.
+     2. on-demand shadows— the only shadow-caster is the static moon over static
+                           architecture, so the shadow map is rendered on
+                           transitions, not every frame.
+     3. adaptive resolution — a frame-time governor trims pixel ratio only when a
+                           device can't hold ~58fps, and restores it when it can. */
+const PERF={ prMax:Math.min(devicePixelRatio||1, isTouch?1.5:2), prMin:1, pr:1, ema:16.7, since:0 };
+PERF.pr=PERF.prMax;
+const MAX_LIT=16;            // hard ceiling on simultaneously-active point lights
+let _pointLights=[];
+const _wp=new THREE.Vector3();
+let _cullAccum=0;
+function refreshLights(){ _pointLights.length=0; scene.traverse(o=>{ if(o.isPointLight) _pointLights.push(o); }); }
+function cullLights(){
+  if(!_pointLights.length) return;
+  const camp=camera.position;
+  for(const l of _pointLights){ l.getWorldPosition(_wp); l.userData._d=_wp.distanceTo(camp); }
+  _pointLights.sort((a,b)=>a.userData._d-b.userData._d);
+  let active=0;
+  for(const l of _pointLights){
+    const range=(l.distance||20)*1.2+4;          // beyond this the light contributes ~nothing
+    const want=l.userData._d<range && active<MAX_LIT;
+    if(want) active++;
+    if(l.visible!==want) l.visible=want;
+  }
+}
+function markShadowDirty(){ if(renderer) renderer.shadowMap.needsUpdate=true; }
+/* called on every level/zone transition: pick up newly-built lights, re-cull, and
+   re-render the (otherwise static) shadow map once for the new vantage. */
+function onTransition(){ refreshLights(); cullLights(); markShadowDirty(); }
+function tunePerf(dtMs){
+  PERF.ema=PERF.ema*0.9+dtMs*0.1;
+  PERF.since+=dtMs;
+  if(PERF.since<700) return;                       // re-evaluate ~ every 0.7s
+  PERF.since=0;
+  const fps=1000/PERF.ema; let pr=PERF.pr;
+  if(fps<52 && pr>PERF.prMin) pr=Math.max(PERF.prMin,+(pr-0.25).toFixed(2));
+  else if(fps>58 && pr<PERF.prMax) pr=Math.min(PERF.prMax,+(pr+0.25).toFixed(2));
+  if(pr!==PERF.pr){
+    PERF.pr=pr;
+    renderer.setPixelRatio(pr);
+    if(composer){ composer.setPixelRatio(pr); composer.setSize(innerWidth,innerHeight); }
+    markShadowDirty();                             // backing store changed → refresh shadow
+  }
+}
 const interactives=[];
 const keys={};
 const move={f:0,s:0};
@@ -1209,6 +1261,7 @@ function descentAnimate(elapsed){
     updateZoneUI('hub');
     Audio.setZoneAudio('hub');
     buildHubIfNeeded();
+    onTransition();
     note('Underground Temple — walk through an archway to enter a zone');
     return;
   }
@@ -1338,6 +1391,7 @@ function teleportToZone(zk){
     saveState();
     updateZoneUI(zk);
     Audio.setZoneAudio(zk);
+    onTransition();
     ov.style.opacity='0'; ov.style.pointerEvents='none';
     note(`${ZONE_NAMES[zk]} — explore hotspots with E or tap`);
   },350);
@@ -1351,6 +1405,7 @@ function returnToHub(){
     currentLevel='hub';
     updateZoneUI('hub');
     Audio.setZoneAudio('hub');
+    onTransition();
     ov.style.opacity='0'; ov.style.pointerEvents='none';
     note('Underground Hub — eight archways await');
   },350);
@@ -1366,6 +1421,7 @@ function returnToBasilica(){
     Audio.setZoneAudio('basilica');
     scene.background=new THREE.Color(0x18100a);
     scene.fog=new THREE.FogExp2(0x1a1008,0.012);
+    onTransition();
     ov.style.opacity='0'; ov.style.pointerEvents='none';
     note('Basilica — the altar seal glows below you');
   },500);
@@ -2345,14 +2401,15 @@ function loadState(){
 
 /* ── Three.js: init renderer ── */
 function initThree(){
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(PERF.pr);
   renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate=false;   // static scene → render shadows on demand, not every frame
   renderer.xr.enabled=true;
   document.body.appendChild(renderer.domElement);
 
@@ -2375,11 +2432,16 @@ function initThree(){
   enableShadows();
   setupXR();
 
-  // composer / bloom — desktop & mobile; XR falls back to direct render below
+  // composer / bloom — desktop & mobile; XR falls back to direct render below.
+  // A multisampled render target keeps MSAA antialiasing through the bloom pass
+  // (the default composer target drops it) — sharper edges + cinematic glow.
   if(EffectComposer&&RenderPass&&UnrealBloomPass){
-    composer=new EffectComposer(renderer);
+    const samples=isTouch?0:4;
+    const rt=new THREE.WebGLRenderTarget(innerWidth,innerHeight,{samples});
+    composer=new EffectComposer(renderer,rt);
+    composer.setPixelRatio(PERF.pr);
     composer.addPass(new RenderPass(scene,camera));
-    bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.7,0.55,0.82);
+    bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.75,0.6,0.82);
     composer.addPass(bloomPass);
     composer.setSize(innerWidth,innerHeight);
   }
@@ -2389,7 +2451,13 @@ function initThree(){
     renderer.setSize(innerWidth,innerHeight);
     if(composer) composer.setSize(innerWidth,innerHeight);
     if(bloomPass) bloomPass.setSize(innerWidth,innerHeight);
+    markShadowDirty();
   });
+
+  // first light cull + one shadow render for the static basilica
+  refreshLights();
+  cullLights();
+  markShadowDirty();
   renderer.setAnimationLoop(tick);
 }
 
@@ -2446,6 +2514,10 @@ function setupXR(){
 function tick(){
   const dt=Math.min(clock.getDelta(),0.05);
   const t=clock.elapsedTime;
+  // adaptive resolution + light culling (cull every ~5 frames; cheap, slow-moving)
+  if(!renderer.xr.isPresenting) tunePerf(dt*1000);
+  _cullAccum+=dt;
+  if(_cullAccum>0.08){ _cullAccum=0; cullLights(); }
   if(!inDescending) updateMovement(dt);
   animateFlames(t);
   animateFloaters(t,dt);
