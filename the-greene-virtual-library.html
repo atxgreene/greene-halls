@@ -576,7 +576,10 @@
 </div>
 
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
 </script>
 <script type="module">
 /* ============================================================
@@ -1035,6 +1038,7 @@ function statusKind(b){
    fails, we drop to a CSS gradient and carry on.
    ============================================================ */
 let THREE=null, renderer, scene, camera, clock, holo, dust, stars, lampLights=[], shaftMotes;
+let composer=null, bloomPass=null;
 let camTarget={pos:null,look:null}, frame=0, temple3d=false;
 async function initTemple(){
   try{
@@ -1058,6 +1062,18 @@ async function initTemple(){
     camTarget.pos = new THREE.Vector3(0,5.4,30);
     camTarget.look = new THREE.Vector3(0,4.5,0);
     temple3d = true;
+    try{
+      const [{EffectComposer},{RenderPass},{UnrealBloomPass}]=await Promise.all([
+        import('three/addons/postprocessing/EffectComposer.js'),
+        import('three/addons/postprocessing/RenderPass.js'),
+        import('three/addons/postprocessing/UnrealBloomPass.js'),
+      ]);
+      composer=new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene,camera));
+      bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.55,0.5,0.84);
+      composer.addPass(bloomPass);
+      composer.setSize(innerWidth,innerHeight);
+    }catch(_){}
     addEventListener('resize', onResize);
     renderLoop();
   }catch(e){
@@ -1071,6 +1087,7 @@ function onResize(){
   if(!temple3d) return;
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  if(composer){ composer.setSize(innerWidth,innerHeight); if(bloomPass) bloomPass.setSize(innerWidth,innerHeight); }
 }
 function buildTemple(){
   const T=THREE;
@@ -1206,7 +1223,7 @@ function renderLoop(){
   if(stars){ stars.material.opacity = 0.65 + Math.sin(t*0.6)*0.2; }
   // lamp flicker
   if(!reduce){ for(let i=0;i<lampLights.length;i++){ lampLights[i].intensity = 5.4 + Math.sin(t*3+i*1.7)*0.9 + Math.random()*0.3; } }
-  renderer.render(scene, camera);
+  if(composer) composer.render(); else renderer.render(scene, camera);
 }
 /* move the camera + retint fog/holo when entering a wing */
 function flyTo(wingId){

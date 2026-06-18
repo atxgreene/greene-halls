@@ -8,26 +8,37 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:#050406;color:#e9dcc0;
     font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:auto}
-  .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    text-align:center;background:radial-gradient(ellipse at 50% 30%,#15101a 0%,#070608 60%,#000 100%);padding:6vh 20px}
+  #bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .wrap{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;
+    background:radial-gradient(ellipse at 50% 30%,rgba(21,16,26,.85) 0%,rgba(7,6,8,.7) 60%,rgba(0,0,0,.55) 100%);
+    padding:6vh 20px}
   h1{font-size:clamp(30px,6vw,64px);font-weight:400;letter-spacing:.12em;color:#e9dcc0;
-    text-shadow:0 0 40px rgba(217,180,99,.35)}
+    text-shadow:0 0 40px rgba(217,180,99,.35);animation:titleglow 6s ease-in-out infinite}
+  @keyframes titleglow{0%,100%{text-shadow:0 0 40px rgba(217,180,99,.3)}50%{text-shadow:0 0 65px rgba(217,180,99,.55),0 0 120px rgba(217,180,99,.18)}}
   .sub{margin-top:14px;font-size:13px;letter-spacing:.4em;text-transform:uppercase;color:#9a8e72}
   .doors{display:flex;gap:28px;margin-top:56px;flex-wrap:wrap;justify-content:center}
   a.door{display:block;width:min(340px,86vw);text-decoration:none;border:1px solid rgba(217,180,99,.3);
     border-radius:4px;padding:34px 28px;transition:.25s;background:rgba(10,9,12,.5);position:relative;overflow:hidden}
+  a.door::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s;
+    background:radial-gradient(ellipse at 50% 0%,rgba(217,180,99,.07),transparent 70%)}
+  a.door:hover::before{opacity:1}
   a.door:hover{transform:translateY(-4px);border-color:#d9b463;box-shadow:0 14px 50px rgba(0,0,0,.6)}
   a.door .t{font-size:26px;color:#e9dcc0;letter-spacing:.04em}
   a.door .d{margin-top:12px;font-size:13.5px;font-style:italic;line-height:1.6;color:#a99e82}
   a.fallen .t{color:#e7b0a0;text-shadow:0 0 26px rgba(184,18,26,.5)}
+  a.fallen::before{background:radial-gradient(ellipse at 50% 0%,rgba(184,18,26,.08),transparent 70%)}
+  a.fallen:hover{border-color:#c47060;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(184,18,26,.12)}
   a.holy .t{color:#ffe6a8;text-shadow:0 0 26px rgba(217,180,99,.55)}
   a.library{width:min(708px,86vw);border-color:rgba(214,177,95,.4)}
   a.library:hover{border-color:#D6B15F;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(214,177,95,.25)}
   a.library .t{color:#e7d39a;text-shadow:0 0 26px rgba(214,177,95,.5)}
+  a.library::before{background:radial-gradient(ellipse at 50% 0%,rgba(214,177,95,.08),transparent 70%)}
   a.ufos{border-color:rgba(32,240,208,.32)}
   a.ufos:hover{border-color:#20f0d0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 40px rgba(32,240,208,.18)}
   a.ufos .t{color:#a8f4e6;text-shadow:0 0 26px rgba(32,240,208,.5)}
   a.ufos .d{color:#8fb3ad}
+  a.ufos::before{background:radial-gradient(ellipse at 50% 0%,rgba(32,240,208,.06),transparent 70%)}
   a.sanctuary{border-color:rgba(202,162,74,.4)}
   a.sanctuary:hover{border-color:#caa24a;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(202,162,74,.22)}
   a.sanctuary .t{color:#e7cf8f;text-shadow:0 0 26px rgba(202,162,74,.5)}
@@ -36,6 +47,7 @@
   a.lyceum:hover{border-color:#9fb4ff;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(159,180,255,.22)}
   a.lyceum .t{color:#cdd8ff;text-shadow:0 0 26px rgba(159,180,255,.5)}
   a.lyceum .d{color:#aab2cc}
+  a.lyceum::before{background:radial-gradient(ellipse at 50% 0%,rgba(159,180,255,.07),transparent 70%)}
   a.lab{border-color:rgba(32,240,208,.4)}
   a.lab:hover{border-color:#20f0d0;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(32,240,208,.24)}
   a.lab .t{color:#a8f4e6;text-shadow:0 0 26px rgba(32,240,208,.5)}
@@ -49,15 +61,19 @@
   a.vision:hover{border-color:#9fb4ff;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 50px rgba(159,180,255,.3)}
   a.vision .t{color:#c8d6ff;text-shadow:0 0 30px rgba(159,180,255,.7)}
   a.vision .d{color:#9ba8cc}
+  a.vision::before{background:radial-gradient(ellipse at 50% 0%,rgba(159,180,255,.08),transparent 70%)}
   a.nephilim{border-color:rgba(224,86,60,.35)}
   a.nephilim:hover{border-color:#e0563c;box-shadow:0 14px 50px rgba(0,0,0,.6),0 0 44px rgba(224,86,60,.22)}
   a.nephilim .t{color:#f4a08a;text-shadow:0 0 28px rgba(224,86,60,.6)}
   a.nephilim .d{color:#c09080}
+  a.nephilim::before{background:radial-gradient(ellipse at 50% 0%,rgba(224,86,60,.07),transparent 70%)}
   .foot{margin-top:48px;font-size:12px;color:#6b6354;line-height:1.8;max-width:560px}
   .foot code{color:#9a8e72}
+  @media(prefers-reduced-motion:reduce){h1{animation:none}#bg{display:none}}
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
 <div class="wrap">
   <h1>The Greene Halls</h1>
   <div class="sub">Chambers of the Museum</div>
@@ -107,5 +123,104 @@
   <div class="foot">The Virtual Library, the Hall of UFOs, the Ancient Basilica Sanctuary, the Lyceum, the Psi Operations Room, and The Revelation are self-contained — they fall back gracefully and run from any static host. For the Watchers, Archangels, and Hall of the Nephilim 3D models and narration to load,
     open them from a local server (run <code>start-museum.bat</code>) rather than double-clicking the HTML directly.</div>
 </div>
+<script>
+(function(){
+  const cv=document.getElementById('bg');
+  const ctx=cv.getContext('2d');
+  let W,H,stars,nebulae,shoot;
+  const PR=Math.min(devicePixelRatio||1,2);
+
+  function resize(){
+    W=cv.width=innerWidth*PR; H=cv.height=innerHeight*PR;
+    cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px';
+    init();
+  }
+
+  function rand(a,b){return a+Math.random()*(b-a);}
+  function init(){
+    // stars: three depth layers
+    stars=Array.from({length:320},()=>({
+      x:rand(0,W), y:rand(0,H),
+      r:rand(0.4,2.2)*PR,
+      spd:rand(0.003,0.022),
+      op:rand(0.15,0.9),
+      twinkle:rand(0,Math.PI*2),
+      twinkleSpd:rand(0.4,1.4)
+    }));
+    // nebula blobs
+    nebulae=[
+      {x:W*0.22,y:H*0.18,rx:W*0.28,ry:H*0.22,col:'rgba(90,40,140,',op:0.055},
+      {x:W*0.78,y:H*0.72,rx:W*0.24,ry:H*0.18,col:'rgba(20,60,110,',op:0.07},
+      {x:W*0.55,y:H*0.42,rx:W*0.32,ry:H*0.26,col:'rgba(60,20,90,',op:0.04},
+    ];
+    shoot={active:false,x:0,y:0,vx:0,vy:0,life:0,maxLife:0};
+    setTimeout(spawnShoot, rand(3000,7000));
+  }
+
+  function spawnShoot(){
+    const a=rand(-0.55,-0.28);
+    shoot.x=rand(0.1,0.8)*W; shoot.y=rand(0.02,0.35)*H;
+    shoot.vx=Math.cos(a)*8*PR; shoot.vy=Math.sin(a)*8*PR;
+    shoot.maxLife=rand(28,48); shoot.life=shoot.maxLife; shoot.active=true;
+    setTimeout(spawnShoot, rand(8000,18000));
+  }
+
+  let last=0;
+  function frame(now){
+    requestAnimationFrame(frame);
+    const dt=Math.min((now-last)/16.67,3); last=now;
+    ctx.clearRect(0,0,W,H);
+
+    // nebula
+    nebulae.forEach(n=>{
+      const maxR=Math.max(n.rx,n.ry);
+      const g=ctx.createRadialGradient(0,0,0,0,0,maxR);
+      g.addColorStop(0,n.col+(n.op*1.6)+')');
+      g.addColorStop(0.5,n.col+n.op+')');
+      g.addColorStop(1,n.col+'0)');
+      ctx.save();
+      ctx.translate(n.x,n.y); ctx.scale(n.rx/maxR,n.ry/maxR);
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,maxR,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+
+    // stars
+    stars.forEach(s=>{
+      s.twinkle+=s.twinkleSpd*dt*0.018;
+      const op=s.op*(0.6+0.4*Math.sin(s.twinkle));
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(235,220,190,'+op+')';
+      ctx.fill();
+      // slow upward drift, wrap
+      s.y-=s.spd*dt*PR;
+      if(s.y<-2) s.y=H+2;
+    });
+
+    // shooting star
+    if(shoot.active){
+      const t=shoot.life/shoot.maxLife;
+      const tailLen=70*PR*t;
+      const grd=ctx.createLinearGradient(
+        shoot.x,shoot.y,
+        shoot.x-shoot.vx*(tailLen/8),shoot.y-shoot.vy*(tailLen/8)
+      );
+      grd.addColorStop(0,'rgba(255,248,230,'+(.92*t)+')');
+      grd.addColorStop(1,'rgba(200,190,160,0)');
+      ctx.strokeStyle=grd; ctx.lineWidth=1.5*PR;
+      ctx.beginPath(); ctx.moveTo(shoot.x,shoot.y);
+      ctx.lineTo(shoot.x-shoot.vx*(tailLen/8),shoot.y-shoot.vy*(tailLen/8));
+      ctx.stroke();
+      shoot.x+=shoot.vx*dt; shoot.y+=shoot.vy*dt;
+      shoot.life-=dt;
+      if(shoot.life<=0) shoot.active=false;
+    }
+  }
+
+  resize();
+  addEventListener('resize',resize);
+  requestAnimationFrame(frame);
+})();
+</script>
 </body>
 </html>
