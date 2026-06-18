@@ -934,6 +934,55 @@ function boot(LIB){
   }
   document.getElementById('cine-skip').onclick=endCinematic;
 
+  // ===================== BOOK OF GIANTS EXHIBIT =====================
+  (function buildBookOfGiants(){
+    const gz=NEPH_Z+16; // halfway between last Watcher row and the Nephilim
+    const BOG_TEXT=[
+      { head:'The Book of Giants', body:'A fragmentary Enochic text recovered from Cave 4 at Qumrân (4Q530–532) — written in Aramaic, ca. 2nd century BCE. It follows the offspring of the Watchers: Ohyah and Hahyah (sons of Shemihazah), Mahaway, Hobabish, and the great Gilgamesh-figure ʿOhyah. The giants receive apocalyptic dreams and send Mahaway to consult Enoch, who interprets the visions as their imminent destruction.' },
+      { head:'The Dreams of Ohyah', body:'"I saw in my dream this night … a garden and watchers … they felled the trees … and the great angel called out: Ohyah, the garden will be burned and cut down."  (4Q530 ii) · The dreams foretell the Flood as divine retribution against the Giants, but the Nephilim cannot bring themselves to repent.' },
+      { head:'Mahaway Consults Enoch', body:'Mahaway crosses the cosmic sea to find Enoch "in the heights," asking him to read the tablet of heaven. Enoch interprets: the sins of the Watchers have been written, and the judgment is fixed. The Giants will die by one another\'s hands, and then be drowned.' },
+      { head:'The Manichean Transmission', body:'Mani (216–274 CE) composed his own Book of Giants — the only substantially preserved version — in Middle Persian and Coptic. It was a canonical Manichean text until the tradition was suppressed. Fragments survive from Turfan (Central Asia), reflecting how far this Enochic tradition travelled.' }
+    ];
+    let revealed=0;
+    // Plinth
+    const plinth=new THREE.Mesh(new THREE.BoxGeometry(3.2,1.4,1.0),wallMat); plinth.position.set(0,0.7,gz); plinth.castShadow=true; HALL.add(plinth);
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.15,1.2),new THREE.MeshStandardMaterial({color:0x000,emissive:0x8844aa,emissiveIntensity:0.8,roughness:0.5,metalness:0.7})); cap.position.set(0,1.4,gz); HALL.add(cap);
+    // Tablet (glowing text panel)
+    const tabW=3.0, tabH=2.6;
+    function makeTabletTex(idx){
+      const cv=document.createElement('canvas'); cv.width=512; cv.height=448; const x=cv.getContext('2d');
+      x.fillStyle='#0d0a12'; x.fillRect(0,0,512,448);
+      x.strokeStyle='rgba(160,100,220,.5)'; x.lineWidth=4; x.strokeRect(10,10,492,428);
+      x.fillStyle='#b090d8'; x.font='600 22px sans-serif'; x.textAlign='center'; x.fillText(BOG_TEXT[idx].head,256,52);
+      x.fillStyle='rgba(160,100,220,.4)'; x.fillRect(48,64,416,2);
+      x.fillStyle='#c8bfa8'; x.font='400 17px sans-serif'; x.textAlign='left';
+      const words=BOG_TEXT[idx].body.split(' '); let line='',y=96;
+      words.forEach(w=>{ const t=line+w+' '; if(x.measureText(t).width>432&&line){ x.fillText(line.trim(),40,y); y+=26; line=w+' '; } else line=t; });
+      x.fillText(line.trim(),40,y);
+      const label=idx<BOG_TEXT.length-1?`▸ press E for next (${idx+1}/${BOG_TEXT.length})`:'◼ press E to restart';
+      x.fillStyle='rgba(160,100,220,.6)'; x.font='italic 14px sans-serif'; x.textAlign='center'; x.fillText(label,256,430);
+      return new THREE.CanvasTexture(cv);
+    }
+    const tabMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x220033,emissiveIntensity:0.6,roughness:0.8,metalness:0.1,map:makeTabletTex(0)});
+    const tab=new THREE.Mesh(new THREE.PlaneGeometry(tabW,tabH),tabMat); tab.position.set(0,1.4+tabH/2+0.08,gz+0.52); HALL.add(tab);
+    // Interaction stub (reuses the E-key readActive path via proximity)
+    tab.userData={ type:'bog', interact:()=>{
+      revealed=(revealed+1)%BOG_TEXT.length;
+      if(tabMat.map) tabMat.map.dispose();
+      tabMat.map=makeTabletTex(revealed); tabMat.needsUpdate=true;
+      note(BOG_TEXT[revealed].head);
+    }};
+    // Ambient light
+    const gl=new THREE.PointLight(0x9955cc,1.8,14,2); gl.position.set(0,3.5,gz); HALL.add(gl);
+    // Plaque label
+    const labCv=document.createElement('canvas'); labCv.width=512; labCv.height=80; const lx=labCv.getContext('2d');
+    lx.fillStyle='rgba(0,0,0,0)'; lx.clearRect(0,0,512,80); lx.fillStyle='#b090d8'; lx.font='600 32px sans-serif'; lx.textAlign='center'; lx.fillText('THE BOOK OF GIANTS',256,56);
+    const labTex=new THREE.CanvasTexture(labCv); labTex.colorSpace=THREE.SRGBColorSpace;
+    const lab=new THREE.Mesh(new THREE.PlaneGeometry(3.8,0.6),new THREE.MeshBasicMaterial({map:labTex,transparent:true,depthWrite:false})); lab.position.set(0,1.3,gz+0.55); HALL.add(lab);
+    // Register as interactable via exhibit proximity check
+    exhibits.push({a:{key:'bog',name:'Book of Giants',glow:'#9955cc'},node:tab,pos:new THREE.Vector3(0,0,gz),glowColor:new THREE.Color(0x9955cc),glyphObj:null,halo:null,aura:null,isNeph:false,isBog:true});
+  })();
+
   // ===================== NAVIGATION =====================
   const keys={}; let yaw=0,pitch=0,locked=false,inCinematic=false,started=false,activeExhibit=null;
   const canvas=renderer.domElement;
@@ -1015,7 +1064,7 @@ function boot(LIB){
     panel.classList.add('open');
     if(autoNarrate) narrate(a);
   }
-  function readActive(){ if(activeExhibit) showPanel(activeExhibit); }
+  function readActive(){ if(!activeExhibit) return; if(activeExhibit.isBog){ activeExhibit.node.userData.interact(); return; } showPanel(activeExhibit); }
 
   // ===================== NARRATION (TTS + optional audio files) =====================
   let narrating=false, autoNarrate=false, currentVoice=null, panelActive=null;
@@ -1180,8 +1229,9 @@ function boot(LIB){
       focusLight.target.position.lerp(tmp.set(near.pos.x,near.isNeph?4:2.5,near.pos.z),0.1);
       focusLight.intensity=lerp(focusLight.intensity,(dist<15?1:0)*230,0.06);
       focusLight.color.lerp(_tint.copy(_warm).lerp(near.glowColor,0.32),0.05);
-      if(dist<7){ if(activeExhibit!==near){ activeExhibit=near; topbar.textContent=near.a.name+' — '+near.a.rank;
-          showToast(`<b>${near.a.name}</b> · ${near.a.aka.split('·')[0].trim()}<br>press <span class="key">E</span> to read · <span class="key">N</span> to hear`); } }
+      if(dist<7){ if(activeExhibit!==near){ activeExhibit=near;
+          if(near.isBog){ topbar.textContent='Book of Giants · Dead Sea Scrolls (4Q530–532)'; showToast(`<b>Book of Giants</b><br>press <span class="key">E</span> to read · each press reveals the next passage`); }
+          else { topbar.textContent=near.a.name+' — '+near.a.rank; showToast(`<b>${near.a.name}</b> · ${near.a.aka.split('·')[0].trim()}<br>press <span class="key">E</span> to read · <span class="key">N</span> to hear`); } } }
       else if(dist>9 && activeExhibit){ activeExhibit=null; topbar.textContent='The Hall of the Watchers'; hideToast(); }
     }
 
