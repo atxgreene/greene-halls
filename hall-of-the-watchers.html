@@ -802,7 +802,22 @@ function boot(LIB){
     trim.rotation.x=Math.PI/2; trim.position.y=isNeph?1.18:1.08; node.add(trim);
     if(!isNeph){
       const niche=new THREE.Mesh(new THREE.BoxGeometry(5,11,0.4),new THREE.MeshStandardMaterial({color:0x08070b,roughness:0.95})); niche.position.set(0,5.5,2.6); node.add(niche);
-      const frame=new THREE.Mesh(new THREE.TorusGeometry(2.3,0.06,8,40,Math.PI),new THREE.MeshStandardMaterial({color:0x000,emissive:a.palette.emissive,emissiveIntensity:0.9})); frame.position.set(0,7.2,2.4); node.add(frame);
+      // Gallery frame: 3-sided rectangle (top bar + left/right pillars, tinted to exhibit colour)
+      const fMat=new THREE.MeshStandardMaterial({color:0x080604,emissive:new THREE.Color(a.palette.emissive),emissiveIntensity:0.55,metalness:0.85,roughness:0.25});
+      const fTop=new THREE.Mesh(new THREE.BoxGeometry(5.7,0.24,0.18),fMat); fTop.position.set(0,11.22,2.68); node.add(fTop);
+      const fL=new THREE.Mesh(new THREE.BoxGeometry(0.24,11.46,0.18),fMat); fL.position.set(-2.87,5.5,2.68); node.add(fL);
+      const fR=new THREE.Mesh(new THREE.BoxGeometry(0.24,11.46,0.18),fMat); fR.position.set(2.87,5.5,2.68); node.add(fR);
+      // Floor name plaque in front of pedestal
+      const pc=document.createElement('canvas'); pc.width=512; pc.height=160; const px=pc.getContext('2d');
+      px.fillStyle='#120e0c'; px.fillRect(0,0,512,160);
+      px.fillStyle='#c9a84c'; px.fillRect(0,0,512,5); px.fillRect(0,155,512,5);
+      px.fillStyle='#ddd09a'; px.font='bold 36px serif'; px.textAlign='center'; px.fillText(a.name,256,62);
+      const rs=a.rank.length>42?a.rank.slice(0,40)+'…':a.rank;
+      px.fillStyle='#7a6e4e'; px.font='italic 22px serif'; px.fillText(rs,256,102);
+      const plq=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.07,0.7),new THREE.MeshStandardMaterial({color:0x120e0c,roughness:0.7,metalness:0.2,map:new THREE.CanvasTexture(pc)}));
+      plq.position.set(0,0.035,-1.8); node.add(plq);
+      // Dedicated gallery spotlight: soft per-exhibit fill from above
+      const egl=new THREE.PointLight(new THREE.Color(a.palette.emissive),3.5,18,2); egl.position.set(0,9.5,1.5); node.add(egl);
     } else {
       // The Deluge — Gustave Doré (public domain): the drowned world, the giants with it. Backdrop behind the colossus.
       new THREE.TextureLoader().load('images/deluge.jpg', tex=>{
